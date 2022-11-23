@@ -1,6 +1,11 @@
 
-# Title
+<p align="center">
+  <img width="150" height="150" src="icons/mp_icon2.png">
+</p>
 
+<div style="text-align: center">
+<h1>Mpterm</h1>
+</div>
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -43,6 +48,10 @@
 
 ### Runtime
 
+- Python 3
+- Qt5
+- pyserial
+
 ### Development
 
 
@@ -68,6 +77,17 @@
 
 ## ToDo
 
+- Settings file
+- Multiple settings profiles
+- Terminal functions
+  - Color encoding
+  - Cursor management
+- Addon function
+- Logging
+- Echo mode
+- Suspend button
+
+
 
 ## Links
 
@@ -78,67 +98,8 @@
 ## License 
 
 
-## Some examples, remove after creation
-
-# The largest heading
-## The second largest heading
-###### The smallest heading
-
-`quoting code`
-
-```c
-void main(int arc, char argv**) {
-  exit 0;
-}
-```
 
 
-| Style  | Syntax  | Example | Output |
-|------- |-------- |---------|--------|
-| Bold   | `** **` | `**This is bold text**`  | **This is bold text** |
-| Italic | `* *`   | ` *This text is italicized*` | *This text is italicized* |
-| Strikethrough | `~~ ~~` | `~~This was mistaken text~~` | ~~This was mistaken text~~ |
-| Subscript | `<sub> </sub>` | `Ordinary, <sup>subscript</sub>` | Ordinary <sub>subscript</sub> |
-| Superscript | `<sup> </sup>` | `Ordinary, <sup>superscript</sup>` | Ordinary <sup>superscript</sup> |
-
-> Text that is a quote
-
-
-
-## Tables
-
-| Header 1 | Header 2 |
-| -------- | -------- |
-|   C1     | C2       |
-|   C3     | C4       |
-
-
-## List
-
-- Item 1
-- Item 2
-- Item 3
-
-## Task list
-
-- [ ] Task 1
-- [x] Task 2
-- [ ] Task 3
-
-
-## Colapsed section
-
-<details><summary>CLICK ME</summary>
-<p>
-
-#### We can hide anything, even code!
-
-```ruby
-puts "Hello World"
-```
-
-</p>
-</details>
 
 ## Links
 

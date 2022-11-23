@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------
 #
-# asdf sfda
+# Serial terminal 
 #
 # File:    mpterm.py
 # Author:
@@ -15,7 +15,6 @@
 # This file is generated from pyplate Python template generator.    
 # Pyplate is developed by
 # Peter Malmberg <peter.malmberg@gmail.com>
-#
 #
 # -----------------------------------------------------------------------
 # pyuic5 mpTerminal.ui -o ui_MainWindow.py
@@ -32,10 +31,11 @@ import logging
 import argparse
 import signal
 import enum
+import json
 from datetime import datetime, date, time
 
 from PyQt5.QtCore import Qt, QTimer, QSettings, QIODevice
-from PyQt5.QtGui import QTextCursor, QIcon, QFont, QKeyEvent
+from PyQt5.QtGui import QTextCursor, QIcon, QFont, QKeyEvent, QCloseEvent
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -57,24 +57,13 @@ from PyQt5.QtWidgets import (
 
 from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
 from ui_MainWindow import Ui_MainWindow
-
+from dataclasses import dataclass
 from escape import Esc, Escape, EscapeDecoder, Ascii, e2h, hex2str, TerminalState
 
 # Settings ------------------------------------------------------------------
 
 # Absolute path to script itself
 self_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
-
-app_name = "mpterm"
-app_version = "0.2"
-app_description = "MpTerm is a simple serial terminal program"
-app_license = ""
-app_author = "Peter Malmberg"
-app_email = "peter.malmberg@gmail.com"
-app_org = ""
-app_home = "github.com/zonbrisad/mpterm"
-app_icon = f"{self_dir}/mp_icon2.png"
-#app_icon = f"{self_dir}/mp_icon2.svg"
 
 class App:
     NAME = "mpterm"
@@ -85,8 +74,9 @@ class App:
     EMAIL = "peter.malmberg@gmail.com"
     ORG = ""
     HOME = "github.com/zonbrisad/mpterm"
-    ICON = f"{self_dir}/mp_icon.png"
+    ICON = f"{self_dir}/icons/mp_icon2.png"
     
+mp_settings = f"{self_dir}/mpterm.json"
 
 # Definitions ---------------------------------------------------------------
 
@@ -284,13 +274,13 @@ DARKGRAY
 
 
 about_html = f"""
-<center><h2>{app_name}</h2></center>
+<center><h2>{App.NAME}</h2></center>
 <br>
 
 <table>
   <tr>
     <td> 
-      <img src={app_icon} width="48" height="48">
+      <img src={App.ICON} width="48" height="48">
     </td>
     <td>
       <table>
@@ -299,7 +289,7 @@ about_html = f"""
             <b>Version: </b>
           </td>
           <td>  
-            {app_version}
+            {App.VERSION}
           </td>
         </tr>
         <tr>
@@ -307,7 +297,7 @@ about_html = f"""
             <b>Author: </b>
           </td>
           <td>  
-            {app_author}
+            {App.AUTHOR}
           </td/
         </tr>
         <tr>
@@ -315,7 +305,7 @@ about_html = f"""
             <b>Email: </b>
           </td>
           <td>  
-            </b><a href="{app_email}">{app_email}</a>
+            </b><a href="{App.EMAIL}">{App.EMAIL}</a>
           </td/
         </tr>
         <tr> 
@@ -323,7 +313,7 @@ about_html = f"""
             <b>Github: </b>
           </td>
           <td>  
-            <a href="{app_home}">{app_home}</a>
+            <a href="{App.HOME}">{App.HOME}</a>
           </td/
           </td>
         </tr>
@@ -332,7 +322,7 @@ about_html = f"""
 </table>
 <hr>
 <br>
-{app_description}
+{App.DESCRIPTION}
 <br>
 """
 
@@ -341,7 +331,7 @@ class AboutDialog(QDialog):
     def __init__(self, parent=None):
         super(AboutDialog, self).__init__(parent)
 
-        self.setWindowTitle(app_name)
+        self.setWindowTitle(App.NAME)
         self.setWindowModality(Qt.ApplicationModal)
         self.resize(400, 300)
 
@@ -369,67 +359,101 @@ class AboutDialog(QDialog):
         return result == QDialog.Accepted
 
 
-settings = {
-    "alias": str,
-    "port": str,
-    "bitrate": str,
-    "bits": int,
-    "parity": str,
-    "stopbits": int,
-}
-
-
+@dataclass
 class mpProfile:
-    def __init__(self, group):
-        self.settings = QSettings(app_org, app_name)
-        self.group = group
-        self.setDefaults()
+    alias: str = "default"
+    port: str = ""
+    bitrate: str = "38400"
+    databits: str = "8"
+    parity: str = "None"
+    stopbits: str = "1"
+    flowcontrol: str = "None"
 
-    def setDefaults(self):
-        self.alias = "Default"
-        self.port = "ttyUSB1"
-        self.bitrate = "9600"
-        self.databits = QSerialPort.Data8
-        self.parity = QSerialPort.NoParity
-        self.stopbits = QSerialPort.OneStop
-        self.flowcontrol = QSerialPort.NoFlowControl
-        self.display = MpTerm.Ascii
-        self.sync = ""
+    filename: str =""
+    
+    def toJSON(self) -> dict:
+        jsonDict={}
+        jsonDict["alias"] = self.alias
+        jsonDict["port"] = self.port
+        jsonDict["bitrate"] = self.bitrate
+        jsonDict["databits"] = self.databits
+        jsonDict["parity"] = self.parity
+        jsonDict["stopbits"] = self.stopbits
+        return jsonDict
 
-    def load(self):
-        self.settings.sync()
-        self.settings.beginGroup(self.group)
-        self.alias = self.settings.value("alias", type=str)
-        self.port = self.settings.value("port", type=str)
-        self.bitrate = self.settings.value("bitrate", type=str)
-        self.databits = self.settings.value("databits", type=str)
-        self.parity = self.settings.value("parity", type=str)
-        self.stopbits = self.settings.value("stopbits", type=str)
-        self.flowcontrol = self.settings.value("flowcontrol", type=str)
-        self.display = self.settings.value("display", type=str)
-        self.sync = self.settings.value("sync", type=str)
-        self.settings.endGroup()
-
-        self.print()
-
-    def print(self):
-        print("Port:     ", self.port)
-        print("Bitrate:  ", self.bitrate)
+    def fromJSON(self, jsonDict):
+        self.alias = jsonDict["alias"] 
+        self.port = jsonDict["port"] 
+        self.bitrate = jsonDict["bitrate"] 
+        self.databits = jsonDict["databits"]
+        self.parity = jsonDict["parity"] 
+        self.stopbits = jsonDict["stopbits"]
 
     def write(self):
-        self.settings.beginGroup(self.group)
-        self.settings.setValue("alias", self.alias)
-        self.settings.setValue("port", self.port)
-        self.settings.setValue("bitrate", self.bitrate)
-        self.settings.setValue("databits", self.databits)
-        self.settings.setValue("parity", self.parity)
-        self.settings.setValue("stopbits", self.stopbits)
-        self.settings.setValue("flowcontrol", self.flowcontrol)
-        self.settings.setValue("display", self.display)
-        self.settings.setValue("sync", self.sync)
-        self.settings.endGroup()
-        self.settings.sync()
-        return
+        with open(self.filename, "w") as outfile:
+            json.dump(self.toJSON(), outfile, indent=4)
+
+    def load(self):
+        if not os.path.exists(self.filename):
+            self.write()
+
+        with open(self.filename, "r") as infile:
+            jsd = json.load(infile)
+
+        self.fromJSON(jsd)
+
+
+# class mpProfile:
+#     def __init__(self, group):
+#         self.settings = QSettings(app_org, app_name)
+#         self.group = group
+#         self.setDefaults()
+
+#     def setDefaults(self):
+#         self.alias = "Default"
+#         self.port = "ttyUSB1"
+#         self.bitrate = "9600"
+#         self.databits = QSerialPort.Data8
+#         self.parity = QSerialPort.NoParity
+#         self.stopbits = QSerialPort.OneStop
+#         self.flowcontrol = QSerialPort.NoFlowControl
+#         self.display = MpTerm.Ascii
+#         self.sync = ""
+
+#     def load(self):
+#         self.settings.sync()
+#         self.settings.beginGroup(self.group)
+#         self.alias = self.settings.value("alias", type=str)
+#         self.port = self.settings.value("port", type=str)
+#         self.bitrate = self.settings.value("bitrate", type=str)
+#         self.databits = self.settings.value("databits", type=str)
+#         self.parity = self.settings.value("parity", type=str)
+#         self.stopbits = self.settings.value("stopbits", type=str)
+#         self.flowcontrol = self.settings.value("flowcontrol", type=str)
+#         self.display = self.settings.value("display", type=str)
+#         self.sync = self.settings.value("sync", type=str)
+#         self.settings.endGroup()
+
+#         self.print()
+
+#     def print(self):
+#         print("Port:     ", self.port)
+#         print("Bitrate:  ", self.bitrate)
+
+#     def write(self):
+#         self.settings.beginGroup(self.group)
+#         self.settings.setValue("alias", self.alias)
+#         self.settings.setValue("port", self.port)
+#         self.settings.setValue("bitrate", self.bitrate)
+#         self.settings.setValue("databits", self.databits)
+#         self.settings.setValue("parity", self.parity)
+#         self.settings.setValue("stopbits", self.stopbits)
+#         self.settings.setValue("flowcontrol", self.flowcontrol)
+#         self.settings.setValue("display", self.display)
+#         self.settings.setValue("sync", self.sync)
+#         self.settings.endGroup()
+#         self.settings.sync()
+#         return
 
 
 class TerminalWin(QTextEdit):
@@ -474,7 +498,13 @@ class SerialPort:
                 logging.error("Could not write data.")
             
 
+
 class MainForm(QMainWindow):
+
+    def closeEvent(self, a0: QCloseEvent) -> None:
+        self.saveSettings()
+        return super().closeEvent(a0)
+    
     def __init__(self, parent=None):
         super(MainForm, self).__init__(parent)
 
@@ -491,7 +521,7 @@ class MainForm(QMainWindow):
         self.ui.horizontalLayout.insertWidget(1, self.terminal) 
 
         # Set window icon
-        self.setWindowIcon(QIcon(app_icon))
+        self.setWindowIcon(QIcon(App.ICON))
 
         self.rxLabel = QLabel("")
         self.txLabel = QLabel("")
@@ -502,6 +532,7 @@ class MainForm(QMainWindow):
         self.ui.cbStopBits.addItem("1.5", QSerialPort.OneAndHalfStop)
         self.ui.cbStopBits.addItem("2", QSerialPort.TwoStop)
         self.ui.cbStopBits.setCurrentIndex(0)
+        
 
         self.ui.cbBits.addItem("5", QSerialPort.Data5)
         self.ui.cbBits.addItem("6", QSerialPort.Data6)
@@ -578,6 +609,8 @@ class MainForm(QMainWindow):
         
         #self.ui.textEdit.setReadOnly(True)
         #self.ui.textEdit.keyReleaseEvent.connect(lambda: print("Hep"))
+        
+        self.loadSettings()
 
         # Initiate terminal state
         self.state = State.DISCONNECTED
@@ -865,11 +898,6 @@ class MainForm(QMainWindow):
     def initPort(self):
         self.setPort()
         self.set_sp()
-        # self.setBitrate()
-        # self.setBits()
-        # self.setStopBits()
-        # self.setParity()
-        # self.setFlowControl()
 
     def setPort(self):
         self.sp.serial_port.setPortName("/dev/" + self.ui.cbPort.currentText())
@@ -880,28 +908,6 @@ class MainForm(QMainWindow):
         self.sp.serial_port.setDataBits(self.ui.cbBits.currentData())
         self.sp.serial_port.setParity(self.ui.cbParity.currentData())
         self.sp.serial_port.setFlowControl(self.ui.cbFlowControl.currentData())
-      
-    # def setBitrate(self):
-    #     self.serial.setBaudRate(self.ui.cbBitrate.currentData())
-
-    # def setStopBits(self):
-    #     self.serial.setStopBits(self.ui.cbStopBits.currentData())
-
-    # def setBits(self):
-    #     self.serial.setDataBits(self.ui.cbBits.currentData())
-
-    # def setParity(self):
-    #     self.serial.setParity(self.ui.cbParity.currentData())
-
-    # def setFlowControl(self):
-    #     self.serial.setFlowControl(self.ui.cbFlowControl.currentData())
-
-    def saveSetting(self):
-        #        self.mpDefault.write()
-        return
-
-    def loadSettings(self):
-        return
 
     def setCbText(self, cb, txt):
         a = cb.findText(txt)
@@ -917,31 +923,43 @@ class MainForm(QMainWindow):
         else:
             cb.setCurrentIndex(a)
 
-    def saveProfile(self, prof):
-        prof.port = self.ui.cbPort.currentText()
-        prof.bitrate = self.ui.cbBitrate.currentText()
-        prof.databits = self.ui.cbBits.currentData()
-        prof.stopbits = self.ui.cbStopBits.currentData()
-        prof.parity = self.ui.cbParity.currentData()
-        prof.flowcontrol = self.ui.cbFlowControl.currentData()
-        prof.display = self.ui.cbDisplay.currentData()
-        prof.sync = self.ui.leSyncString.text()
-        prof.write()
+    def saveSettings(self):
+        self.prof.port = self.ui.cbPort.currentText()
+        self.prof.bitrate = self.ui.cbBitrate.currentText()
+        self.prof.databits = self.ui.cbBits.currentText()
+        self.prof.stopbits = self.ui.cbStopBits.currentText()
+        self.prof.parity = self.ui.cbParity.currentText()
+        self.prof.flowcontrol = self.ui.cbFlowControl.currentText()
+        #self.prof.display = self.ui.cbDisplay.currentData()
+        #self.prof.sync = self.ui.leSyncString.text()
+        self.prof.write()
+        
+    def loadSettings(self):
+        
+        # Handle settings
+        self.prof = mpProfile(filename=mp_settings)
+        self.prof.load()
+   
+        self.ui.cbPort.setCurrentText(self.prof.port)
+        self.ui.cbBitrate.setCurrentText(self.prof.bitrate)
+        self.ui.cbStopBits.setCurrentText(self.prof.stopbits)
+        self.ui.cbBits.setCurrentText(self.prof.databits)
+        self.ui.cbParity.setCurrentText(self.prof.port)
 
-    def loadProfile(self, prof):
-        self.setCbText(self.ui.cbPort, prof.port)
-        self.setCbText(self.ui.cbBitrate, prof.bitrate)
-        self.setCbData(self.ui.cbBits, prof.databits)
-        self.setCbData(self.ui.cbStopBits, prof.stopbits)
-        self.setCbData(self.ui.cbParity, prof.parity)
-        self.setCbData(self.ui.cbFlowControl, prof.flowcontrol)
-        self.setCbData(self.ui.cbDisplay, prof.display)
-        self.ui.leSyncString.setText(prof.sync)
+        #self.ui.cbFlowControl.setCurrentText(self.settings["bitrate"])
+
+        # self.setCbText(self.ui.cbPort, prof.port)
+        # self.setCbText(self.ui.cbBitrate, prof.bitrate)
+        # self.setCbData(self.ui.cbBits, prof.databits)
+        # self.setCbData(self.ui.cbStopBits, prof.stopbits)
+        # self.setCbData(self.ui.cbParity, prof.parity)
+        # self.setCbData(self.ui.cbFlowControl, prof.flowcontrol)
+        # self.setCbData(self.ui.cbDisplay, prof.display)
+        # self.ui.leSyncString.setText(prof.sync)
 
     def exitProgram(self, e):
-        self.saveProfile(self.mpDefault)
-
-        self.serial.close()
+        self.sp.serial_port.close()
+        self.saveSettings()
         self.close()
 
     def ss(self, str):
@@ -952,7 +970,7 @@ class MainForm(QMainWindow):
         return nstr
 
     def appendInfo(self, desc, data):
-        self.ui.textEdit.insertHtml(
+        self.appendHtml(    
             f"<b>{self.ss(desc)}</b><code><font color='Green'>{data}<br>"
         )
 
@@ -965,17 +983,16 @@ class MainForm(QMainWindow):
             self.appendInfo("Product id:", str(port.productIdentifier()))
             self.appendInfo("Manufacturer:", port.manufacturer())
             self.appendInfo("Description:", port.description())
-            #self.ui.textEdit.insertHtml("<hr>")
-            self.ui.textEdit.insertHtml("<br>")
+            self.appendHtml("<br>")
 
     def new(self):
         subprocess.Popen([f"{self_dir}/mpterm.py"], shell=False)
 
-    def openFile(self):
-        dlg = QFileDialog()
-        dlg.setFileMode(QFileDialog.AnyFile)
-        dlg.setFilter("Text files (*.txt)")
-        filenames = QStringList()
+    # def openFile(self):
+    #     dlg = QFileDialog()
+    #     dlg.setFileMode(QFileDialog.AnyFile)
+    #     dlg.setFilter("Text files (*.txt)")
+    #     filenames = QStringList()
 
 
 def list_ports():
@@ -984,20 +1001,16 @@ def list_ports():
         print(f"{p.portName()}  {p.description()}  {p.systemLocation()}")
 
 
-def settings():
-    s = QSettings()
-    sys.exit(0)
-
 
 def main():
     logging_format = "[%(levelname)s] %(lineno)d %(funcName)s() : %(message)s"
 
     # options parsing
     parser = argparse.ArgumentParser(
-        prog=app_name, add_help=True, description=app_description
+        prog=App.NAME, add_help=True, description=App.DESCRIPTION
     )
     parser.add_argument(
-        "--version", action="version", version=f"%(prog)s {app_version}"
+        "--version", action="version", version=f"%(prog)s {App.VERSION}"
     )
     parser.add_argument("--info", action="store_true", help="Information about script")
     parser.add_argument("--suspend", action="store_true",
