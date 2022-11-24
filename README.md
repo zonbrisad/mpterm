@@ -10,31 +10,22 @@
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-  - [About](#about)
-  - [Features](#features)
-  - [Requirements](#requirements)
-    - [Runtime](#runtime)
-    - [Development](#development)
-  - [Install](#install)
-    - [Download](#download)
-    - [Installation](#installation)
-    - [Configuration](#configuration)
-  - [Freqlenty asked Questions](#freqlenty-asked-questions)
-  - [History](#history)
-  - [ToDo](#todo)
-  - [Links](#links)
-  - [Contribute](#contribute)
-  - [License](#license)
-  - [Some examples, remove after creation](#some-examples-remove-after-creation)
-- [The largest heading](#the-largest-heading)
-  - [The second largest heading](#the-second-largest-heading)
-          - [The smallest heading](#the-smallest-heading)
-  - [Tables](#tables)
-  - [List](#list)
-  - [Task list](#task-list)
-  - [Colapsed section](#colapsed-section)
-      - [We can hide anything, even code!](#we-can-hide-anything-even-code)
-  - [Links](#links-1)
+- [About](#about)
+- [Features](#features)
+- [Requirements](#requirements)
+  - [Runtime](#runtime)
+  - [Development](#development)
+- [Install](#install)
+  - [Download](#download)
+  - [Installation](#installation)
+  - [Configuration](#configuration)
+- [Freqlenty asked Questions](#freqlenty-asked-questions)
+- [History](#history)
+- [ToDo](#todo)
+- [Links](#links)
+- [Contribute](#contribute)
+- [License](#license)
+- [Links](#links-1)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -86,6 +77,7 @@
 - Logging
 - Echo mode
 - Suspend button
+- Sync feature
 
 
 

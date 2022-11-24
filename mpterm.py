@@ -39,19 +39,19 @@ from PyQt5.QtGui import QTextCursor, QIcon, QFont, QKeyEvent, QCloseEvent
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
+    QDialog,
+    QVBoxLayout,
     QMenu,
     QMenuBar,
     QAction,
     QStatusBar,
-    QDialog,
-    QVBoxLayout,
     QHBoxLayout,
+    QLabel,
     QTextEdit,
     QDialogButtonBox,
     QPushButton,
     QMessageBox,
     QWidget,
-    QLabel,
     QFileDialog,
 )
 
@@ -59,6 +59,8 @@ from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
 from ui_MainWindow import Ui_MainWindow
 from dataclasses import dataclass
 from escape import Esc, Escape, EscapeDecoder, Ascii, e2h, hex2str, TerminalState
+
+import AboutDialogXX
 
 # Settings ------------------------------------------------------------------
 
@@ -258,31 +260,14 @@ class MpTerm:
     # SHOW_CURSOR = "\x1b[?25h"  # show cursor
 
 
-colorTest = f"""
-BLACK 
-{Esc.RED}RED
-{Esc.GREEN}GREEN{Esc.RESET}
-YELLOW
-BLUE
-MAGENTA
-CYAN
-GRAY 
-DARKGRAY 
-"""
-
 # Code ----------------------------------------------------------------------
 
 
 about_html = f"""
+<center><img src={App.ICON} width="54" height="54"></center>
 <center><h2>{App.NAME}</h2></center>
-<br>
 
-<table>
-  <tr>
-    <td> 
-      <img src={App.ICON} width="48" height="48">
-    </td>
-    <td>
+
       <table>
         <tr>
           <td> 
@@ -318,8 +303,7 @@ about_html = f"""
           </td>
         </tr>
       </table>
-  </tr>
-</table>
+
 <hr>
 <br>
 {App.DESCRIPTION}
@@ -379,6 +363,7 @@ class mpProfile:
         jsonDict["databits"] = self.databits
         jsonDict["parity"] = self.parity
         jsonDict["stopbits"] = self.stopbits
+        jsonDict["flowcontrol"] = self.flowcontrol
         return jsonDict
 
     def fromJSON(self, jsonDict):
@@ -388,6 +373,7 @@ class mpProfile:
         self.databits = jsonDict["databits"]
         self.parity = jsonDict["parity"] 
         self.stopbits = jsonDict["stopbits"]
+        self.flowcontrol = jsonDict["flowcontrol"] 
 
     def write(self):
         with open(self.filename, "w") as outfile:
@@ -545,9 +531,6 @@ class MainForm(QMainWindow):
         self.ui.cbParity.addItem("Even", QSerialPort.EvenParity)
         self.ui.cbParity.setCurrentIndex(0)
 
-        # self.ui.cbFlowControl.addItem("No Flow Control", QSerialPort.NoFlowControl)
-        # self.ui.cbFlowControl.addItem("Hardware Control", QSerialPort.HardwareControl)
-        # self.ui.cbFlowControl.addItem("Software Control", QSerialPort.SoftwareControl)
         self.ui.cbFlowControl.addItem("None", QSerialPort.NoFlowControl)
         self.ui.cbFlowControl.addItem("Hardware", QSerialPort.HardwareControl)
         self.ui.cbFlowControl.addItem("Software", QSerialPort.SoftwareControl)
@@ -572,6 +555,11 @@ class MainForm(QMainWindow):
         self.ui.cbDisplay.addItem("Ascii", MpTerm.Ascii)
         self.ui.cbDisplay.addItem("Hex", MpTerm.Hex)
         #self.ui.cbDisplay.addItem("Hex + Ascii", MpTerm.AsciiHex)
+
+        self.ui.cbProfiles.addItem("Default", 0)
+        self.ui.cbProfiles.addItem("115299", 2)
+        self.ui.cbProfiles.addItem("New...", 3)
+        self.ui.cbProfiles.hide()
 
         self.ui.cbRTS.clicked.connect(self.handle_rts)
         
@@ -603,10 +591,9 @@ class MainForm(QMainWindow):
 
         self.ui.bpTest1.pressed.connect(lambda: self.send(b"ABCD"))
         self.ui.bpTest2.pressed.connect(lambda: self.send(b"0123456789"))
-        self.ui.colorTest.pressed.connect(lambda: self.send(colorTest))
+        #self.ui.colorTest.pressed.connect(lambda: self.send(colorTest))
         self.ui.leSyncString.textChanged.connect(self.syncChanged)
 
-        
         #self.ui.textEdit.setReadOnly(True)
         #self.ui.textEdit.keyReleaseEvent.connect(lambda: print("Hep"))
         
@@ -669,6 +656,7 @@ class MainForm(QMainWindow):
 
     def about(self) -> None:
         AboutDialog.about()
+        #AboutDialogXX.about(App)
 
     def port_handler(self):
         if self.state == State.DISCONNECTED:
@@ -746,13 +734,12 @@ class MainForm(QMainWindow):
         return
 
     def actionClear(self):
-        pass
-        # self.ui.textEdit.clear()
+        self.terminal.clear()
 
     # scroll down to bottom
     def scrollDown(self):
-        #vsb = self.ui.textEdit.verticalScrollBar()
-        #vsb.setValue(vsb.maximum())
+        vsb = self.ui.textEdit.verticalScrollBar()
+        vsb.setValue(vsb.maximum())
         pass
 
     def _message(self, msg):
@@ -800,14 +787,15 @@ class MainForm(QMainWindow):
                 #logging.debug(x)
                 if x == Ascii.NL:
                     self.appendHtml("<br>")
-                    self.terminal.moveCursor(QTextCursor.StartOfLine)
+                    #self.terminal.moveCursor(QTextCursor.StartOfLine)
+                    #self.terminal.moveCursor(QTextCursor.L)
                     continue
 
                 if x == Ascii.CR:
-                    self.terminal.moveCursor(QTextCursor.StartOfLine)
+                    #self.terminal.moveCursor(QTextCursor.StartOfLine)
                     logging.debug("Carriage return")
-                    continue
                     self.appendHtml("<br>")
+                    continue
 
                 if x == Esc.RETURN:
                     self.terminal.moveCursor(QTextCursor.StartOfLine)
@@ -815,6 +803,14 @@ class MainForm(QMainWindow):
 
                 if x == Esc.UP:
                     self.terminal.moveCursor(QTextCursor.Up)
+                    continue
+                
+                if x == Esc.BACK:
+                    self.terminal.moveCursor(QTextCursor.Left)
+                    continue
+                
+                if x == Esc.FORWARD:
+                    self.terminal.moveCursor(QTextCursor.Right)
                     continue
 
                 if x == " ":
@@ -944,7 +940,8 @@ class MainForm(QMainWindow):
         self.ui.cbBitrate.setCurrentText(self.prof.bitrate)
         self.ui.cbStopBits.setCurrentText(self.prof.stopbits)
         self.ui.cbBits.setCurrentText(self.prof.databits)
-        self.ui.cbParity.setCurrentText(self.prof.port)
+        self.ui.cbParity.setCurrentText(self.prof.parity)
+        self.ui.cbFlowControl.setCurrentText(self.prof.flowcontrol)
 
         #self.ui.cbFlowControl.setCurrentText(self.settings["bitrate"])
 
