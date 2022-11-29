@@ -173,7 +173,46 @@ text_attr() { ##D Font color attributes
 }
 
 color() { ##D Standard 16 colors
-  FCOLORS=(E_BLACK E_RED E_GREEN E_YELLOW E_BLUE E_MAGENTA E_CYAN E_GRAY E_DARKGRAY E_BR_RED E_BR_GREEN E_BR_YELLOW E_BR_BLUE E_BR_MAGENTA E_BR_CYAN E_WHITE)
+  # ANSI foreground colors codes
+  #
+  E_FG_BLACK=$'\e[0;30m'      # Black
+  E_FG_RED=$'\e[31m'          # Red
+  E_FG_GREEN=$'\e[32m'        # Green
+  E_FG_YELLOW=$'\e[33m'       # Yellow
+  E_FG_BLUE=$'\e[34m'         # Blue
+  E_FG_MAGENTA=$'\e[35m'      # Magenta
+  E_FG_CYAN=$'\e[36m'         # Cyan
+  E_FG_GRAY=$'\e[37m'         # Gray
+  E_FG_DARKGRAY=$'\e[1;30m'   # Dark Gray
+  E_FG_BR_RED=$'\e[1;31m'     # Bright Red
+  E_FG_BR_GREEN=$'\e[1;32m'   # Bright Green
+  E_FG_BR_YELLOW=$'\e[1;33m'  # Bright Yellow
+  E_FG_BR_BLUE=$'\e[1;34m'    # Bright Blue
+  E_FG_BR_MAGENTA=$'\e[1;35m' # Bright Magenta
+  E_FG_BR_CYAN=$'\e[1;36m'    # Bright Cyan
+  E_FG_WHITE=$'\e[1;37m'      # White
+
+  # ANSI background color codes
+  #
+  E_BG_BLACK=$'\e[40m'   # Black
+  E_BG_RED=$'\e[41m'     # Red
+  E_BG_GREEN=$'\e[42m'   # Green
+  E_BG_YELLOW=$'\e[43m'  # Yellow
+  E_BG_BLUE=$'\e[44m'    # Blue
+  E_BG_MAGENTA=$'\e[45m' # Magenta
+  E_BG_CYAN=$'\e[46m'    # Cyan
+  E_BG_GRAY=$'\e[47m'    # Gray
+
+  E_BG_DARK_GRAY=$'\e[48;5;8m'   # Dark gray
+  E_BG_BR_RED=$'\e[48;5;9m'      # Bright Red
+  E_BG_BR_GREEN=$'\e[48;5;10m'   # Bright Green
+  E_BG_BR_YELLOW=$'\e[48;5;11m'  # Bright Yellow
+  E_BG_BR_BLUE=$'\e[48;5;12m'    # Bright Blue
+  E_BG_BR_MAGENTA=$'\e[48;5;13m' # Bright Magenta
+  E_BG_BR_CYAN=$'\e[48;5;14m'    # Bright Cyan
+  E_BG_WHITE=$'\e[48;5;15m'      # White
+
+  FCOLORS=(E_FG_BLACK E_FG_RED E_FG_GREEN E_FG_YELLOW E_FG_BLUE E_FG_MAGENTA E_FG_CYAN E_FG_GRAY E_FG_DARKGRAY E_FG_BR_RED E_FG_BR_GREEN E_FG_BR_YELLOW E_FG_BR_BLUE E_FG_BR_MAGENTA E_FG_BR_CYAN E_FG_WHITE)
   BCOLORS=(E_BG_BLACK E_BG_RED E_BG_GREEN E_BG_YELLOW E_BG_BLUE E_BG_MAGENTA E_BG_CYAN E_BG_WHITE)
   BCOLORS_BR=(E_BG_DARK_GRAY E_BG_BR_RED E_BG_BR_GREEN E_BG_BR_YELLOW E_BG_BR_BLUE E_BG_BR_MAGENTA E_BG_BR_CYAN E_BG_GRAY)
 
@@ -184,23 +223,23 @@ color() { ##D Standard 16 colors
     eval "FG=\$$fc"
     for bc in "${BCOLORS[@]}"; do
       eval "BG=\$$bc"
-      printf "${FG}${BG} %-13s${E_RESET}" "$fc"
+      printf "${FG}${BG} %-15s${E_RESET}" "$fc"
     done
     echo
   done
 
   echo
 
-  for fc in "${FCOLORS[@]}"; do
-    eval "FG=\$$fc"
-    for bc in "${BCOLORS_BR[@]}"; do
-      eval "BG=\$$bc"
-      printf "${FG}${BG} %-13s${E_RESET}" "$fc"
-    done
-    echo
-  done
+  # for fc in "${FCOLORS[@]}"; do
+  #   eval "FG=\$$fc"
+  #   for bc in "${BCOLORS_BR[@]}"; do
+  #     eval "BG=\$$bc"
+  #     printf "${FG}${BG} %-15s${E_RESET}" "$fc"
+  #   done
+  #   echo
+  # done
 
-  echo
+  # echo
 }
 #---------------------------------------------------------------------
 # Bashplate modules
