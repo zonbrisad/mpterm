@@ -24,13 +24,13 @@
 #
 #
 
+from __future__ import annotations
 from dataclasses import dataclass
 import subprocess
 import enum
 import logging
 import os
 from enum import Enum, auto
-
 
 class Ascii:
     NULL = "\0"
@@ -98,75 +98,123 @@ def hex2str(c: int) -> str:
     return chr(c)
 
 
-# class CType(Enum):
-#     NONE = 0
-#     CHARACTER = 1
-#     ESC_CSI = 2
+class CSI(Enum):
+    """Control Sequence Introducer
 
+    Args:
+        Enum (_type_): _description_
+    """
 
+    CURSOR_UP = "A"
+    CURSOR_DOWN = "B"
+    CURSOR_FORWARD = "C"
+    CURSOR_BACK = "D"
+    CURSOR_NEXT_LINE = "E"
+    CURSOR_PREVOIUS_LINE = "F"
+    CURSOR_HORIZONTAL_ABSOLUTE = "G"
+    CURSOR_POSITION = "H"
+    ERASE_IN_DISPLAY = "J"
+    ERASE_IN_LINE = "K"
+    ERASE_SCROLL_UP = "S"
+    ERASE_SCROLL_DOWN = "T"
+    SGR = "m" # Select graphics rendition (SGR)
+    AUX = "i"
+    DSR = "n" # Device statur report
 
-class Escape(Enum):
-    BLACK = auto()
-    RED = auto()
-    GREEN = auto()
-    YELLOW = auto()
-    BLUE = auto()
-    MAGENTA = auto()
-    CYAN = auto()
-    GRAY = auto()
-    DARKGRAY = auto()
-    BRIGHT_RED = auto()
-    BRIGHT_GREEN = auto()
-    BRIGHT_YELLOW = auto()
-    BRIGHT_BLUE = auto()
-    BRIGHT_MAGENTA = auto()
-    BRIGHT_CYAN = auto()
-    WHITE = auto()
+    UNSUPPORED = "UNSUP"
 
-    # ANSI background color codes
-    #
-    ON_BLACK = auto()
-    ON_RED = auto()
-    ON_GREEN = auto()
-    ON_YELLOW = auto()
-    ON_BLUE = auto()
-    ON_MAGENTA = auto()
-    ON_CYAN = auto()
-    ON_WHITE = auto()
+    @staticmethod
+    def decode(s) -> CSI:
+        if not s[0] == Esc.ESCAPE:
+            return None
 
-    # ANSI Text attributes
-    ATTR_NORMAL = auto()
-    ATTR_BOLD = auto()
-    ATTR_LOWINTENSITY = auto()
-    ATTR_ITALIC = auto()
-    ATTR_UNDERLINE = auto()
-    ATTR_SLOWBLINK = auto()
-    ATTR_FASTBLINK = auto()
-    ATTR_REVERSE = auto()
-    ATTR_FRACTUR = auto()
-    ATTR_FRAMED = auto()
-    ATTR_OVERLINED = auto()
-    ATTR_SUPERSCRIPT = auto()
-    ATTR_SUBSCRIPT = auto()
-    
-    END = auto()
-    CLEAR = auto()
-    RESET = auto()
-    
-    WONR = auto()
+        tc = s[-1] # termination character in Escape sequence
 
-    # ANSI cursor operations
-    #
-    RETURN = auto()
-    UP = auto()
-    DOWN = auto()
-    FORWARD = auto()
-    BACK = auto()
-    HIDE = auto()
-    SHOW = auto()
+        for x in CSI:
+            if tc == x.value:
+                logging.debug(f"Found {x}")
+                return x
+
+        logging.debug(f"Found {CSI.UNSUPPORED}")
+        return CSI.UNSUPPORED
+
  
+class SGR(Enum):
+    """Control Sequence Introducer
 
+    Args:
+        Enum (_type_): _description_
+    """
 
+    # SGR (Select Graphic Rendition)
+    RESET = "0" # Reset all attributes
+    BOLD = "1" # Bold/increased intensity
+    DIM = "2"  # Dim/decreased intensity
+    ITALIC = "3"
+    UNDERLINE = "4"
+    SLOW_BLINK = "5"
+    RAPID_BLINK = "6"
+    REVERSE_VIDEO = "7"
+    CONCEAL = "8"
+    STRIKE = "9"
+    PRIMARY = "10" # Primary (default) font
+
+    FRACTUR = "20" # Gothic 
+    DOUBLE_UNDERLINE = "21" 
+
+    NORMAL_INTENSITY = "22"
+    NOT_ITALIC = "23"
+    NOT_UNDERLINED = "24"
+    NOT_BLINKING = "25"
+    NOT_REVERSED = "27"
+    REVEAL = "28"
+    NOT_CROSSED = "29"
+    FG_COLOR_BLACK = "30"
+    FG_COLOR_RED = "31"
+    FG_COLOR_GREEN = "32"
+    FG_COLOR_YELLOW = "33"
+    FG_COLOR_BLUE = "34"
+    FG_COLOR_MAGENTA = "35"
+    FG_COLOR_CYAN = "36"
+    FG_COLOR_WHITE = "37"
+    
+    BG_COLOR_BLACK = "40"
+    BG_COLOR_RED = "41"
+    BG_COLOR_GREEN = "42"
+    BG_COLOR_YELLOW = "43"
+    BG_COLOR_BLUE = "44"
+    BG_COLOR_MAGENTA = "45"
+    BG_COLOR_CYAN = "46"
+    BG_COLOR_WHITE = "47"
+
+    FRAMED = "51"
+
+    SUPERSCRIPT = "73"
+    SUBSCRIPT = "74"
+
+    UNSUPPORTED = "UNSP"
+    
+    @staticmethod
+    def decode(s):
+        if not s[0] == Esc.ESCAPE or not s[-1] == "m":
+            return None
+
+        x = s[2:-1]
+        sp = x.split(";")
+        xx = []
+        for c in sp:
+            if c == "":
+                xx.append(SGR.RESET)
+            else:
+                for a in SGR:
+                    if c == a.value:
+                        xx.append(a)
+
+        # if isinstance(t, SGR):
+        logging.debug(f"SGR: {xx}")
+        return xx          
+                
+            
 class Esc:
     ESCAPE = "\x1b"
 
@@ -178,7 +226,7 @@ class Esc:
     BLUE = '\x1b[0;34m'         # Blue
     MAGENTA = '\x1b[0;35m'      # Magenta
     CYAN = '\x1b[0;36m'         # Cyan
-    GRAY = '\x1b[0;37m'         # Gray
+    WHITE = '\x1b[0;37m'         # Gray
     DARKGRAY = '\x1b[1;30m'     # Dark Gray
     BR_RED = '\x1b[1;31m'       # Bright Red
     BR_GREEN = '\x1b[1;32m'     # Bright Green
@@ -186,7 +234,7 @@ class Esc:
     BR_BLUE = '\x1b[1;34m'      # Bright Blue
     BR_MAGENTA = '\x1b[1;35m'   # Bright Magenta
     BR_CYAN = '\x1b[1;36m'      # Bright Cyan
-    WHITE = '\x1b[1;37m'        # White
+    BR_WHITE = '\x1b[1;37m'     # White
 
     # ANSI background color codes
     #
@@ -214,10 +262,9 @@ class Esc:
     ATTR_SUPERSCRIPT = "\x1b[73m" # Superscript
     ATTR_SUBSCRIPT = "\x1b[74m"   # Subscript
     
-
     END = "\x1b[0m"
     CLEAR = "\x1b[2J"
-    RESET = "\x1bc"
+    RESET = "\x1b[m"
     
     WONR = "\x1b[1;47\x1b[1;31m"
 
@@ -232,11 +279,12 @@ class Esc:
     END = "\x1b[m"              # Clear Attributes
 
     # ANSI movement codes 
-    CUR_RETURN = '\x1b[;0F'     # cursor return
-    CUR_UP = '\x1b[;0A'         # cursor up
-    CUR_DOWN = '\x1b[;0B'       # cursor down
-    CUR_FORWARD = '\x1b[;0C'    # cursor forward
-    CUR_BACK = '\x1b[;0D'       # cursor back
+    CUR_UP = '\x1b[A'         # cursor up
+    CUR_DOWN = '\x1b[B'       # cursor down
+    CUR_FORWARD = '\x1b[C'    # cursor forward
+    CUR_BACK = '\x1b[;D'       # cursor back
+    CUR_RETURN = '\x1b[F'     # cursor return
+    
     CUR_HIDE = '\x1b[?25l'      # hide cursor
     CUR_SHOW = '\x1b[?25h'      # show cursor
     
@@ -269,145 +317,64 @@ class Esc:
 
 
 escape2html = {
-    Escape.BLACK: [ Esc.BLACK, "black"],
-    Escape.RED: [ Esc.RED, "red"],
-    Escape.GREEN: [ Esc.GREEN, "green"],
-    Escape.YELLOW: [ Esc.YELLOW, "yellow"],
-    Escape.BLUE: [ Esc.BLUE, "blue"],
-    Escape.MAGENTA: [ Esc.MAGENTA, "magenta"],
-    Escape.CYAN: [ Esc.CYAN, "cyan"],
-    Escape.GRAY: [ Esc.GRAY, "gray"],
-    Escape.DARKGRAY: [ Esc.DARKGRAY, "darkgray"],
-    Escape.BRIGHT_RED: [ Esc.BR_RED, "red"],
-    Escape.BRIGHT_GREEN: [ Esc.BR_GREEN, "green"],
-    Escape.BRIGHT_YELLOW: [ Esc.BR_YELLOW, "yellow"],
-    Escape.BRIGHT_BLUE: [ Esc.BR_BLUE, "blue"],
-    Escape.BRIGHT_MAGENTA: [ Esc.BR_MAGENTA, "magenta"],
-    Escape.BRIGHT_CYAN: [ Esc.BR_CYAN, "cyan"],
-    Escape.WHITE: [ Esc.WHITE, "white"],
+    SGR.FG_COLOR_BLACK: [ Esc.BLACK, "black"],
+    SGR.FG_COLOR_RED: [ Esc.RED, "red"],
+    SGR.FG_COLOR_GREEN: [ Esc.GREEN, "green"],
+    SGR.FG_COLOR_YELLOW: [ Esc.YELLOW, "yellow"],
+    SGR.FG_COLOR_BLUE: [ Esc.BLUE, "blue"],
+    SGR.FG_COLOR_MAGENTA: [ Esc.MAGENTA, "magenta"],
+    SGR.FG_COLOR_CYAN: [ Esc.CYAN, "cyan"],
+    SGR.FG_COLOR_WHITE: [ Esc.WHITE, "white"],
+    #SGR.FG_COLOR_BR_BLACK: [ Esc.DARKGRAY, "darkgray"],
+    # SGR.FG_COLOR_BR_RED: [ Esc.BR_RED, "red"],
+    # SGR.FG_COLOR_BR_GREEN: [ Esc.BR_GREEN, "green"],
+    # SGR.FG_COLOR_BR_YELLOW: [ Esc.BR_YELLOW, "yellow"],
+    # SGR.FG_COLOR_BR_BLUE: [ Esc.BR_BLUE, "blue"],
+    # SGR.FG_COLOR_BR_MAGENTA: [ Esc.BR_MAGENTA, "magenta"],
+    # SGR.FG_COLOR_BR_CYAN: [ Esc.BR_CYAN, "cyan"],
+    # SGR.FG_COLOR_BR_WHITE: [ Esc.BR_WHITE, "white"],
 
     # ANSI background color codes
     #
-    Escape.ON_BLACK: [ Esc.ON_BLACK, "black"],
-    Escape.ON_RED: [ Esc.ON_RED, "red"],
-    Escape.ON_GREEN: [ Esc.ON_GREEN, "green"],
-    Escape.ON_YELLOW: [ Esc.ON_YELLOW, "yellow"],
-    Escape.ON_BLUE: [ Esc.ON_BLUE, "blue"],
-    Escape.ON_MAGENTA: [ Esc.ON_MAGENTA, "magenta"],
-    Escape.ON_CYAN: [ Esc.ON_CYAN, "cyan"],
-    Escape.ON_WHITE: [ Esc.ON_WHITE, "white"],
+    SGR.BG_COLOR_BLACK: [ Esc.ON_BLACK, "black"],
+    SGR.BG_COLOR_RED: [ Esc.ON_RED, "red"],
+    SGR.BG_COLOR_GREEN: [ Esc.ON_GREEN, "green"],
+    SGR.BG_COLOR_YELLOW: [ Esc.ON_YELLOW, "yellow"],
+    SGR.BG_COLOR_BLUE: [ Esc.ON_BLUE, "blue"],
+    SGR.BG_COLOR_MAGENTA: [ Esc.ON_MAGENTA, "magenta"],
+    SGR.BG_COLOR_CYAN: [ Esc.ON_CYAN, "cyan"],
+    SGR.BG_COLOR_WHITE: [ Esc.ON_WHITE, "white"],
 
     # ANSI Text attributes
-    Escape.ATTR_NORMAL: [ Esc.ATTR_NORMAL, "normal"],
-    Escape.ATTR_BOLD: [ Esc.ATTR_BOLD, "bold"],
-    Escape.ATTR_LOWINTENSITY: [ Esc.ATTR_LOWINTENSITY, ""],
-    Escape.ATTR_ITALIC: [ Esc.ATTR_ITALIC, ""],
-    Escape.ATTR_UNDERLINE: [ Esc.ATTR_UNDERLINE, ""],
-    Escape.ATTR_SLOWBLINK: [ Esc.ATTR_SLOWBLINK, ""],
-    Escape.ATTR_FASTBLINK: [ Esc.ATTR_FASTBLINK, ""],
-    Escape.ATTR_REVERSE: [ Esc.ATTR_REVERSE, ""],
-    Escape.ATTR_FRACTUR: [ Esc.ATTR_FRACTUR, ""],
-    Escape.ATTR_FRAMED: [ Esc.ATTR_FRAMED, ""],
-    Escape.ATTR_OVERLINED: [ Esc.ATTR_OVERLINED, ""],
-    Escape.ATTR_SUPERSCRIPT: [ Esc.ATTR_SUPERSCRIPT, ""],
-    Escape.ATTR_SUBSCRIPT: [ Esc.ATTR_SUBSCRIPT, ""],
-    
-    Escape.END: [ Esc.END, "" ]
-    # Escape.CLEAR: [ Esc. ],
-    # Escape.RESET: [ Esc. ],
-    
-    # Escape.WONR: [ Esc. ],
-
-    # # ANSI cursor operations
-    # #
-    # Escape.RETURN: [ Esc. ],
-    # Escape.UP: [ Esc. ],
-    # Escape.DOWN: [ Esc. ],
-    # Escape.FORWARD: [ Esc. ],
-    # Escape.BACK: [ Esc. ],
-    # Escape.HIDE: [ Esc. ],
-    # Escape.SHOW: [ Esc. ],    
-
+    SGR.RESET: [ Esc.ATTR_NORMAL, "normal"],
+    SGR.BOLD: [ Esc.ATTR_BOLD, "bold"],
+    SGR.DIM: [ Esc.ATTR_LOWINTENSITY, ""],
+    SGR.ITALIC: [ Esc.ATTR_ITALIC, ""],
+    SGR.UNDERLINE: [ Esc.ATTR_UNDERLINE, ""],
+    SGR.SLOW_BLINK: [ Esc.ATTR_SLOWBLINK, ""],
+    SGR.RAPID_BLINK: [ Esc.ATTR_FASTBLINK, ""],
+    SGR.REVERSE_VIDEO: [ Esc.ATTR_REVERSE, ""],
+    SGR.FRACTUR: [ Esc.ATTR_FRACTUR, ""],
+    SGR.FRAMED: [ Esc.ATTR_FRAMED, ""],
+    SGR.STRIKE: [ Esc.ATTR_OVERLINED, ""],
+    SGR.SUPERSCRIPT: [ Esc.ATTR_SUPERSCRIPT, ""],
+    SGR.SUBSCRIPT: [ Esc.ATTR_SUBSCRIPT, ""],
+    SGR.RESET: [ Esc.END, "" ]
 }
 
 
-def e2h(s: str) -> Escape:
-    if s[0] != Esc.ESCAPE:
-        return None
 
-    for x, y in escape2html.items():
-        if y[0] == s:
-            return x
 
-    return None
-
-def escape2string(s: str) -> str:
-    if s[0] != Esc.ESCAPE:
-        # return "Not escape sequence"
-        return str
-
-    for x, y in escape2html.items():
-        if y[0] == s:
-            return f"'\\x1b{s[1:]}' {x}"
-
-    return f"'\\x1b{s[1:]}' Sequence not supported"
-
-def esc2html(e: Escape) -> str:
-    return escape2html[e][1]
-
-@dataclass
-class TerminalState:
-    color:Escape = Escape.BLACK
-    bg_color:Escape = Escape.ON_WHITE
-    attribute:Escape = Escape.ATTR_NORMAL
-    cur_x = None
-    cur_y = None
-
-    def update(self, es) -> None:
-        #logging.debug(es)
-        if es == Escape.END:
-            self.color = Escape.BLACK
-            self.bg_color = Escape.WHITE
-            self.attribute = Escape.ATTR_NORMAL
-            
-        if es in [Escape.BLACK, Escape.RED, Escape.GREEN, Escape.YELLOW, Escape.BLUE,
-                  Escape.MAGENTA, Escape.CYAN, Escape.GRAY, Escape.DARKGRAY, Escape.BRIGHT_RED,
-                  Escape.BRIGHT_GREEN, Escape.BRIGHT_YELLOW, Escape.BRIGHT_BLUE, Escape.BRIGHT_MAGENTA,
-                  Escape.BRIGHT_CYAN, Escape.WHITE]:
-            self.color = es
-        logging.debug(f"{self.color}")
-
-    def state2html(self, s: str) -> str:
-        #x = f"""<span style="color:{esc2html(self.color)};background-color:{};font-weight:{}">{s}</span>"""
-        x = f"""<pre><span style="color:{esc2html(self.color)}">{s}</span></pre>"""
-        logging.debug(x)
-        return x
-
-FLAG_BLUE="\x1b[48;5;20m"
-FLAG_YELLOW="\x1b[48;5;226m"
-
-flag = f"""
-{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Esc.END}
-{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Esc.END}
-{FLAG_YELLOW}                 {Esc.END}
-{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Esc.END}
-{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Esc.END}
-"""
-      
 class EscapeDecoder():
     nls = ["\n", "\x0d", "\x1b"]
     
     def __init__(self):
         self.idx = 0
-        self.clear()
         self.seq = False
+        self.clear()
         
     def clear(self):
         self.buf = ""
-   
-    def append(self, ch):
-        self.buf += ch 
-        #self.buf.append(ch)
 
     def append_string(self, s:str) -> None:
         self.buf += s
@@ -432,22 +399,25 @@ class EscapeDecoder():
 
     def __next__(self):
         l = len(self.buf)
-        if l == 0:                # Buffer is empty, abort iteration
+        if l == 0:                     # Buffer is empty, abort iteration
             raise StopIteration
 
         j = 0
 
-        if self.buf[j] == Esc.ESCAPE:              # Escape sequence found
+        if self.buf[j] == Esc.ESCAPE:  # Escape sequence start character found
             while j<l and not self.buf[j].isalpha():
                 j += 1
             if j == l:
                 raise StopIteration
-            # Complete Escape sequence
-            if self.buf[j].isalpha():
+            
+            if self.buf[j].isalpha():  # Termination character found
                 res = self.buf[0:j+1]
                 self.buf = self.buf[j+1:]
-                logging.debug(f"Found escape sequence: {escape2string(res)}")
-                # logging.debug(f"Found escape sequence: {e2h(res)}")
+                logging.debug(f"Found escape sequence: '\\x1b{res[1:]}' ")
+
+                csi = CSI.decode(res)
+                if csi == CSI.SGR:
+                    SGR.decode(res)
                 return res
             
             # Escape sequence not complete, abort iteration
@@ -475,6 +445,62 @@ class EscapeDecoder():
         return res
 
 
+
+
+class TerminalState:
+    bold : bool = False
+    faint : bool = False
+    italic : bool = False
+    underline : bool = False
+    slow_blink : bool = False
+    rapid_blink : bool = False
+    reverse_video : bool = False
+    strike : bool = False
+    
+    color:SGR = SGR.FG_COLOR_BLACK
+    bg_color:SGR = SGR.BG_COLOR_WHITE
+    attribute:SGR = SGR.RESET
+    cur_x = None
+    cur_y = None
+
+    def __init__(self) -> None:
+        self.ed = EscapeDecoder()
+        self.reset()
+        
+
+    def reset(self):
+        self.faint = False
+        self.italic = False
+        self.underline = False
+        self.slow_blink = False
+        self.rapid_blink = False
+        self.reverse_video = False
+        self.strike = False
+        self.color = SGR.FG_COLOR_BLACK
+        self.bg_color = SGR.BG_COLOR_WHITE
+        self.ed.clear()
+        
+    def update(self, str : str) -> None:
+        logging.debug(f"{self.color}")
+
+    def state2html(self, s: str) -> str:
+        #x = f"""<span style="color:{esc2html(self.color)};background-color:{};font-weight:{}">{s}</span>"""
+        #x = f"""<pre><span style="color:{esc2html(self.color)}">{s}</span></pre>"""
+        #logging.debug(x)
+        #return x
+        return ""
+
+
+FLAG_BLUE="\x1b[48;5;20m"
+FLAG_YELLOW="\x1b[48;5;226m"
+
+flag = f"""
+{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Esc.END}
+{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Esc.END}
+{FLAG_YELLOW}                 {Esc.END}
+{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Esc.END}
+{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Esc.END}
+"""
 escape_attribute_test = f"""  
 {Esc.ATTR_NORMAL}Normal text{Esc.END}
 {Esc.ATTR_BOLD}Bold text{Esc.ATTR_NORMAL}
@@ -495,7 +521,7 @@ escape_attribute_test = f"""
 {Esc.BLUE}Blue{Esc.END}
 {Esc.MAGENTA}Magenta{Esc.END}
 {Esc.CYAN}Cyan{Esc.END}
-{Esc.GRAY}Gray{Esc.END}
+{Esc.WHITE}WHITE{Esc.END}
 {Esc.WHITE}White{Esc.END}
 {Esc.DARKGRAY}Dark Gray{Esc.END}
 {Esc.BR_RED}Bright Red{Esc.END}
@@ -506,6 +532,11 @@ escape_attribute_test = f"""
 {Esc.BR_CYAN}Bright Cyan{Esc.END}
 """
 
+cursor_test = f"""
+{Esc.CUR_DOWN} asdf {Esc.CUR_UP}  {Esc.CUR_BACK} {Esc.CUR_FORWARD} {Esc.ATTR_FRACTUR}
+"""
+
+
 incomplete_escape_sequence = f"""
 {Esc.BR_MAGENTA}Some colored text{Esc.END}
 {Esc.GREEN}Some more text with incomplete escape sequence \x1b["""
@@ -515,38 +546,47 @@ end_with_newline = "Some text with newline end\n"
 def main() -> None:
     logging.basicConfig(format="[%(levelname)s] Line: %(lineno)d %(message)s", level=logging.DEBUG)
    
-    print(escape_attribute_test)
-    print(flag)
+    #print(escape_attribute_test)
+    #print(flag)
 
-    dec = EscapeDecoder()
-    dec.append_string(f"Normal color {Esc.RED}Red color {Esc.END}More normal color {Esc.BLUE}Blue angels {Esc.END}White end")
-    for x in dec:
-        print(f"{x}")
-        
+    # dec = EscapeDecoder()
+    # dec.append_string(f"Normal color {Esc.RED}Red color {Esc.END}More normal color {Esc.BLUE}Blue angels {Esc.END}White end")
+    # for x in dec:
+    #     print(f"{x}")
+
+
+    print(escape_attribute_test)    
     dec2 = EscapeDecoder()
     dec2.append_string(escape_attribute_test)
     for x in dec2:
         pass
-        #print(f"{x}")
 
-    print(escape_attribute_test.replace("\x1b", "\\x1b").replace("\x0a", "\\n").replace("\x0d", '\\c'))
+    # print(escape_attribute_test.replace("\x1b", "\\x1b").replace("\x0a", "\\n").replace("\x0d", '\\c'))
 
-    res = subprocess.Popen(["pmg"], shell=False, stdout=subprocess.PIPE)
-    out, err = res.communicate()
-    dec3 = EscapeDecoder()
-    dec3.append_bytearray(out)    
-    #for x in dec3:
-    #    pass
+    # res = subprocess.Popen(["pmg"], shell=False, stdout=subprocess.PIPE)
+    # out, err = res.communicate()
+    # dec3 = EscapeDecoder()
+    # dec3.append_bytearray(out)    
+    # #for x in dec3:
+    # #    pass
     
-    dec4 = EscapeDecoder()
-    dec4.append_string(incomplete_escape_sequence)
-    for x in dec4:
-        pass
+    # dec4 = EscapeDecoder()
+    # dec4.append_string(incomplete_escape_sequence)
+    # for x in dec4:
+    #     pass
     
-    dec5 = EscapeDecoder()
-    dec5.append_string(end_with_newline)
-    for x in dec5:
-        pass
+    # dec5 = EscapeDecoder()
+    # dec5.append_string(end_with_newline)
+    # for x in dec5:
+    #     pass
+
+    dec6 = EscapeDecoder()
+    dec6.append_string(cursor_test)
+    for x in dec6:
+        pass 
+
+        
+    
 
 if __name__ == "__main__":
     main()

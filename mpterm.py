@@ -58,7 +58,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
 from ui_MainWindow import Ui_MainWindow
 from dataclasses import dataclass
-from escape import Esc, Escape, EscapeDecoder, Ascii, e2h, hex2str, TerminalState
+from escape import Esc, EscapeDecoder, Ascii, hex2str, TerminalState
 
 import AboutDialogXX
 
@@ -79,6 +79,8 @@ class App:
     ICON = f"{self_dir}/icons/mp_icon2.png"
     
 mp_settings = f"{self_dir}/mpterm.json"
+
+
 
 # Definitions ---------------------------------------------------------------
 
@@ -200,64 +202,18 @@ class State(enum.Enum):
     RECONNECTING = 3
 
 
-class MpTerm:
+
+class MpTerm(enum.Enum):
     # Display modes
     Ascii = 0
     Hex = 1
     AsciiHex = 2
+    Terminal = 3
 
     # Newline modes
     Nl = 0
     Cr = 1
     NlCr = 2
-
-    # Black = '<font color="Black">'
-    # Red = '<font color="DarkRed">'
-    # Green = '<font color="Green">'
-    # Yellow = '<font color="Yellow">'
-    # Blue = '<font color="Blue">'
-    # Magenta = '<font color="Purple">'
-    # Cyan = '<font color="Teal">'
-    # Gray = '<font color="Gray">'
-    # Darkgray = '<font color="Black">'
-    # Br_Red = '<font color="Red">'
-    # Br_Green = '<font color="Green">'
-    # Br_Yellow = '<font color="Yellow">'
-    # Br_Blue = '<font color="Blue">'
-    # Br_Magenta = '<font color="Fuchsia">'
-    # Br_Cyan = '<font color="Aqua">'
-    # White = '<font color="White">'
-
-    # ON_BLACK = '<font color="">'
-    # ON_RED = '<font color="">'
-    # ON_GREEN = '<font color="">'
-    # ON_YELLOW = '<font color="">'
-    # ON_BLUE = '<font color="">'
-    # ON_MAGENTA = '<font color="">'
-    # ON_CYAN = '<font color="">'
-    # ON_WHITE = '<font color="">'
-
-    # # ANSI Text attributes
-    # ATTR_BOLD = "\x1b[1m"
-    # ATTR_LOWI = "\x1b[2m"
-    # ATTR_UNDERLINE = "\x1b[4m"
-    # ATTR_BLINK = "\x1b[5m"
-    # ATTR_REVERSE = "\x1b[7m"
-
-    # END = "\x1b[0m"
-    # CLEAR = "\x1b[2J"
-    # RESET = "\x1bc"
-
-    # WONR = "\x1b[1;47\x1b[1;31m"
-
-    # # ANSI movement codes
-    # CUR_RETURN = "\x1b[;0F"  # cursor return
-    # CUR_UP = "\x1b[;0A"  # cursor up
-    # CUR_DOWN = "\x1b[;0B"  # cursor down
-    # CUR_FORWARD = "\x1b[;0C"  # cursor forward
-    # CUR_BACK = "\x1b[;0D"  # cursor back
-    # HIDE_CURSOR = "\x1b[?25l"  # hide cursor
-    # SHOW_CURSOR = "\x1b[?25h"  # show cursor
 
 
 # Code ----------------------------------------------------------------------
@@ -309,7 +265,6 @@ about_html = f"""
 {App.DESCRIPTION}
 <br>
 """
-
 
 class AboutDialog(QDialog):
     def __init__(self, parent=None):
@@ -389,60 +344,12 @@ class mpProfile:
         self.fromJSON(jsd)
 
 
-# class mpProfile:
-#     def __init__(self, group):
-#         self.settings = QSettings(app_org, app_name)
-#         self.group = group
-#         self.setDefaults()
-
-#     def setDefaults(self):
-#         self.alias = "Default"
-#         self.port = "ttyUSB1"
-#         self.bitrate = "9600"
-#         self.databits = QSerialPort.Data8
-#         self.parity = QSerialPort.NoParity
-#         self.stopbits = QSerialPort.OneStop
-#         self.flowcontrol = QSerialPort.NoFlowControl
-#         self.display = MpTerm.Ascii
-#         self.sync = ""
-
-#     def load(self):
-#         self.settings.sync()
-#         self.settings.beginGroup(self.group)
-#         self.alias = self.settings.value("alias", type=str)
-#         self.port = self.settings.value("port", type=str)
-#         self.bitrate = self.settings.value("bitrate", type=str)
-#         self.databits = self.settings.value("databits", type=str)
-#         self.parity = self.settings.value("parity", type=str)
-#         self.stopbits = self.settings.value("stopbits", type=str)
-#         self.flowcontrol = self.settings.value("flowcontrol", type=str)
-#         self.display = self.settings.value("display", type=str)
-#         self.sync = self.settings.value("sync", type=str)
-#         self.settings.endGroup()
-
-#         self.print()
-
-#     def print(self):
-#         print("Port:     ", self.port)
-#         print("Bitrate:  ", self.bitrate)
-
-#     def write(self):
-#         self.settings.beginGroup(self.group)
-#         self.settings.setValue("alias", self.alias)
-#         self.settings.setValue("port", self.port)
-#         self.settings.setValue("bitrate", self.bitrate)
-#         self.settings.setValue("databits", self.databits)
-#         self.settings.setValue("parity", self.parity)
-#         self.settings.setValue("stopbits", self.stopbits)
-#         self.settings.setValue("flowcontrol", self.flowcontrol)
-#         self.settings.setValue("display", self.display)
-#         self.settings.setValue("sync", self.sync)
-#         self.settings.endGroup()
-#         self.settings.sync()
-#         return
-
+template="""
+<pre>
+"""
 
 class TerminalWin(QTextEdit):
+    
     def __init__(self, parent=None, sp=None):
         super().__init__(parent)
         self.sp=sp
@@ -451,6 +358,14 @@ class TerminalWin(QTextEdit):
         self.setFont(font)
         self.setObjectName("textEdit")
         self.setReadOnly(True)
+        self.reset()
+        self.ensureCursorVisible()
+        self.setCursorWidth(2)
+        #self.cursorPositionChanged.connect(host='', port=0, timeout=None, source_address=None)
+        self.cursorPositionChanged.connect(lambda: print("Kalle"))
+
+    def reset(self):
+        self.setHtml(template)
 
     def keyPressEvent(self, e: QKeyEvent) -> None:
         super().keyPressEvent(e)
@@ -484,9 +399,9 @@ class SerialPort:
                 logging.error("Could not write data.")
             
 
-
 class MainForm(QMainWindow):
 
+    # Handle windows close event
     def closeEvent(self, a0: QCloseEvent) -> None:
         self.saveSettings()
         return super().closeEvent(a0)
@@ -622,7 +537,6 @@ class MainForm(QMainWindow):
 
     def signal_usr1(self, signum, frame) -> None:
         logging.debug("USR1 signal received")
-        # self.message("Port suspend signal received")
         if self.state == State.CONNECTED:
             self.serial.close()
             self.state = State.SUSPENDED
@@ -630,7 +544,6 @@ class MainForm(QMainWindow):
             logging.debug("Suspending port")
 
     def signal_usr1_timeout(self) -> None:
-        # if self.signal == True:
         if self.state == State.SUSPENDED: 
             rt = self.signal_timerx.remainingTime()
             self.message(f"Port suspended. Time left {rt / 1000:.0f}")
@@ -651,12 +564,11 @@ class MainForm(QMainWindow):
                 self.messageError(
                 f"Failed to open port /dev/{self.ui.cbPort.currentText()}. {errors[err]}"
                 )
-                #logging.debug("Reconeccting")
+                #logging.debug("Reconecting")
                 self.message("Reconnecting...")
 
     def about(self) -> None:
         AboutDialog.about()
-        #AboutDialogXX.about(App)
 
     def port_handler(self):
         if self.state == State.DISCONNECTED:
@@ -738,7 +650,7 @@ class MainForm(QMainWindow):
 
     # scroll down to bottom
     def scrollDown(self):
-        vsb = self.ui.textEdit.verticalScrollBar()
+        vsb =self.terminal.verticalScrollBar()
         vsb.setValue(vsb.maximum())
         pass
 
@@ -764,7 +676,7 @@ class MainForm(QMainWindow):
 
     def appendHtml(self, str):
         # move cursor to end of buffer
-        #self.terminal.moveCursor(QTextCursor.End)
+        self.terminal.moveCursor(QTextCursor.End)
         self.terminal.insertHtml(str)
 
     def read(self):
@@ -785,8 +697,9 @@ class MainForm(QMainWindow):
             
             for x in self.decoder:
                 #logging.debug(x)
+                #print(x)
                 if x == Ascii.NL:
-                    self.appendHtml("<br>")
+                    #self.appendHtml("<br>")
                     #self.terminal.moveCursor(QTextCursor.StartOfLine)
                     #self.terminal.moveCursor(QTextCursor.L)
                     continue
@@ -813,22 +726,24 @@ class MainForm(QMainWindow):
                     self.terminal.moveCursor(QTextCursor.Right)
                     continue
 
-                if x == " ":
-                    self.appendHtml("&nbsp;")
-                    continue 
+                # if x == " ":
+                #     self.appendHtml("&nbsp;")
+                #     continue 
 
                 if x[0] == Esc.ESCAPE:
-                    self.ts.update(e2h(x))
+                    
+                    #self.ts.update(e2h(x))
                     #e = e2h(x)
                     # if e in [Escape.GREEN]:
                     #     self.ts.color = e
                     # if e == Escape.END:
                     #     self.ts.color = Escape.BLACK
                     #     self.ts.attribute = Escape.ATTR_NORMAL
-
+                    continue
 
                 if x[0] != Esc.ESCAPE:    
-                    self.appendHtml(self.ts.state2html(x))
+                    #self.appendHtml(self.ts.state2html(x))
+                    self.appendHtml(x)
                     #self.appendHtml(x)
 
         elif DisplayMode == MpTerm.Hex:  # Hexadecimal display mode
@@ -865,7 +780,6 @@ class MainForm(QMainWindow):
         self.send(bytearray(data, "utf-8"))
 
     def keyPressEvent(self, a: QKeyEvent):  
-
         logging.debug(f"  {a.key():x}  {get_description(a)}")   
         #self.send_string(get_key(a))
 
