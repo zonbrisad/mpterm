@@ -58,7 +58,8 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
 from ui_MainWindow import Ui_MainWindow
 from dataclasses import dataclass
-from escape import Esc, EscapeDecoder, Ascii, hex2str, TerminalState
+from escape import Esc, EscapeDecoder, Ascii, TerminalState
+from terminalwin import TerminalWin
 
 import AboutDialogXX
 
@@ -348,30 +349,30 @@ template="""
 <pre>
 """
 
-class TerminalWin(QTextEdit):
+# class TerminalWin(QTextEdit):
     
-    def __init__(self, parent=None, sp=None):
-        super().__init__(parent)
-        self.sp=sp
-        font = QFont()
-        font.setFamily("Monospace")
-        self.setFont(font)
-        self.setObjectName("textEdit")
-        self.setReadOnly(True)
-        self.reset()
-        self.ensureCursorVisible()
-        self.setCursorWidth(2)
-        #self.cursorPositionChanged.connect(host='', port=0, timeout=None, source_address=None)
-        self.cursorPositionChanged.connect(lambda: print("Kalle"))
+#     def __init__(self, parent=None, sp=None):
+#         super().__init__(parent)
+#         self.sp=sp
+#         font = QFont()
+#         font.setFamily("Monospace")
+#         self.setFont(font)
+#         self.setObjectName("textEdit")
+#         self.setReadOnly(True)
+#         self.reset()
+#         self.ensureCursorVisible()
+#         self.setCursorWidth(2)
+#         #self.cursorPositionChanged.connect(host='', port=0, timeout=None, source_address=None)
+#         self.cursorPositionChanged.connect(lambda: print("Kalle"))
 
-    def reset(self):
-        self.setHtml(template)
+#     def reset(self):
+#         self.setHtml(template)
 
-    def keyPressEvent(self, e: QKeyEvent) -> None:
-        super().keyPressEvent(e)
+#     def keyPressEvent(self, e: QKeyEvent) -> None:
+#         super().keyPressEvent(e)
 
-        logging.debug(f"  {e.key():x}  {get_description(e)}")   
-        self.sp.send_string(get_key(e))
+#         logging.debug(f"  {e.key():x}  {get_description(e)}")   
+#         self.sp.send_string(get_key(e))
         
 
 class SerialPort:
@@ -477,6 +478,12 @@ class MainForm(QMainWindow):
         self.ui.cbProfiles.hide()
 
         self.ui.cbRTS.clicked.connect(self.handle_rts)
+
+        # Send menu
+        ctrlcAction = QAction("Ctrl-c", self)
+        ctrlcAction.triggered.connect(lambda: self.send_string(Esc.KEY_CTRL_C))
+        self.ui.menuSend.addAction(ctrlcAction)
+        
         
         # Timers
         self.timer = QTimer()
@@ -504,14 +511,14 @@ class MainForm(QMainWindow):
 
         self.ui.pbOpen.pressed.connect(self.openPort)
 
+        # Debug panel to the right
+        self.ui.gbDebug.setHidden(True)
         self.ui.bpTest1.pressed.connect(lambda: self.send(b"ABCD"))
         self.ui.bpTest2.pressed.connect(lambda: self.send(b"0123456789"))
         #self.ui.colorTest.pressed.connect(lambda: self.send(colorTest))
         self.ui.leSyncString.textChanged.connect(self.syncChanged)
 
-        #self.ui.textEdit.setReadOnly(True)
-        #self.ui.textEdit.keyReleaseEvent.connect(lambda: print("Hep"))
-        
+
         self.loadSettings()
 
         # Initiate terminal state
@@ -602,14 +609,14 @@ class MainForm(QMainWindow):
                 f"MpTerm  /dev/{self.ui.cbPort.currentText()} {self.ui.cbBitrate.currentText()}"
             )
             self.ui.pbOpen.setText("Close")
-            self.ui.cbPort.setEnabled(0)
+            self.ui.cbPort.setEnabled(False)
         else:
             self.setWindowTitle("MpTerm")
             self.ui.pbOpen.setText("Open")
-            self.ui.cbPort.setEnabled(1)
-
-        self.rxLabel.setText(f'<font color="Purple"> RX: {self.sp.rxCnt:06d} ')
-        self.txLabel.setText(f'<font color="Purple"> TX: {self.sp.txCnt:06d} ')
+            self.ui.cbPort.setEnabled(True)
+        
+        self.rxLabel.setText(f'<span style="color:Black">RX:</span> <span style="color:Purple">{self.sp.rxCnt:06d}</span> ')
+        self.txLabel.setText(f'<span style="color:Black">TX:</span> <span style="color:Purple">{self.sp.txCnt:06d}</span> ')
 
     def updatePorts(self):
         ports = QSerialPortInfo.availablePorts()
@@ -676,8 +683,9 @@ class MainForm(QMainWindow):
 
     def appendHtml(self, str):
         # move cursor to end of buffer
-        self.terminal.moveCursor(QTextCursor.End)
-        self.terminal.insertHtml(str)
+        # self.terminal.moveCursor(QTextCursor.End)
+        # self.terminal.insertHtml(str)
+        pass
 
     def read(self):
         # get all data from buffer
@@ -687,64 +695,15 @@ class MainForm(QMainWindow):
 
         self.sp.rxCnt += data.count()
 
-        db = data_str.replace("\x1b", "\\x1b").replace("\x0a", "\\n").replace("\x0d", '\\c')
+        db = data_str.replace("\x1b", "\\e").replace("\x0a", "\\n").replace("\x0d", '\\r')
         logging.debug(f"Data received: {data.count()} {db}")
 
         DisplayMode = self.ui.cbDisplay.currentData()
 
         if DisplayMode == MpTerm.Ascii:  # Standard ascii display mode
-            self.decoder.append_string(data_str)
-            
-            for x in self.decoder:
-                #logging.debug(x)
-                #print(x)
-                if x == Ascii.NL:
-                    #self.appendHtml("<br>")
-                    #self.terminal.moveCursor(QTextCursor.StartOfLine)
-                    #self.terminal.moveCursor(QTextCursor.L)
-                    continue
-
-                if x == Ascii.CR:
-                    #self.terminal.moveCursor(QTextCursor.StartOfLine)
-                    logging.debug("Carriage return")
-                    self.appendHtml("<br>")
-                    continue
-
-                if x == Esc.RETURN:
-                    self.terminal.moveCursor(QTextCursor.StartOfLine)
-                    continue
-
-                if x == Esc.UP:
-                    self.terminal.moveCursor(QTextCursor.Up)
-                    continue
-                
-                if x == Esc.BACK:
-                    self.terminal.moveCursor(QTextCursor.Left)
-                    continue
-                
-                if x == Esc.FORWARD:
-                    self.terminal.moveCursor(QTextCursor.Right)
-                    continue
-
-                # if x == " ":
-                #     self.appendHtml("&nbsp;")
-                #     continue 
-
-                if x[0] == Esc.ESCAPE:
-                    
-                    #self.ts.update(e2h(x))
-                    #e = e2h(x)
-                    # if e in [Escape.GREEN]:
-                    #     self.ts.color = e
-                    # if e == Escape.END:
-                    #     self.ts.color = Escape.BLACK
-                    #     self.ts.attribute = Escape.ATTR_NORMAL
-                    continue
-
-                if x[0] != Esc.ESCAPE:    
-                    #self.appendHtml(self.ts.state2html(x))
-                    self.appendHtml(x)
-                    #self.appendHtml(x)
+            #self.decoder.append_string(data_str)
+            #self.terminal.append(data_str)
+            self.terminal.apps(data_str)
 
         elif DisplayMode == MpTerm.Hex:  # Hexadecimal display mode
             s = ""
@@ -779,8 +738,8 @@ class MainForm(QMainWindow):
     def send_string(self, data: str):
         self.send(bytearray(data, "utf-8"))
 
-    def keyPressEvent(self, a: QKeyEvent):  
-        logging.debug(f"  {a.key():x}  {get_description(a)}")   
+    # def keyPressEvent(self, a: QKeyEvent):  
+    #     logging.debug(f"  {a.key():x}  {get_description(a)}")   
         #self.send_string(get_key(a))
 
     def openPort(self):

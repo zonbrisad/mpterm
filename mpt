@@ -172,7 +172,7 @@ text_attr() { ##D Font color attributes
   echo
 }
 
-color() { ##D Standard 16 colors
+__color() { ## Standard 16 colors
   # ANSI foreground colors codes
   #
   E_FG_BLACK=$'\e[0;30m'      # Black
@@ -216,11 +216,9 @@ color() { ##D Standard 16 colors
   BCOLORS=(E_BG_BLACK E_BG_RED E_BG_GREEN E_BG_YELLOW E_BG_BLUE E_BG_MAGENTA E_BG_CYAN E_BG_WHITE)
   BCOLORS_BR=(E_BG_DARK_GRAY E_BG_BR_RED E_BG_BR_GREEN E_BG_BR_YELLOW E_BG_BR_BLUE E_BG_BR_MAGENTA E_BG_BR_CYAN E_BG_GRAY)
 
-  echo
-  bpTextLine "16 color map"
-  echo
   for fc in "${FCOLORS[@]}"; do
     eval "FG=\$$fc"
+    sleep 0.05
     for bc in "${BCOLORS[@]}"; do
       eval "BG=\$$bc"
       printf "${FG}${BG} %-15s${E_RESET}" "$fc"
@@ -229,18 +227,23 @@ color() { ##D Standard 16 colors
   done
 
   echo
-
-  # for fc in "${FCOLORS[@]}"; do
-  #   eval "FG=\$$fc"
-  #   for bc in "${BCOLORS_BR[@]}"; do
-  #     eval "BG=\$$bc"
-  #     printf "${FG}${BG} %-15s${E_RESET}" "$fc"
-  #   done
-  #   echo
-  # done
-
-  # echo
 }
+
+color() { ##D Standard 16 colors
+  echo
+  bpTextLine "16 color map"
+  echo
+  __color
+}
+
+cc() { ##D Continuous color
+
+  while true; do
+    __color
+    sleep .05
+  done
+}
+
 #---------------------------------------------------------------------
 # Bashplate modules
 #---------------------------------------------------------------------

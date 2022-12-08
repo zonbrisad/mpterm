@@ -87,6 +87,7 @@
 
 ## Links
 
+[Serial port monitor](https://www.hhdsoftware.com/serial-port-monitor)
 
 ## Contribute
 

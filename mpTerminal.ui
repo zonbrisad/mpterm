@@ -341,8 +341,14 @@
     <addaction name="actionReset_port"/>
     <addaction name="actionPortInfo"/>
    </widget>
+   <widget class="QMenu" name="menuSend">
+    <property name="title">
+     <string>Send</string>
+    </property>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuAction"/>
+   <addaction name="menuSend"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusbar">
