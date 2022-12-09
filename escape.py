@@ -22,6 +22,11 @@
 #
 # ---------------------------------------------------------------------------
 #
+# https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit
+# https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
+# https://www.ditig.com/256-colors-cheat-sheet
+# https://michurin.github.io/xterm256-color-picker/
+#
 #
 
 from __future__ import annotations
@@ -187,6 +192,9 @@ class SGR(Enum):
     BG_COLOR_CYAN = "46"
     BG_COLOR_WHITE = "47"
 
+    SET_FG_COLOR = "38"     # Select 256 color or RGB color foreground
+    SET_BG_COLOR = "48"     # Select 256 color or RGB color background
+
     FRAMED = "51"
 
     SUPERSCRIPT = "73"
@@ -199,6 +207,13 @@ class SGR(Enum):
         if s[0] == Esc.ESCAPE and s[-1] == "m":
             return True
         return False
+
+    @staticmethod
+    def find_sgr(sgr_code : str) -> SGR: 
+        for e in SGR:
+            if sgr_code == e.value:    
+                return e
+        return SGR.UNSUPPORTED
     
     @staticmethod
     def decode(s: str):
@@ -206,22 +221,36 @@ class SGR(Enum):
             return None
 
         x = s[2:-1]
-        sp = x.split(";")
-        xx = []
-        for c in sp:
-            if c == "":              # If no number present it is a reset(0)
-                xx.append(SGR.RESET)
+        attributes = x.split(";")
+        attr_list = []
+        for attr in attributes:
+            if attr == "":              # If no number present it is a reset(0)
+                attr_list.append({"SGR":SGR.RESET})
             else:
-                for a in SGR:
-                    if c == a.value:
-                        xx.append(a)
+                if attr in [ SGR.SET_BG_COLOR.value, SGR.SET_FG_COLOR.value]:
+                    logging.debug(attributes)
+
+                    # 256 color mode
+                    if int(attributes[1]) == 5: 
+                        attr_list.append({"SGR":SGR.find_sgr(attr), "color":int(attributes[2])})
+
+                    # Truecolor mode    
+                    if int(attributes[1]) == 2: 
+                        #xx.append({"SGR":SGR.find_sgr(c), "color":int(sp[2])})
+                        pass
+                        
+                    break
+                   
+                attr_list.append({"SGR":SGR.find_sgr(attr)})
+
 
         # if isinstance(t, SGR):
-        logging.debug(f"SGR: {xx}")
-        return xx          
+        logging.debug(f"SGR: {attr_list}")
+        return attr_list          
                 
             
 class Esc:
+    ETX = '\x03'               # End of text(ETX), CTRL-C
     ESCAPE = "\x1b"
 
     """ ANSI foreground colors codes """
@@ -289,7 +318,7 @@ class Esc:
     CUR_UP = '\x1b[A'         # cursor up
     CUR_DOWN = '\x1b[B'       # cursor down
     CUR_FORWARD = '\x1b[C'    # cursor forward
-    CUR_BACK = '\x1b[;D'       # cursor back
+    CUR_BACK = '\x1b[D'       # cursor back
     CUR_RETURN = '\x1b[F'     # cursor return
     
     CUR_HIDE = '\x1b[?25l'      # hide cursor
@@ -321,13 +350,6 @@ class Esc:
     KEY_F15 = '\x1b[28~'      # F
     KEY_F16 = '\x1b[29~'      # F
 
-    KEY_CTRL_C = '\x1b[4c'
-
-    # KEY_ = '\x1b[1~'         # 
-    # KEY_ = '\x1b[1~'         # 
-    # KEY_ = '\x1b[1~'         # 
-    
-    
     E_RET  = 100
     E_UP   = 101
     E_DOWN = 102
@@ -336,6 +358,14 @@ class Esc:
     y = { E_RET:CUR_RETURN, 
           E_UP:CUR_UP, 
           E_DOWN:CUR_DOWN }
+
+    @staticmethod
+    def fg_8bit_color(c :int) -> str:
+        return f"\x1b[38;5;{c}m"
+
+    @staticmethod
+    def bg_8bit_color(c :int) -> str:
+        return f"\x1b[48;5;{c}m"
 
     @staticmethod
     def findEnd(data, idx):
@@ -354,133 +384,6 @@ class Esc:
             return True
         else:
             return False
-
-
-# escape2html = {
-#     SGR.FG_COLOR_BLACK: [ Esc.BLACK, "black"],
-#     SGR.FG_COLOR_RED: [ Esc.RED, "red"],
-#     SGR.FG_COLOR_GREEN: [ Esc.GREEN, "green"],
-#     SGR.FG_COLOR_YELLOW: [ Esc.YELLOW, "yellow"],
-#     SGR.FG_COLOR_BLUE: [ Esc.BLUE, "blue"],
-#     SGR.FG_COLOR_MAGENTA: [ Esc.MAGENTA, "magenta"],
-#     SGR.FG_COLOR_CYAN: [ Esc.CYAN, "cyan"],
-#     SGR.FG_COLOR_WHITE: [ Esc.WHITE, "white"],
-#     #SGR.FG_COLOR_BR_BLACK: [ Esc.DARKGRAY, "darkgray"],
-#     # SGR.FG_COLOR_BR_RED: [ Esc.BR_RED, "red"],
-#     # SGR.FG_COLOR_BR_GREEN: [ Esc.BR_GREEN, "green"],
-#     # SGR.FG_COLOR_BR_YELLOW: [ Esc.BR_YELLOW, "yellow"],
-#     # SGR.FG_COLOR_BR_BLUE: [ Esc.BR_BLUE, "blue"],
-#     # SGR.FG_COLOR_BR_MAGENTA: [ Esc.BR_MAGENTA, "magenta"],
-#     # SGR.FG_COLOR_BR_CYAN: [ Esc.BR_CYAN, "cyan"],
-#     # SGR.FG_COLOR_BR_WHITE: [ Esc.BR_WHITE, "white"],
-
-#     # ANSI background color codes
-#     #
-#     SGR.BG_COLOR_BLACK: [ Esc.ON_BLACK, "black"],
-#     SGR.BG_COLOR_RED: [ Esc.ON_RED, "red"],
-#     SGR.BG_COLOR_GREEN: [ Esc.ON_GREEN, "green"],
-#     SGR.BG_COLOR_YELLOW: [ Esc.ON_YELLOW, "yellow"],
-#     SGR.BG_COLOR_BLUE: [ Esc.ON_BLUE, "blue"],
-#     SGR.BG_COLOR_MAGENTA: [ Esc.ON_MAGENTA, "magenta"],
-#     SGR.BG_COLOR_CYAN: [ Esc.ON_CYAN, "cyan"],
-#     SGR.BG_COLOR_WHITE: [ Esc.ON_WHITE, "white"],
-
-#     # ANSI Text attributes
-#     SGR.RESET: [ Esc.ATTR_NORMAL, "normal"],
-#     SGR.BOLD: [ Esc.ATTR_BOLD, "bold"],
-#     SGR.DIM: [ Esc.ATTR_LOWINTENSITY, ""],
-#     SGR.ITALIC: [ Esc.ATTR_ITALIC, ""],
-#     SGR.UNDERLINE: [ Esc.ATTR_UNDERLINE, ""],
-#     SGR.SLOW_BLINK: [ Esc.ATTR_SLOWBLINK, ""],
-#     SGR.RAPID_BLINK: [ Esc.ATTR_FASTBLINK, ""],
-#     SGR.REVERSE_VIDEO: [ Esc.ATTR_REVERSE, ""],
-#     SGR.FRACTUR: [ Esc.ATTR_FRACTUR, ""],
-#     SGR.FRAMED: [ Esc.ATTR_FRAMED, ""],
-#     SGR.CROSSED: [ Esc.ATTR_OVERLINED, ""],
-#     SGR.SUPERSCRIPT: [ Esc.ATTR_SUPERSCRIPT, ""],
-#     SGR.SUBSCRIPT: [ Esc.ATTR_SUBSCRIPT, ""],
-#     SGR.RESET: [ Esc.END, "" ]
-# }
-
-
-class EscapeDecoder():
-    nls = ["\n", "\x0d", "\x1b"]
-    
-    def __init__(self):
-        self.idx = 0
-        self.seq = False
-        self.clear()
-        
-    def clear(self):
-        self.buf = ""
-
-    def append_string(self, s:str) -> None:
-        self.buf += s
-
-    def append_bytearray(self, ba: bytearray) -> None:
-        self.buf += ba.decode("utf-8")
-
-    def len(self):
-        return len(self.buf)
-
-    def is_nls(self, s) -> bool:
-        if s in self.nls:
-            return True
-        return False
-
-    def next_char(self):
-        pass
-
-    def __iter__(self):
-        self.i = 0
-        return self 
-
-    def __next__(self):
-        l = len(self.buf)
-        if l == 0:                     # Buffer is empty, abort iteration
-            raise StopIteration
-
-        j = 0
-
-        if self.buf[j] == Esc.ESCAPE:  # Escape sequence start character found
-            while j<l and not self.buf[j].isalpha():
-                j += 1
-            if j == l:
-                raise StopIteration
-            
-            if self.buf[j].isalpha():  # Termination character found
-                res = self.buf[0:j+1]
-                self.buf = self.buf[j+1:]
-                logging.debug(f"Found escape sequence: '\\x1b{res[1:]}' ")
-
-                csi = CSI.decode(res)
-                if csi == CSI.SGR:
-                    SGR.decode(res)
-                return res
-            
-            # Escape sequence not complete, abort iteration
-            raise StopIteration
-            
-        if  self.buf[j] == Ascii.NL:
-            logging.debug(f"Found newline:")
-            res = self.buf[0:j+1]
-            self.buf = self.buf[j+1:]
-            return res
-        
-        if  self.buf[j] == Ascii.CR:
-            logging.debug(f"Found carriage return:")
-            res = self.buf[0:j+1]
-            self.buf = self.buf[j+1:]
-            return res
-
-        # Handle normal text    
-        #if self.buf[j] != Esc.ESCAPE: 
-        while j<l and not self.is_nls(self.buf[j]):
-           j += 1
-        res = self.buf[0:j]
-        self.buf = self.buf[j:]
-        logging.debug(f"Found text sequence: '" + res.replace("\x1b", "\\x1b").replace("\x0a", "\\n").replace("\x0d", '\\c')+"'")
-        return res
 
 
 class EscapeTokenizer():
@@ -554,7 +457,265 @@ class TColor():
     BRIGHT_WHITE : str = "#eeeeec"
 
 
-
+    # { "name": "Black", "hex" : "#000000"}
+CC256 = [
+{ "name":"Black (SYSTEM)", "hex":"#000000"},
+{ "name":"Maroon (SYSTEM)", "hex":"#800000"},
+{ "name":"Green (SYSTEM)", "hex":"#008000"},
+{ "name":"Olive (SYSTEM)", "hex":"#808000"},
+{ "name":"Navy (SYSTEM)", "hex":"#000080"},
+{ "name":"Purple (SYSTEM)", "hex":"#800080"},
+{ "name":"Teal (SYSTEM)", "hex":"#008080"},
+{ "name":"Silver (SYSTEM)", "hex":"#c0c0c0"},
+{ "name":"Grey (SYSTEM)", "hex":"#808080"},
+{ "name":"Red (SYSTEM)", "hex":"#ff0000"},
+{ "name":"Lime (SYSTEM)", "hex":"#00ff00"},
+{ "name":"Yellow (SYSTEM)", "hex":"#ffff00"},
+{ "name":"Blue (SYSTEM)", "hex":"#0000ff"},
+{ "name":"Fuchsia (SYSTEM)", "hex":"#ff00ff"},
+{ "name":"Aqua (SYSTEM)", "hex":"#00ffff"},
+{ "name":"White (SYSTEM)", "hex":"#ffffff"},
+{ "name":"Grey0", "hex":"#000000"},
+{ "name":"NavyBlue", "hex":"#00005f"},
+{ "name":"DarkBlue", "hex":"#000087"},
+{ "name":"Blue3", "hex":"#0000af"},
+{ "name":"Blue3", "hex":"#0000d7"},
+{ "name":"Blue1", "hex":"#0000ff"},
+{ "name":"DarkGreen", "hex":"#005f00"},
+{ "name":"DeepSkyBlue4", "hex":"#005f5f"},
+{ "name":"DeepSkyBlue4", "hex":"#005f87"},
+{ "name":"DeepSkyBlue4", "hex":"#005faf"},
+{ "name":"DodgerBlue3", "hex":"#005fd7"},
+{ "name":"DodgerBlue2", "hex":"#005fff"},
+{ "name":"Green4", "hex":"#008700"},
+{ "name":"SpringGreen4", "hex":"#00875f"},
+{ "name":"Turquoise4", "hex":"#008787"},
+{ "name":"DeepSkyBlue3", "hex":"#0087af"},
+{ "name":"DeepSkyBlue3", "hex":"#0087d7"},
+{ "name":"DodgerBlue1", "hex":"#0087ff"},
+{ "name":"Green3", "hex":"#00af00"},
+{ "name":"SpringGreen3", "hex":"#00af5f"},
+{ "name":"DarkCyan", "hex":"#00af87"},
+{ "name":"LightSeaGreen", "hex":"#00afaf"},
+{ "name":"DeepSkyBlue2", "hex":"#00afd7"},
+{ "name":"DeepSkyBlue1", "hex":"#00afff"},
+{ "name":"Green3", "hex":"#00d700"},
+{ "name":"SpringGreen3", "hex":"#00d75f"},
+{ "name":"SpringGreen2", "hex":"#00d787"},
+{ "name":"Cyan3", "hex":"#00d7af"},
+{ "name":"DarkTurquoise", "hex":"#00d7d7"},
+{ "name":"Turquoise2", "hex":"#00d7ff"},
+{ "name":"Green1", "hex":"#00ff00"},
+{ "name":"SpringGreen2", "hex":"#00ff5f"},
+{ "name":"SpringGreen1", "hex":"#00ff87"},
+{ "name":"MediumSpringGreen", "hex":"#00ffaf"},
+{ "name":"Cyan2", "hex":"#00ffd7"},
+{ "name":"Cyan1", "hex":"#00ffff"},
+{ "name":"DarkRed", "hex":"#5f0000"},
+{ "name":"DeepPink4", "hex":"#5f005f"},
+{ "name":"Purple4", "hex":"#5f0087"},
+{ "name":"Purple4", "hex":"#5f00af"},
+{ "name":"Purple3", "hex":"#5f00d7"},
+{ "name":"BlueViolet", "hex":"#5f00ff"},
+{ "name":"Orange4", "hex":"#5f5f00"},
+{ "name":"Grey37", "hex":"#5f5f5f"},
+{ "name":"MediumPurple4", "hex":"#5f5f87"},
+{ "name":"SlateBlue3", "hex":"#5f5faf"},
+{ "name":"SlateBlue3", "hex":"#5f5fd7"},
+{ "name":"RoyalBlue1", "hex":"#5f5fff"},
+{ "name":"Chartreuse4", "hex":"#5f8700"},
+{ "name":"DarkSeaGreen4", "hex":"#5f875f"},
+{ "name":"PaleTurquoise4", "hex":"#5f8787"},
+{ "name":"SteelBlue", "hex":"#5f87af"},
+{ "name":"SteelBlue3", "hex":"#5f87d7"},
+{ "name":"CornflowerBlue", "hex":"#5f87ff"},
+{ "name":"Chartreuse3", "hex":"#5faf00"},
+{ "name":"DarkSeaGreen4", "hex":"#5faf5f"},
+{ "name":"CadetBlue", "hex":"#5faf87"},
+{ "name":"CadetBlue", "hex":"#5fafaf"},
+{ "name":"SkyBlue3", "hex":"#5fafd7"},
+{ "name":"SteelBlue1", "hex":"#5fafff"},
+{ "name":"Chartreuse3", "hex":"#5fd700"},
+{ "name":"PaleGreen3", "hex":"#5fd75f"},
+{ "name":"SeaGreen3", "hex":"#5fd787"},
+{ "name":"Aquamarine3", "hex":"#5fd7af"},
+{ "name":"MediumTurquoise", "hex":"#5fd7d7"},
+{ "name":"SteelBlue1", "hex":"#5fd7ff"},
+{ "name":"Chartreuse2", "hex":"#5fff00"},
+{ "name":"SeaGreen2", "hex":"#5fff5f"},
+{ "name":"SeaGreen1", "hex":"#5fff87"},
+{ "name":"SeaGreen1", "hex":"#5fffaf"},
+{ "name":"Aquamarine1", "hex":"#5fffd7"},
+{ "name":"DarkSlateGray2", "hex":"#5fffff"},
+{ "name":"DarkRed", "hex":"#870000"},
+{ "name":"DeepPink4", "hex":"#87005f"},
+{ "name":"DarkMagenta", "hex":"#870087"},
+{ "name":"DarkMagenta", "hex":"#8700af"},
+{ "name":"DarkViolet", "hex":"#8700d7"},
+{ "name":"Purple", "hex":"#8700ff"},
+{ "name":"Orange4", "hex":"#875f00"},
+{ "name":"LightPink4", "hex":"#875f5f"},
+{ "name":"Plum4", "hex":"#875f87"},
+{ "name":"MediumPurple3", "hex":"#875faf"},
+{ "name":"MediumPurple3", "hex":"#875fd7"},
+{ "name":"SlateBlue1", "hex":"#875fff"},
+{ "name":"Yellow4", "hex":"#878700"},
+{ "name":"Wheat4", "hex":"#87875f"},
+{ "name":"Grey53", "hex":"#878787"},
+{ "name":"LightSlateGrey", "hex":"#8787af"},
+{ "name":"MediumPurple", "hex":"#8787d7"},
+{ "name":"LightSlateBlue", "hex":"#8787ff"},
+{ "name":"Yellow4", "hex":"#87af00"},
+{ "name":"DarkOliveGreen3", "hex":"#87af5f"},
+{ "name":"DarkSeaGreen", "hex":"#87af87"},
+{ "name":"LightSkyBlue3", "hex":"#87afaf"},
+{ "name":"LightSkyBlue3", "hex":"#87afd7"},
+{ "name":"SkyBlue2", "hex":"#87afff"},
+{ "name":"Chartreuse2", "hex":"#87d700"},
+{ "name":"DarkOliveGreen3", "hex":"#87d75f"},
+{ "name":"PaleGreen3", "hex":"#87d787"},
+{ "name":"DarkSeaGreen3", "hex":"#87d7af"},
+{ "name":"DarkSlateGray3", "hex":"#87d7d7"},
+{ "name":"SkyBlue1", "hex":"#87d7ff"},
+{ "name":"Chartreuse1", "hex":"#87ff00"},
+{ "name":"LightGreen", "hex":"#87ff5f"},
+{ "name":"LightGreen", "hex":"#87ff87"},
+{ "name":"PaleGreen1", "hex":"#87ffaf"},
+{ "name":"Aquamarine1", "hex":"#87ffd7"},
+{ "name":"DarkSlateGray1", "hex":"#87ffff"},
+{ "name":"Red3", "hex":"#af0000"},
+{ "name":"DeepPink4", "hex":"#af005f"},
+{ "name":"MediumVioletRed", "hex":"#af0087"},
+{ "name":"Magenta3", "hex":"#af00af"},
+{ "name":"DarkViolet", "hex":"#af00d7"},
+{ "name":"Purple", "hex":"#af00ff"},
+{ "name":"DarkOrange3", "hex":"#af5f00"},
+{ "name":"IndianRed", "hex":"#af5f5f"},
+{ "name":"HotPink3", "hex":"#af5f87"},
+{ "name":"MediumOrchid3", "hex":"#af5faf"},
+{ "name":"MediumOrchid", "hex":"#af5fd7"},
+{ "name":"MediumPurple2", "hex":"#af5fff"},
+{ "name":"DarkGoldenrod", "hex":"#af8700"},
+{ "name":"LightSalmon3", "hex":"#af875f"},
+{ "name":"RosyBrown", "hex":"#af8787"},
+{ "name":"Grey63", "hex":"#af87af"},
+{ "name":"MediumPurple2", "hex":"#af87d7"},
+{ "name":"MediumPurple1", "hex":"#af87ff"},
+{ "name":"Gold3", "hex":"#afaf00"},
+{ "name":"DarkKhaki", "hex":"#afaf5f"},
+{ "name":"NavajoWhite3", "hex":"#afaf87"},
+{ "name":"Grey69", "hex":"#afafaf"},
+{ "name":"LightSteelBlue3", "hex":"#afafd7"},
+{ "name":"LightSteelBlue", "hex":"#afafff"},
+{ "name":"Yellow3", "hex":"#afd700"},
+{ "name":"DarkOliveGreen3", "hex":"#afd75f"},
+{ "name":"DarkSeaGreen3", "hex":"#afd787"},
+{ "name":"DarkSeaGreen2", "hex":"#afd7af"},
+{ "name":"LightCyan3", "hex":"#afd7d7"},
+{ "name":"LightSkyBlue1", "hex":"#afd7ff"},
+{ "name":"GreenYellow", "hex":"#afff00"},
+{ "name":"DarkOliveGreen2", "hex":"#afff5f"},
+{ "name":"PaleGreen1", "hex":"#afff87"},
+{ "name":"DarkSeaGreen2", "hex":"#afffaf"},
+{ "name":"DarkSeaGreen1", "hex":"#afffd7"},
+{ "name":"PaleTurquoise1", "hex":"#afffff"},
+{ "name":"Red3", "hex":"#d70000"},
+{ "name":"DeepPink3", "hex":"#d7005f"},
+{ "name":"DeepPink3", "hex":"#d70087"},
+{ "name":"Magenta3", "hex":"#d700af"},
+{ "name":"Magenta3", "hex":"#d700d7"},
+{ "name":"Magenta2", "hex":"#d700ff"},
+{ "name":"DarkOrange3", "hex":"#d75f00"},
+{ "name":"IndianRed", "hex":"#d75f5f"},
+{ "name":"HotPink3", "hex":"#d75f87"},
+{ "name":"HotPink2", "hex":"#d75faf"},
+{ "name":"Orchid", "hex":"#d75fd7"},
+{ "name":"MediumOrchid1", "hex":"#d75fff"},
+{ "name":"Orange3", "hex":"#d78700"},
+{ "name":"LightSalmon3", "hex":"#d7875f"},
+{ "name":"LightPink3", "hex":"#d78787"},
+{ "name":"Pink3", "hex":"#d787af"},
+{ "name":"Plum3", "hex":"#d787d7"},
+{ "name":"Violet", "hex":"#d787ff"},
+{ "name":"Gold3", "hex":"#d7af00"},
+{ "name":"LightGoldenrod3", "hex":"#d7af5f"},
+{ "name":"Tan", "hex":"#d7af87"},
+{ "name":"MistyRose3", "hex":"#d7afaf"},
+{ "name":"Thistle3", "hex":"#d7afd7"},
+{ "name":"Plum2", "hex":"#d7afff"},
+{ "name":"Yellow3", "hex":"#d7d700"},
+{ "name":"Khaki3", "hex":"#d7d75f"},
+{ "name":"LightGoldenrod2", "hex":"#d7d787"},
+{ "name":"LightYellow3", "hex":"#d7d7af"},
+{ "name":"Grey84", "hex":"#d7d7d7"},
+{ "name":"LightSteelBlue1", "hex":"#d7d7ff"},
+{ "name":"Yellow2", "hex":"#d7ff00"},
+{ "name":"DarkOliveGreen1", "hex":"#d7ff5f"},
+{ "name":"DarkOliveGreen1", "hex":"#d7ff87"},
+{ "name":"DarkSeaGreen1", "hex":"#d7ffaf"},
+{ "name":"Honeydew2", "hex":"#d7ffd7"},
+{ "name":"LightCyan1", "hex":"#d7ffff"},
+{ "name":"Red1", "hex":"#ff0000"},
+{ "name":"DeepPink2", "hex":"#ff005f"},
+{ "name":"DeepPink1", "hex":"#ff0087"},
+{ "name":"DeepPink1", "hex":"#ff00af"},
+{ "name":"Magenta2", "hex":"#ff00d7"},
+{ "name":"Magenta1", "hex":"#ff00ff"},
+{ "name":"OrangeRed1", "hex":"#ff5f00"},
+{ "name":"IndianRed1", "hex":"#ff5f5f"},
+{ "name":"IndianRed1", "hex":"#ff5f87"},
+{ "name":"HotPink", "hex":"#ff5faf"},
+{ "name":"HotPink", "hex":"#ff5fd7"},
+{ "name":"MediumOrchid1", "hex":"#ff5fff"},
+{ "name":"DarkOrange", "hex":"#ff8700"},
+{ "name":"Salmon1", "hex":"#ff875f"},
+{ "name":"LightCoral", "hex":"#ff8787"},
+{ "name":"PaleVioletRed1", "hex":"#ff87af"},
+{ "name":"Orchid2", "hex":"#ff87d7"},
+{ "name":"Orchid1", "hex":"#ff87ff"},
+{ "name":"Orange1", "hex":"#ffaf00"},
+{ "name":"SandyBrown", "hex":"#ffaf5f"},
+{ "name":"LightSalmon1", "hex":"#ffaf87"},
+{ "name":"LightPink1", "hex":"#ffafaf"},
+{ "name":"Pink1", "hex":"#ffafd7"},
+{ "name":"Plum1", "hex":"#ffafff"},
+{ "name":"Gold1", "hex":"#ffd700"},
+{ "name":"LightGoldenrod2", "hex":"#ffd75f"},
+{ "name":"LightGoldenrod2", "hex":"#ffd787"},
+{ "name":"NavajoWhite1", "hex":"#ffd7af"},
+{ "name":"MistyRose1", "hex":"#ffd7d7"},
+{ "name":"Thistle1", "hex":"#ffd7ff"},
+{ "name":"Yellow1", "hex":"#ffff00"},
+{ "name":"LightGoldenrod1", "hex":"#ffff5f"},
+{ "name":"Khaki1", "hex":"#ffff87"},
+{ "name":"Wheat1", "hex":"#ffffaf"},
+{ "name":"Cornsilk1", "hex":"#ffffd7"},
+{ "name":"Grey100", "hex":"#ffffff"},
+{ "name":"Grey3", "hex":"#080808"},
+{ "name":"Grey7", "hex":"#121212"},
+{ "name":"Grey11", "hex":"#1c1c1c"},
+{ "name":"Grey15", "hex":"#262626"},
+{ "name":"Grey19", "hex":"#303030"},
+{ "name":"Grey23", "hex":"#3a3a3a"},
+{ "name":"Grey27", "hex":"#444444"},
+{ "name":"Grey30", "hex":"#4e4e4e"},
+{ "name":"Grey35", "hex":"#585858"},
+{ "name":"Grey39", "hex":"#626262"},
+{ "name":"Grey42", "hex":"#6c6c6c"},
+{ "name":"Grey46", "hex":"#767676"},
+{ "name":"Grey50", "hex":"#808080"},
+{ "name":"Grey54", "hex":"#8a8a8a"},
+{ "name":"Grey58", "hex":"#949494"},
+{ "name":"Grey62", "hex":"#9e9e9e"},
+{ "name":"Grey66", "hex":"#a8a8a8"},
+{ "name":"Grey70", "hex":"#b2b2b2"},
+{ "name":"Grey74", "hex":"#bcbcbc"},
+{ "name":"Grey78", "hex":"#c6c6c6"},
+{ "name":"Grey82", "hex":"#d0d0d0"},
+{ "name":"Grey85", "hex":"#dadada"},
+{ "name":"Grey89", "hex":"#e4e4e4"},
+{ "name":"Grey93", "hex":"#eeeeee"}
+]
 
 
 class TerminalState:
@@ -607,8 +768,9 @@ class TerminalState:
             if Esc.is_escape_seq(token):
                 x = CSI.decode(token)
                 if x == CSI.SGR:
-                    y = SGR.decode(token)
-                    for a in y:
+                    sgrs = SGR.decode(token)
+                    for s in sgrs:
+                        a = s["SGR"]
                         if a == SGR.BOLD:
                             self.buf += "<b>"
                             self.bold = True
@@ -677,6 +839,16 @@ class TerminalState:
                         if a == SGR.BG_COLOR_WHITE:
                             self.buf += f"<span style=\"background-color:{TColor.WHITE}\">"
                             self.color = True
+
+                        if a == SGR.SET_FG_COLOR: 
+                            hex = CC256[s["color"]]["hex"]
+                            self.buf += f"<span style=\"color:{hex}\">"
+                            self.color = True
+
+                        if a == SGR.SET_BG_COLOR: 
+                            hex = CC256[s["color"]]["hex"]
+                            self.buf += f"<span style=\"background-color:{hex}\">"
+                            self.color = True
                             
                         if a == SGR.RESET:
                             if self.color is True: 
@@ -699,8 +871,7 @@ class TerminalState:
                                 self.buf += "</sup>"
                             if self.subscript is True:
                                 self.subscript = False
-                                self.buf += "</sub>"
-                                
+                                self.buf += "</sub>"                           
             else:
                 self.buf += token       
 
@@ -730,6 +901,8 @@ flag = f"""
 {FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Esc.END}
 """
 escape_attribute_test = f"""  
+{Esc.ATTR_UNDERLINE}Font attributes{Esc.END}
+
 {Esc.ATTR_NORMAL}Normal text{Esc.END}
 {Esc.ATTR_BOLD}Bold text{Esc.ATTR_NORMAL}
 {Esc.ATTR_LOWINTENSITY}Dim text{Esc.ATTR_NORMAL}
@@ -742,6 +915,8 @@ Subscript{Esc.ATTR_SUBSCRIPT}text{Esc.ATTR_NORMAL}
 Superscript{Esc.ATTR_SUPERSCRIPT}text{Esc.ATTR_NORMAL}
 {Esc.ATTR_FRACTUR}Fractur/Gothic text{Esc.ATTR_NORMAL}
 {Esc.ATTR_CROSSED}Crossed text{Esc.ATTR_NORMAL}
+
+{Esc.ATTR_UNDERLINE}Standard foreground color attributes{Esc.END}
 
 {Esc.BLACK}Black{Esc.END}
 {Esc.RED}Red{Esc.ATTR_NORMAL}
@@ -760,6 +935,8 @@ Superscript{Esc.ATTR_SUPERSCRIPT}text{Esc.ATTR_NORMAL}
 {Esc.BR_MAGENTA}Bright Magenta{Esc.END}
 {Esc.BR_CYAN}Bright Cyan{Esc.END}
 
+{Esc.ATTR_UNDERLINE}Standard background color attributes{Esc.END}
+
 {Esc.ON_BLACK} Black {Esc.END}
 {Esc.ON_RED} Red {Esc.END}
 {Esc.ON_GREEN} Green {Esc.END}
@@ -767,6 +944,15 @@ Superscript{Esc.ATTR_SUPERSCRIPT}text{Esc.ATTR_NORMAL}
 {Esc.ON_BLUE} Blue {Esc.END}
 {Esc.ON_MAGENTA} Magenta {Esc.END}
 {Esc.ON_CYAN} Cyan {Esc.END}
+
+{Esc.ATTR_UNDERLINE}256 Color attributes{Esc.END}
+{Esc.fg_8bit_color(12)}Color 12{Esc.END}
+{Esc.fg_8bit_color(45)}Color 45{Esc.END}
+{Esc.fg_8bit_color(240)}Color 240{Esc.END}
+{Esc.bg_8bit_color(32)}Color 32{Esc.END}
+{Esc.bg_8bit_color(78)}Color 78{Esc.END}
+{Esc.bg_8bit_color(249)}Color 249{Esc.END}
+
 """
 
 cursor_test = f"""

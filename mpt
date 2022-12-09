@@ -218,7 +218,7 @@ __color() { ## Standard 16 colors
 
   for fc in "${FCOLORS[@]}"; do
     eval "FG=\$$fc"
-    sleep 0.05
+    sleep "$1"
     for bc in "${BCOLORS[@]}"; do
       eval "BG=\$$bc"
       printf "${FG}${BG} %-15s${E_RESET}" "$fc"
@@ -233,13 +233,13 @@ color() { ##D Standard 16 colors
   echo
   bpTextLine "16 color map"
   echo
-  __color
+  __color 0
 }
 
 cc() { ##D Continuous color
 
   while true; do
-    __color
+    __color 0.05
     sleep .05
   done
 }

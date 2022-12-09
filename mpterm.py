@@ -58,7 +58,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
 from ui_MainWindow import Ui_MainWindow
 from dataclasses import dataclass
-from escape import Esc, EscapeDecoder, Ascii, TerminalState
+from escape import Esc, Ascii, TerminalState
 from terminalwin import TerminalWin
 
 import AboutDialogXX
@@ -382,8 +382,7 @@ class SerialPort:
 
         # Initiate terminal state
         self.state = State.DISCONNECTED
-        self.decoder = EscapeDecoder()
-
+        
     def clear(self):
         self.rxCnt = 0
         self.txCnt = 0
@@ -429,6 +428,10 @@ class MainForm(QMainWindow):
         self.txLabel = QLabel("")
         self.ui.statusbar.addPermanentWidget(self.rxLabel, stretch=0)
         self.ui.statusbar.addPermanentWidget(self.txLabel, stretch=0)
+
+        # self.rxLabel.mouseDoubleClickEvent.connect(lambda: print("xxx"))
+        # self.txLabel.mouseDoubleClickEvent.connect(lambda: print("xxx"))
+        #self.txLabel.mousePressEvent.connect(lambda: print("asd"))
 
         self.ui.cbStopBits.addItem("1", QSerialPort.OneStop)
         self.ui.cbStopBits.addItem("1.5", QSerialPort.OneAndHalfStop)
@@ -481,7 +484,7 @@ class MainForm(QMainWindow):
 
         # Send menu
         ctrlcAction = QAction("Ctrl-c", self)
-        ctrlcAction.triggered.connect(lambda: self.send_string(Esc.KEY_CTRL_C))
+        ctrlcAction.triggered.connect(lambda: self.send_string(Esc.ETX))
         self.ui.menuSend.addAction(ctrlcAction)
         
         
@@ -523,8 +526,6 @@ class MainForm(QMainWindow):
 
         # Initiate terminal state
         self.state = State.DISCONNECTED
-
-        self.decoder = EscapeDecoder()
 
         # Configure signal handler
         signal.signal(signal.SIGUSR1, self.signal_usr1)
