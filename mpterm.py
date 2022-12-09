@@ -202,8 +202,6 @@ class State(enum.Enum):
     SUSPENDED = 2
     RECONNECTING = 3
 
-
-
 class MpTerm(enum.Enum):
     # Display modes
     Ascii = 0
@@ -345,45 +343,42 @@ class mpProfile:
         self.fromJSON(jsd)
 
 
-template="""
-<pre>
-"""
-
-# class TerminalWin(QTextEdit):
     
-#     def __init__(self, parent=None, sp=None):
-#         super().__init__(parent)
-#         self.sp=sp
-#         font = QFont()
-#         font.setFamily("Monospace")
-#         self.setFont(font)
-#         self.setObjectName("textEdit")
-#         self.setReadOnly(True)
-#         self.reset()
-#         self.ensureCursorVisible()
-#         self.setCursorWidth(2)
-#         #self.cursorPositionChanged.connect(host='', port=0, timeout=None, source_address=None)
-#         self.cursorPositionChanged.connect(lambda: print("Kalle"))
-
-#     def reset(self):
-#         self.setHtml(template)
-
-#     def keyPressEvent(self, e: QKeyEvent) -> None:
-#         super().keyPressEvent(e)
-
-#         logging.debug(f"  {e.key():x}  {get_description(e)}")   
-#         self.sp.send_string(get_key(e))
-        
-
 class SerialPort:
     def __init__(self) -> None:
-        self.clear()
+        self.clear_counters()
         self.serial_port = QSerialPort()
 
         # Initiate terminal state
         self.state = State.DISCONNECTED
+
+        self.suspend_timer = QTimer()
+        self.suspend_timer.setSingleShot(True)
+        self.suspend_timer.timeout.connect(self.suspend_timeout)
         
-    def clear(self):
+        self.reconnect_timer = QTimer()
+        self.reconnect_timer.setInterval(200)
+        #self.reconnect_timer.timeout.connect(self.timer_5_timeout)
+        self.reconnect_timer.start()
+
+    def name(self) -> str:
+        return self.serial_port.portName()
+
+    def open(self, port):
+        res = self.serial_port.open(QIODevice.ReadWrite)
+        if res:
+            self.state = State.CONNECTED
+        else:
+            err = self.serial_port.error()
+            logging.error(errors[err])
+            
+        return res
+    
+    def close(self) -> None:
+        self.state = State.DISCONNECTED
+        self.serial_port.close()
+
+    def clear_counters(self):
         self.rxCnt = 0
         self.txCnt = 0
 
@@ -397,6 +392,21 @@ class SerialPort:
                 self.txCnt += res
             else:
                 logging.error("Could not write data.")
+
+    def suspend(self):
+        if self.state == State.CONNECTED:
+            self.serial_port.close()
+            self.state = State.SUSPENDED
+            self.suspend_timer.start(4000)
+            logging.debug("Suspending port")
+
+    def suspend_timeout(self):
+        if self.state == State.SUSPENDED:
+            self.state = State.RECONNECTING 
+            logging.debug("Reconnecting port")
+
+    def is_open(self) -> bool:
+        return self.serial_port.isOpen()
             
 
 class MainForm(QMainWindow):
@@ -414,7 +424,7 @@ class MainForm(QMainWindow):
 
         self.sp = SerialPort()
         self.sp.serial_port.readyRead.connect(self.read)
-
+        
         self.updatePorts()
 
         self.terminal = TerminalWin(self.ui.centralwidget, sp = self.sp)
@@ -426,12 +436,11 @@ class MainForm(QMainWindow):
 
         self.rxLabel = QLabel("")
         self.txLabel = QLabel("")
+        self.stateLabel = QLabel("State")
+        self.ui.statusbar.addPermanentWidget(self.stateLabel, stretch=0)
         self.ui.statusbar.addPermanentWidget(self.rxLabel, stretch=0)
         self.ui.statusbar.addPermanentWidget(self.txLabel, stretch=0)
 
-        # self.rxLabel.mouseDoubleClickEvent.connect(lambda: print("xxx"))
-        # self.txLabel.mouseDoubleClickEvent.connect(lambda: print("xxx"))
-        #self.txLabel.mousePressEvent.connect(lambda: print("asd"))
 
         self.ui.cbStopBits.addItem("1", QSerialPort.OneStop)
         self.ui.cbStopBits.addItem("1.5", QSerialPort.OneAndHalfStop)
@@ -486,18 +495,6 @@ class MainForm(QMainWindow):
         ctrlcAction = QAction("Ctrl-c", self)
         ctrlcAction.triggered.connect(lambda: self.send_string(Esc.ETX))
         self.ui.menuSend.addAction(ctrlcAction)
-        
-        
-        # Timers
-        self.timer = QTimer()
-        self.timer.setInterval(1000)
-        self.timer.timeout.connect(self.timerEvent)
-        self.timer.start()
-        
-        self.timer_5 = QTimer()
-        self.timer_5.setInterval(200)
-        self.timer_5.timeout.connect(self.timer_5_timeout)
-        self.timer_5.start()
 
         # event slots
         self.ui.cbBitrate.activated.connect(self.set_sp)
@@ -513,7 +510,8 @@ class MainForm(QMainWindow):
         self.ui.actionPortInfo.triggered.connect(self.portInfo)
 
         self.ui.pbOpen.pressed.connect(self.openPort)
-
+        self.ui.pbSuspend.pressed.connect(self.sp.suspend)
+        
         # Debug panel to the right
         self.ui.gbDebug.setHidden(True)
         self.ui.bpTest1.pressed.connect(lambda: self.send(b"ABCD"))
@@ -521,23 +519,24 @@ class MainForm(QMainWindow):
         #self.ui.colorTest.pressed.connect(lambda: self.send(colorTest))
         self.ui.leSyncString.textChanged.connect(self.syncChanged)
 
-
         self.loadSettings()
 
         # Initiate terminal state
-        self.state = State.DISCONNECTED
+        self.sp.state = State.DISCONNECTED
 
         # Configure signal handler
         signal.signal(signal.SIGUSR1, self.signal_usr1)
 
-        # Setup of signal polling timer
-        # This is required in order to allow the Qt eventloop to yield and
-        # handle signal reception
-        self.signal_timer = QTimer()
-        self.signal_timer.start(200)
-        self.signal_timer.timeout.connect(self.signal_usr1_timeout)
-        self.signal_timerx = QTimer()
-        self.signal_timerx.setSingleShot(True)
+        # Timers
+        self.timer = QTimer()
+        self.timer.setInterval(1000)
+        self.timer.timeout.connect(self.timerEvent)
+        self.timer.start()
+        
+        self.timer_5 = QTimer()
+        self.timer_5.setInterval(200)
+        self.timer_5.timeout.connect(self.timer_5_timeout)
+        self.timer_5.start()
 
         self.ts = TerminalState()
         
@@ -545,30 +544,22 @@ class MainForm(QMainWindow):
 
     def signal_usr1(self, signum, frame) -> None:
         logging.debug("USR1 signal received")
-        if self.state == State.CONNECTED:
-            self.serial.close()
-            self.state = State.SUSPENDED
-            self.signal_timerx.start(4000)
-            logging.debug("Suspending port")
-
-    def signal_usr1_timeout(self) -> None:
-        if self.state == State.SUSPENDED: 
-            rt = self.signal_timerx.remainingTime()
-            self.message(f"Port suspended. Time left {rt / 1000:.0f}")
-            if rt < 0:
-                self.state = State.RECONNECTING
+        self.sp.suspend()
 
     def timer_5_timeout(self):
+        if self.sp.state == State.SUSPENDED:
+            rt = self.sp.suspend_timer.remainingTime()
+            self.message(f"Port suspended. Time left {rt / 1000:.0f}")
 
         # Reconnect state
-        if self.state == State.RECONNECTING:
+        if self.sp.state == State.RECONNECTING:
             self.initPort()
-            self.serial.clear()
-            if self.serial.open(QIODevice.ReadWrite):
-                self.state = State.CONNECTED
+            self.sp.serial_port.clear()
+            if self.sp.serial_port.open(QIODevice.ReadWrite):
+                self.sp.state = State.CONNECTED
                 self.message(f"Reconnected to port: /dev/{self.ui.cbPort.currentText()}")
             else:
-                err = self.serial.error()
+                err = self.sp.serial_port.error()
                 self.messageError(
                 f"Failed to open port /dev/{self.ui.cbPort.currentText()}. {errors[err]}"
                 )
@@ -579,18 +570,17 @@ class MainForm(QMainWindow):
         AboutDialog.about()
 
     def port_handler(self):
-        if self.state == State.DISCONNECTED:
+        if self.sp.state == State.DISCONNECTED:
             pass
         
     def timerEvent(self):
         portNames = [x.portName() for x in QSerialPortInfo.availablePorts()]
 
         # Check if current port is still connecter (USB to serial adapters), if not close port
-        if self.sp.serial_port.isOpen():
-            if self.sp.serial_port.portName() not in portNames:
-                self.sp.serial_port.close()
-                self.state = State.DISCONNECTED
-                self.messageError(f"Port {self.sp.serial_port.portName()} no longer available.")
+        if self.sp.is_open():
+            if self.sp.name() not in portNames:
+                self.sp.close()
+                self.messageError(f"Port {self.sp.name()} no longer available.")
                 
         # Update list of serialports in combobox
         for x in range(self.ui.cbPort.count()):
@@ -605,7 +595,7 @@ class MainForm(QMainWindow):
         self.updateUi()
 
     def updateUi(self):
-        if self.sp.serial_port.isOpen():
+        if self.sp.serial_port.isOpen() or self.sp.state == State.SUSPENDED:
             self.setWindowTitle(
                 f"MpTerm  /dev/{self.ui.cbPort.currentText()} {self.ui.cbBitrate.currentText()}"
             )
@@ -618,6 +608,14 @@ class MainForm(QMainWindow):
         
         self.rxLabel.setText(f'<span style="color:Black">RX:</span> <span style="color:Purple">{self.sp.rxCnt:06d}</span> ')
         self.txLabel.setText(f'<span style="color:Black">TX:</span> <span style="color:Purple">{self.sp.txCnt:06d}</span> ')
+
+        states = {
+            State.DISCONNECTED : f"""<span style="color:Black">Disconected</span>""",
+            State.CONNECTED : f"""<span style="color:Green">Connected  </span>""",
+            State.SUSPENDED : f"""<span style="color:Red">Suspended </span>""",
+            State.RECONNECTING : f"""<span style="color:Magenta">Reconnecting</span>""",
+            }
+        self.stateLabel.setText(f"{states[self.sp.state]}")
 
     def updatePorts(self):
         ports = QSerialPortInfo.availablePorts()
@@ -655,6 +653,8 @@ class MainForm(QMainWindow):
 
     def actionClear(self):
         self.terminal.clear()
+        self.sp.clear_counters()
+        self.update()
 
     # scroll down to bottom
     def scrollDown(self):
@@ -684,8 +684,8 @@ class MainForm(QMainWindow):
 
     def appendHtml(self, str):
         # move cursor to end of buffer
-        # self.terminal.moveCursor(QTextCursor.End)
-        # self.terminal.insertHtml(str)
+        self.terminal.moveCursor(QTextCursor.End)
+        self.terminal.insertHtml(str)
         pass
 
     def read(self):
@@ -713,7 +713,7 @@ class MainForm(QMainWindow):
                 ch = data.at(i)
                 chd = int.from_bytes(ch, 'big')
 
-                logging.debug(f"{chd:02x} {hex2str(chd)}")
+                #logging.debug(f"{chd:02x} {hex2str(chd)}")
                 # handle sync
                 # if self.sync >= 0 and ord(ch) == self.sync:
                 #     s = s + '\n'
@@ -723,12 +723,11 @@ class MainForm(QMainWindow):
             # self.ui.textEdit.insertPlainText(s)
             self.appendHtml(s)
 
-        
         self.scrollDown()
         self.updateUi()
 
     def send(self, data: bytearray):
-        if self.sp.serial_port.isOpen():
+        if self.sp.is_open():
             res = self.sp.serial_port.write(data)
             if res >0: 
                 self.sp.txCnt += res
@@ -739,29 +738,22 @@ class MainForm(QMainWindow):
     def send_string(self, data: str):
         self.send(bytearray(data, "utf-8"))
 
-    # def keyPressEvent(self, a: QKeyEvent):  
-    #     logging.debug(f"  {a.key():x}  {get_description(a)}")   
-        #self.send_string(get_key(a))
-
     def openPort(self):
-        if self.sp.serial_port.isOpen():
-            self.sp.serial_port.close()
-            self.state = State.DISCONNECTED
+        if self.sp.is_open():
+            self.sp.close()
             self.updateUi()
             return
 
         self.initPort()
         self.sp.serial_port.clear()
-        res = self.sp.serial_port.open(QIODevice.ReadWrite)
+        res = self.sp.open(QIODevice.ReadWrite)
         if res:
             self.message("Opening port: /dev/" + self.ui.cbPort.currentText())
-            self.state = State.CONNECTED
         else:
             err = self.sp.serial_port.error()
             self.messageError(
                 f"Failed to open port /dev/{self.ui.cbPort.currentText()}. {errors[err]}"
             )
-            logging.error(errors[err])
 
         self.updateUi()
 
@@ -846,6 +838,8 @@ class MainForm(QMainWindow):
         )
 
     def portInfo(self):
+        if not self.sp.state == State.DISCONNECTED:
+            return
         ports = QSerialPortInfo.availablePorts()
         for port in ports:
             self.appendInfo("Port:", port.portName())
@@ -859,17 +853,10 @@ class MainForm(QMainWindow):
     def new(self):
         subprocess.Popen([f"{self_dir}/mpterm.py"], shell=False)
 
-    # def openFile(self):
-    #     dlg = QFileDialog()
-    #     dlg.setFileMode(QFileDialog.AnyFile)
-    #     dlg.setFilter("Text files (*.txt)")
-    #     filenames = QStringList()
-
-
 def list_ports():
     spi = QSerialPortInfo.availablePorts()
     for p in spi:
-        print(f"{p.portName()}  {p.description()}  {p.systemLocation()}")
+        print(f"{p.portName():<10}{p.description():<20}{p.systemLocation()}")
 
 
 

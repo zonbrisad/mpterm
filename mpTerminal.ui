@@ -223,9 +223,9 @@
        </spacer>
       </item>
       <item>
-       <widget class="QPushButton" name="pushButton_2">
+       <widget class="QPushButton" name="pbSuspend">
         <property name="text">
-         <string>Pause</string>
+         <string>Suspend</string>
         </property>
        </widget>
       </item>

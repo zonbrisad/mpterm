@@ -1,0 +1,34 @@
+{
+    "font": "monospace",
+    "fontsize": "11",
+    "suspendtimeout": "4",
+    "profiles": [
+        {
+            "alias": "default",
+            "port": "ttyUSB1",
+            "bitrate": "115200",
+            "databits": "8",
+            "parity": "None",
+            "stopbits": "1",
+            "flowcontrol": "None"
+        },
+        {
+            "alias": "Full speed",
+            "port": "ttyUSB1",
+            "bitrate": "115200",
+            "databits": "8",
+            "parity": "None",
+            "stopbits": "1",
+            "flowcontrol": "None"
+        },
+        {
+            "alias": "Extra system",
+            "port": "ttyUSB1",
+            "bitrate": "115200",
+            "databits": "8",
+            "parity": "None",
+            "stopbits": "1",
+            "flowcontrol": "None"
+        }
+    ]
+}
