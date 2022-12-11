@@ -50,6 +50,7 @@ from PyQt5.QtWidgets import (
     QTextEdit,
     QDialogButtonBox,
     QPushButton,
+    QComboBox,
     QMessageBox,
     QWidget,
     QFileDialog,
@@ -80,8 +81,6 @@ class App:
     ICON = f"{self_dir}/icons/mp_icon2.png"
     
 mp_settings = f"{self_dir}/mpterm.json"
-
-
 
 # Definitions ---------------------------------------------------------------
 
@@ -140,7 +139,7 @@ keys = { Qt.Key_Enter:("\n", "Enter"),
          Qt.Key_F5:("", "F5"),
          Qt.Key_F6:("", "F6"),
          Qt.Key_F7:("", "F7"),
-         Qt.Key_F8:("", "F8"),
+         Qt.Key_F8:("", "F8"), 
          Qt.Key_F9:("", "F9"),
          Qt.Key_F10:("", "F10"),
          Qt.Key_F11:("", "F11"),
@@ -157,7 +156,6 @@ keys = { Qt.Key_Enter:("\n", "Enter"),
          Qt.Key_Tab:(Ascii.TAB, "Tab")
 } 
 
-
 def get_description(key: QKeyEvent) -> str:
     for a,b in keys.items():
         if key.key() == a:
@@ -165,14 +163,12 @@ def get_description(key: QKeyEvent) -> str:
 
     return key.text()
 
-
 def get_key(key: QKeyEvent) -> str:
     for a,b in keys.items():
         if key.key() == a:
             return b[0]
 
     return key.text()
-
 
 def get_char(c: QKeyEvent) -> str:
     for a, b in chars.items():
@@ -195,6 +191,9 @@ errors = {
     QSerialPort.UnknownError:"Unknown",  
 }
 
+class Mode(enum.Enum):
+    Normal = 0
+    Echo   = 1
 
 class State(enum.Enum):
     DISCONNECTED = 0
@@ -214,9 +213,7 @@ class MpTerm(enum.Enum):
     Cr = 1
     NlCr = 2
 
-
 # Code ----------------------------------------------------------------------
-
 
 about_html = f"""
 <center><img src={App.ICON} width="54" height="54"></center>
@@ -264,6 +261,7 @@ about_html = f"""
 {App.DESCRIPTION}
 <br>
 """
+
 
 class AboutDialog(QDialog):
     def __init__(self, parent=None):
@@ -342,9 +340,10 @@ class mpProfile:
 
         self.fromJSON(jsd)
 
-
     
 class SerialPort:
+    count : int
+    
     def __init__(self) -> None:
         self.clear_counters()
         self.serial_port = QSerialPort()
@@ -360,6 +359,19 @@ class SerialPort:
         self.reconnect_timer.setInterval(200)
         #self.reconnect_timer.timeout.connect(self.timer_5_timeout)
         self.reconnect_timer.start()
+
+    def read_str(self) -> str:
+        data = self.serial_port.readAll()
+        data_str = str(data, "utf-8")
+        self.count = data.count()
+        self.rxCnt += self.count
+        return data_str
+
+    def read(self):
+        data = self.serial_port.readAll()
+        self.count = data.count()
+        self.rxCnt += self.count
+        return data
 
     def name(self) -> str:
         return self.serial_port.portName()
@@ -407,7 +419,64 @@ class SerialPort:
 
     def is_open(self) -> bool:
         return self.serial_port.isOpen()
-            
+
+
+class FormatHex():
+    
+    def __init__(self) -> None:
+        self.index = 0
+        self.max = 30
+        self.end = "<br>"
+        self.setMode(MpTerm.Ascii)
+
+    def setMode(self, mode):
+        self.mode = mode
+        self.index = 0
+
+    def clear(self):
+        self.index = 0
+        
+    def _format_ascii_hex(self, data) -> str:
+        s = ""
+        for i in range(0, data.count()):
+            ch = data.at(i)
+            str(ch, "utf-8")
+            chd = int.from_bytes(ch, 'big')
+            s += f"""<b>{chd:02x}</b> "{str(ch, "utf-8")}" """
+            self.index += 1
+            if self.index == self.max: 
+                s += self.end
+                self.index = 0
+        return s
+
+    def _format_hex(self, data) -> str:
+        s = ""
+        for i in range(0, data.count()):
+            ch = data.at(i)
+            chd = int.from_bytes(ch, 'big')
+            s += f"{chd:02x} "
+            self.index += 1
+            if self.index == self.max: 
+                s += self.end
+                self.index = 0
+        return s
+
+    def update(self, data) -> str:
+        if self.mode == MpTerm.Hex:
+            return self._format_hex(data)
+
+        if self.mode == MpTerm.AsciiHex:
+            return self._format_ascii_hex(data)
+
+        return ""
+    
+
+class StyleS:
+    normal = "color:Black; border:0"
+    error = "color:Red; border:0"
+    win = "border:0"
+    # normal = "background-color:#3F84CB; color:#F7F9FC; border:0"
+    # error = "background-color:#CC6633; color:#F7F9FC; border:0"
 
 class MainForm(QMainWindow):
 
@@ -427,7 +496,7 @@ class MainForm(QMainWindow):
         
         self.updatePorts()
 
-        self.terminal = TerminalWin(self.ui.centralwidget, sp = self.sp)
+        self.terminal = TerminalWin(self.ui.centralwidget, sp = self.sp, init=f"""MpTerm Ver: <b>{App.VERSION}</b>\n""")
         
         self.ui.horizontalLayout.insertWidget(1, self.terminal) 
 
@@ -436,18 +505,16 @@ class MainForm(QMainWindow):
 
         self.rxLabel = QLabel("")
         self.txLabel = QLabel("")
-        self.stateLabel = QLabel("State")
+        self.stateLabel = QLabel("")
         self.ui.statusbar.addPermanentWidget(self.stateLabel, stretch=0)
         self.ui.statusbar.addPermanentWidget(self.rxLabel, stretch=0)
         self.ui.statusbar.addPermanentWidget(self.txLabel, stretch=0)
-
 
         self.ui.cbStopBits.addItem("1", QSerialPort.OneStop)
         self.ui.cbStopBits.addItem("1.5", QSerialPort.OneAndHalfStop)
         self.ui.cbStopBits.addItem("2", QSerialPort.TwoStop)
         self.ui.cbStopBits.setCurrentIndex(0)
         
-
         self.ui.cbBits.addItem("5", QSerialPort.Data5)
         self.ui.cbBits.addItem("6", QSerialPort.Data6)
         self.ui.cbBits.addItem("7", QSerialPort.Data7)
@@ -482,7 +549,8 @@ class MainForm(QMainWindow):
 
         self.ui.cbDisplay.addItem("Ascii", MpTerm.Ascii)
         self.ui.cbDisplay.addItem("Hex", MpTerm.Hex)
-        #self.ui.cbDisplay.addItem("Hex + Ascii", MpTerm.AsciiHex)
+        self.ui.cbDisplay.addItem("Hex + Ascii", MpTerm.AsciiHex)
+        self.ui.cbDisplay.currentIndexChanged.connect(self.mode_change)      
 
         self.ui.cbProfiles.addItem("Default", 0)
         self.ui.cbProfiles.addItem("115299", 2)
@@ -491,9 +559,15 @@ class MainForm(QMainWindow):
 
         self.ui.cbRTS.clicked.connect(self.handle_rts)
 
+        #self.setStyleSheet(StyleS.win)
+        self.ui.statusbar.setStyleSheet(StyleS.normal)
+
         # Send menu
-        ctrlcAction = QAction("Ctrl-c", self)
+        ctrlcAction = QAction("Ctrl-C (ETX)", self)
         ctrlcAction.triggered.connect(lambda: self.send_string(Esc.ETX))
+        self.ui.menuSend.addAction(ctrlcAction)
+        ctrlcAction = QAction("Break (NULL)", self)
+        ctrlcAction.triggered.connect(lambda: self.send_string(Ascii.NULL))
         self.ui.menuSend.addAction(ctrlcAction)
 
         # event slots
@@ -502,6 +576,7 @@ class MainForm(QMainWindow):
         self.ui.cbBits.activated.connect(self.set_sp)
         self.ui.cbParity.activated.connect(self.set_sp)
         self.ui.cbFlowControl.activated.connect(self.set_sp)
+        self.ui.cbDisplay.activated.connect(self.set_sp)    
 
         self.ui.actionNew.triggered.connect(self.new)
         self.ui.actionExit.triggered.connect(self.exitProgram)
@@ -513,11 +588,16 @@ class MainForm(QMainWindow):
         self.ui.pbSuspend.pressed.connect(self.sp.suspend)
         
         # Debug panel to the right
-        self.ui.gbDebug.setHidden(True)
-        self.ui.bpTest1.pressed.connect(lambda: self.send(b"ABCD"))
-        self.ui.bpTest2.pressed.connect(lambda: self.send(b"0123456789"))
-        #self.ui.colorTest.pressed.connect(lambda: self.send(colorTest))
-        self.ui.leSyncString.textChanged.connect(self.syncChanged)
+        # self.ui.gbDebug.setHidden(True)
+        # self.ui.bpTest1.pressed.connect(lambda: self.send(b"ABCD"))
+        # self.ui.bpTest2.pressed.connect(lambda: self.send(b"0123456789"))
+        # self.ui.colorTest.pressed.connect(lambda: self.send(colorTest))
+        # self.ui.leSyncString.textChanged.connect(self.syncChanged)
+
+        self.cbMode = QComboBox(self.ui.centralwidget)
+        self.ui.verticalLayout_4.insertWidget(1, self.cbMode)
+        self.cbMode.addItem(Mode.Normal.name, Mode.Normal)
+        self.cbMode.addItem(Mode.Echo.name, Mode.Echo)
 
         self.loadSettings()
 
@@ -538,7 +618,14 @@ class MainForm(QMainWindow):
         self.timer_5.timeout.connect(self.timer_5_timeout)
         self.timer_5.start()
 
+        # self.setStyleSheet("QPushButton::hover"
+        #                      "{"
+        #                      "background-color : lightgreen;"
+        #                      "}")
+        
         self.ts = TerminalState()
+
+        self.formater = FormatHex()
         
         self.updateUi()
 
@@ -653,6 +740,7 @@ class MainForm(QMainWindow):
 
     def actionClear(self):
         self.terminal.clear()
+        self.formater.reset()
         self.sp.clear_counters()
         self.update()
 
@@ -660,20 +748,21 @@ class MainForm(QMainWindow):
     def scrollDown(self):
         vsb =self.terminal.verticalScrollBar()
         vsb.setValue(vsb.maximum())
-        pass
 
     def _message(self, msg):
         self.ui.statusbar.showMessage(msg, 4000)
+        self.ui.statusbar.show
 
     # Show message in status bar
     def message(self, msg):
-        self.ui.statusbar.setStyleSheet("color: black")
+        #self.ui.statusbar.setStyleSheet("color: black")
+        self.ui.statusbar.setStyleSheet(StyleS.normal)
         self._message(msg)
         logging.debug(msg)
 
     # Show error message in status bar
     def messageError(self, msg):
-        self.ui.statusbar.setStyleSheet("color: red")
+        self.ui.statusbar.setStyleSheet(StyleS.error)
         self._message(msg)
         logging.error(msg)
 
@@ -682,49 +771,38 @@ class MainForm(QMainWindow):
     #     self.ui.textEdit.moveCursor(QTextCursor.End)
     #     self.ui.textEdit.appendPlainText(str)
 
+    def mode_change(self):
+        self.terminal.clear()
+        self.formater.setMode(self.ui.cbDisplay.currentData())
+        logging.debug(f"Setting display mode {self.ui.cbDisplay.currentData()}")
+        
     def appendHtml(self, str):
         # move cursor to end of buffer
         self.terminal.moveCursor(QTextCursor.End)
         self.terminal.insertHtml(str)
-        pass
 
     def read(self):
-        # get all data from buffer
+        data = self.sp.read()
 
-        data = self.sp.serial_port.readAll()
         data_str = str(data, "utf-8")
 
-        self.sp.rxCnt += data.count()
-
         db = data_str.replace("\x1b", "\\e").replace("\x0a", "\\n").replace("\x0d", '\\r')
-        logging.debug(f"Data received: {data.count()} {db}")
+        logging.debug(f"Data received: {self.sp.count} {db}")
 
         DisplayMode = self.ui.cbDisplay.currentData()
 
         if DisplayMode == MpTerm.Ascii:  # Standard ascii display mode
-            #self.decoder.append_string(data_str)
-            #self.terminal.append(data_str)
             self.terminal.apps(data_str)
 
-        elif DisplayMode == MpTerm.Hex:  # Hexadecimal display mode
-            s = ""
-            # self.ui.textEdit.setFont()
-            for i in range(0, data.count()):
-                ch = data.at(i)
-                chd = int.from_bytes(ch, 'big')
-
-                #logging.debug(f"{chd:02x} {hex2str(chd)}")
-                # handle sync
-                # if self.sync >= 0 and ord(ch) == self.sync:
-                #     s = s + '\n'
-
-                s = s + f"{chd:02x} "
-
-            # self.ui.textEdit.insertPlainText(s)
-            self.appendHtml(s)
+        if DisplayMode != MpTerm.Ascii:  # Hexadecimal display mode
+            self.appendHtml(self.formater.update(data))
 
         self.scrollDown()
         self.updateUi()
+
+        if self.cbMode.currentData() == Mode.Echo:
+            self.sp.send(data)
+        
 
     def send(self, data: bytearray):
         if self.sp.is_open():

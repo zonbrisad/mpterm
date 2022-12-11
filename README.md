@@ -72,17 +72,20 @@
 
 ## ToDo
 
-- Settings file
-- Multiple settings profiles
-- Terminal functions
-  - Color encoding
-  - Cursor management
-- Addon function
-- Logging
-- Echo mode
-- Suspend button
-- Sync feature
-
+- [x] Settings file
+- [ ] Multiple settings profiles
+- [ ] Terminal functions
+- [x] Color encoding
+- [ ] Truecolor
+- [ ] Cursor management
+- [ ] Addon function
+- [ ] Logging
+- [x] Echo mode
+- [x] Suspend button
+- [ ] Sync feature
+- [ ] Programming button
+- [ ] Hex mode
+- [ ] Show pin status
 
 
 ## Links

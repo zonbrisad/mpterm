@@ -39,6 +39,7 @@ from enum import Enum, auto
 
 class Ascii:
     NULL = "\0"
+    ETX = '\x03'          # End of text(ETX), CTRL-C
     BEL = "\a"
     BS = "\b"
     TAB = "\t"

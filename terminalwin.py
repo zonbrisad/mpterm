@@ -22,7 +22,7 @@ import sys
 import logging
 
 from PyQt5.QtCore import Qt, QTimer, QSettings, QIODevice
-from PyQt5.QtGui import QTextCursor, QFont, QKeyEvent
+from PyQt5.QtGui import QTextCursor, QFont, QKeyEvent, QColor
 from PyQt5.QtWidgets import (
     QTextEdit,
 
@@ -93,36 +93,35 @@ def get_key(key: QKeyEvent) -> str:
     return key.text()
 
 
-template="""
-<b>MPterm startup...</b><br>
-<pre>
-"""
-
-
+template="""<pre>"""
 
 class TerminalWin(QTextEdit):
     
-    def __init__(self, parent=None, sp=None):
+    def __init__(self, parent=None, sp=None, init=None):
         super().__init__(parent)
         self.sp=sp
         font = QFont()
         font.setFamily("Monospace")
         self.setFont(font)
         self.setObjectName("textEdit")
+
         self.setStyleSheet("background-color: rgb(0, 0, 0); color : White")
+
+        # p = self.viewport().palette()
+        # p.setColor(self.viewport().backgroundRole(), QColor(0,0,0))
+        # self.viewport().setPalette(p)
+        
         self.setReadOnly(True)
-        self.clear()
+        self.clear(init=init)
         self.ensureCursorVisible()
         self.setCursorWidth(2)
 
         self.ts = TerminalState()
 
-    def clear(self):
+    def clear(self, init = ""):
         super().clear()
-        self.setHtml(template)
+        self.setHtml(template+init)
         self.moveCursor(QTextCursor.End)
-        # self.insertHtml(xx)
-        #self.insertPlainText(xx)
         self.buf = template
 
     def update(self, s : str) -> str:
