@@ -569,6 +569,9 @@ class MainForm(QMainWindow):
         ctrlcAction = QAction("Break (NULL)", self)
         ctrlcAction.triggered.connect(lambda: self.send_string(Ascii.NULL))
         self.ui.menuSend.addAction(ctrlcAction)
+        # testMenu = QMenu("Test", self.centralWidget)
+        # testMenu = QMenu(self.centralWidget, "Test")
+        # self.ui.menuSend.addAction(testMenu)
 
         # event slots
         self.ui.cbBitrate.activated.connect(self.set_sp)

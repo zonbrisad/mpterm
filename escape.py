@@ -223,6 +223,7 @@ class SGR(Enum):
 
         x = s[2:-1]
         attributes = x.split(";")
+        attributes = x.replace(":", ";").split(";")
         attr_list = []
         for attr in attributes:
             if attr == "":              # If no number present it is a reset(0)

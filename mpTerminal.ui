@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1056</width>
+    <width>608</width>
     <height>614</height>
    </rect>
   </property>
@@ -210,6 +210,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QGroupBox" name="groupBox">
+        <property name="title">
+         <string>GroupBox</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <spacer name="verticalSpacer">
         <property name="orientation">
          <enum>Qt::Vertical</enum>
@@ -238,7 +245,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1056</width>
+     <width>608</width>
      <height>22</height>
     </rect>
    </property>
@@ -267,6 +274,14 @@
     <property name="title">
      <string>Send</string>
     </property>
+    <widget class="QMenu" name="menudddd">
+     <property name="title">
+      <string>dddd</string>
+     </property>
+     <addaction name="actionsss"/>
+     <addaction name="actionsss_2"/>
+    </widget>
+    <addaction name="menudddd"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuAction"/>
@@ -321,6 +336,16 @@
   <action name="actionPortInfo">
    <property name="text">
     <string>Port Info</string>
+   </property>
+  </action>
+  <action name="actionsss">
+   <property name="text">
+    <string>sss</string>
+   </property>
+  </action>
+  <action name="actionsss_2">
+   <property name="text">
+    <string>sss</string>
    </property>
   </action>
  </widget>
