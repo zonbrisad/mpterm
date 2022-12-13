@@ -59,7 +59,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
 from ui_MainWindow import Ui_MainWindow
 from dataclasses import dataclass
-from escape import Esc, Ascii, TerminalState
+from escape import Esc, Ascii, TerminalState, flag, escape_attribute_test, color_256_test
 from terminalwin import TerminalWin
 
 import AboutDialogXX
@@ -118,63 +118,64 @@ chars = {  0x00:"NULL",
            0x1F:"US"
 }
 
-keys = { Qt.Key_Enter:("\n", "Enter"), 
-         Qt.Key_Return:("\n", "Return"), 
-         Qt.Key_Escape:("", "Escape"), 
-         Qt.Key_Delete:("", "Delete"), 
-         Qt.Key_Left:("", "Left"),
-         Qt.Key_Right:("", "Right"),
-         Qt.Key_Up:("", "Up"),
-         Qt.Key_Down:("", "Down"),
-         Qt.Key_Insert:("", "Insert"),
-         Qt.Key_Backspace:("", "Backspace"),
-         Qt.Key_Home:("", "Home"),
-         Qt.Key_End:("", "End"),
-         Qt.Key_PageDown:("", "Page down"),
-         Qt.Key_PageUp:("", "Page up"),
-         Qt.Key_F1:("\x09", "F1"),
-         Qt.Key_F2:("", "F2"),
-         Qt.Key_F3:("", "F3"),
-         Qt.Key_F4:("", "F4"),
-         Qt.Key_F5:("", "F5"),
-         Qt.Key_F6:("", "F6"),
-         Qt.Key_F7:("", "F7"),
-         Qt.Key_F8:("", "F8"), 
-         Qt.Key_F9:("", "F9"),
-         Qt.Key_F10:("", "F10"),
-         Qt.Key_F11:("", "F11"),
-         Qt.Key_F12:("", "F12"),
-         Qt.Key_Control:("", "Control"),
-         Qt.Key_Shift:("", "Shift"),
-         Qt.Key_Alt:("", "Alt"),
-         Qt.Key_AltGr:("", "Alt Gr"),
-         Qt.Key_Space:(" ", "Space"),
-         Qt.Key_Print:("", "Print"),
-         Qt.Key_ScrollLock:("", "Scroll lock"),
-         Qt.Key_CapsLock:("", "Caps lock"),
-         Qt.Key_Pause:("", "Pause"),
-         Qt.Key_Tab:(Ascii.TAB, "Tab")
-} 
+# keymap = { 
+#     Qt.Key_Enter:("\n", "Enter"), 
+#     Qt.Key_Return:("\n", "Return"), 
+#     Qt.Key_Escape:("", "Escape"), 
+#     Qt.Key_Delete:("", "Delete"), 
+#     Qt.Key_Left:("", "Left"),
+#     Qt.Key_Right:("", "Right"),
+#     Qt.Key_Up:("", "Up"),
+#     Qt.Key_Down:("", "Down"),
+#     Qt.Key_Insert:("", "Insert"),
+#     Qt.Key_Backspace:("", "Backspace"),
+#     Qt.Key_Home:("", "Home"),
+#     Qt.Key_End:("", "End"),
+#     Qt.Key_PageDown:("", "Page down"),
+#     Qt.Key_PageUp:("", "Page up"),
+#     Qt.Key_F1:("\x09", "F1"),
+#     Qt.Key_F2:("", "F2"),
+#     Qt.Key_F3:("", "F3"),
+#     Qt.Key_F4:("", "F4"),
+#     Qt.Key_F5:("", "F5"),
+#     Qt.Key_F6:("", "F6"),
+#     Qt.Key_F7:("", "F7"),
+#     Qt.Key_F8:("", "F8"), 
+#     Qt.Key_F9:("", "F9"),
+#     Qt.Key_F10:("", "F10"),
+#     Qt.Key_F11:("", "F11"),
+#     Qt.Key_F12:("", "F12"),
+#     Qt.Key_Control:("", "Control"),
+#     Qt.Key_Shift:("", "Shift"),
+#     Qt.Key_Alt:("", "Alt"),
+#     Qt.Key_AltGr:("", "Alt Gr"),
+#     Qt.Key_Space:(" ", "Space"),
+#     Qt.Key_Print:("", "Print"),
+#     Qt.Key_ScrollLock:("", "Scroll lock"),
+#     Qt.Key_CapsLock:("", "Caps lock"),
+#     Qt.Key_Pause:("", "Pause"),
+#     Qt.Key_Tab:(Ascii.TAB, "Tab")
+# } 
 
-def get_description(key: QKeyEvent) -> str:
-    for a,b in keys.items():
-        if key.key() == a:
-            return b[1]
+# def get_description(key: QKeyEvent) -> str:
+#     for a,b in keymap.items():
+#         if key.key() == a:
+#             return b[1]
 
-    return key.text()
+#     return key.text()
 
-def get_key(key: QKeyEvent) -> str:
-    for a,b in keys.items():
-        if key.key() == a:
-            return b[0]
+# def get_key(key: QKeyEvent) -> str:
+#     for a,b in keymap.items():
+#         if key.key() == a:
+#             return b[0]
 
-    return key.text()
+#     return key.text()
 
-def get_char(c: QKeyEvent) -> str:
-    for a, b in chars.items():
-        if  c.key() == a:
-            return b
-    return c.text()
+# def get_char(c: QKeyEvent) -> str:
+#     for a, b in chars.items():
+#         if  c.key() == a:
+#             return b
+#     return c.text()
 
 
 errors = {
@@ -200,6 +201,14 @@ class State(enum.Enum):
     CONNECTED = 1
     SUSPENDED = 2
     RECONNECTING = 3
+
+
+class StateHandler:
+    def __init__(self) -> None:
+        self.state = State.DISCONNECTED
+
+    def set_state(self, new_state):
+        pass
 
 class MpTerm(enum.Enum):
     # Display modes
@@ -569,10 +578,25 @@ class MainForm(QMainWindow):
         ctrlcAction = QAction("Break (NULL)", self)
         ctrlcAction.triggered.connect(lambda: self.send_string(Ascii.NULL))
         self.ui.menuSend.addAction(ctrlcAction)
-        # testMenu = QMenu("Test", self.centralWidget)
-        # testMenu = QMenu(self.centralWidget, "Test")
-        # self.ui.menuSend.addAction(testMenu)
+        tabAction = QAction("Tab (0x09)", self)
+        tabAction.triggered.connect(lambda: self.send_string(Ascii.TAB))
+        self.ui.menuSend.addAction(tabAction)
+        
+        
+        self.testMenu = self.ui.menuSend.addMenu("Tests")
 
+        sendTestAction = QAction("Escape test", self)
+        sendTestAction.triggered.connect(lambda: self.send_string(escape_attribute_test))
+        self.testMenu.addAction(sendTestAction)
+
+        sendFlagAction = QAction("Flag SE", self)
+        sendFlagAction.triggered.connect(lambda: self.send_string(flag))
+        self.testMenu.addAction(sendFlagAction)
+        
+        colorAction = QAction("Color test", self)
+        colorAction.triggered.connect(lambda: self.send_string(color_256_test()))
+        self.testMenu.addAction(colorAction)
+        
         # event slots
         self.ui.cbBitrate.activated.connect(self.set_sp)
         self.ui.cbStopBits.activated.connect(self.set_sp)
@@ -938,7 +962,6 @@ def list_ports():
     spi = QSerialPortInfo.availablePorts()
     for p in spi:
         print(f"{p.portName():<10}{p.description():<20}{p.systemLocation()}")
-
 
 
 def main():

@@ -97,7 +97,7 @@ template="""<pre>"""
 
 class TerminalWin(QTextEdit):
     
-    def __init__(self, parent=None, sp=None, init=None):
+    def __init__(self, parent=None, sp=None, init=""):
         super().__init__(parent)
         self.sp=sp
         font = QFont()
@@ -141,12 +141,11 @@ class TerminalWin(QTextEdit):
         logging.debug(b)
 
         
-
     def keyPressEvent(self, e: QKeyEvent) -> None:
-        super().keyPressEvent(e)
-
         logging.debug(f"  {e.key():x}  {get_description(e)}")   
         self.sp.send_string(get_key(e))
+        super().keyPressEvent(e)
+
 
 
 def main() -> None:

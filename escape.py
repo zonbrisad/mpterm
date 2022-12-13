@@ -31,10 +31,7 @@
 
 from __future__ import annotations
 from dataclasses import dataclass
-import subprocess
-import enum
 import logging
-import os
 from enum import Enum, auto
 
 class Ascii:
@@ -195,7 +192,7 @@ class SGR(Enum):
 
     SET_FG_COLOR = "38"     # Select 256 color or RGB color foreground
     SET_BG_COLOR = "48"     # Select 256 color or RGB color background
-
+    SET_UL_COLOR = "58"     # Select underline color
     FRAMED = "51"
 
     SUPERSCRIPT = "73"
@@ -211,7 +208,7 @@ class SGR(Enum):
 
     @staticmethod
     def find_sgr(sgr_code : str) -> SGR: 
-        for e in SGR:
+        for e in SGR: 
             if sgr_code == e.value:    
                 return e
         return SGR.UNSUPPORTED
@@ -222,28 +219,36 @@ class SGR(Enum):
             return None
 
         x = s[2:-1]
-        attributes = x.split(";")
+        # attributes = x.split(";")
         attributes = x.replace(":", ";").split(";")
         attr_list = []
         for attr in attributes:
             if attr == "":              # If no number present it is a reset(0)
-                attr_list.append({"SGR":SGR.RESET})
-            else:
-                if attr in [ SGR.SET_BG_COLOR.value, SGR.SET_FG_COLOR.value]:
-                    logging.debug(attributes)
+                # attr_list.append({"SGR":SGR.RESET})
+                attr = "0"
 
-                    # 256 color mode
-                    if int(attributes[1]) == 5: 
-                        attr_list.append({"SGR":SGR.find_sgr(attr), "color":int(attributes[2])})
+            # Extended(256/Truecolor) color management    
+            if attr in [ SGR.SET_BG_COLOR.value, SGR.SET_FG_COLOR.value]:
+                logging.debug(attributes)
+                # 256 color mode
+                if int(attributes[1]) == 5: 
+                    attr_list.append({"SGR":SGR.find_sgr(attr), "color":int(attributes[2])})
+                # Truecolor mode    
+                if int(attributes[1]) == 2: 
+                    #xx.append({"SGR":SGR.find_sgr(c), "color":int(sp[2])})
+                    pass
+                break
 
-                    # Truecolor mode    
-                    if int(attributes[1]) == 2: 
-                        #xx.append({"SGR":SGR.find_sgr(c), "color":int(sp[2])})
-                        pass
-                        
-                    break
-                   
+            # Handle underline style 
+            if attr == SGR.UNDERLINE.value:
                 attr_list.append({"SGR":SGR.find_sgr(attr)})
+                break
+
+            # Handle underline color
+            if attr == SGR.SET_UL_COLOR.value:
+                break
+                    
+            attr_list.append({"SGR":SGR.find_sgr(attr)})
 
 
         # if isinstance(t, SGR):
@@ -285,20 +290,30 @@ class Esc:
     ON_WHITE = '\x1b[47m'       # White
 
     # ANSI Text attributes
-    ATTR_NORMAL = "\x1b[0m"       # Reset attributes
+    ATTR_RESET = "\x1b[0m"       # Reset attributes
     ATTR_BOLD = "\x1b[1m"         # bold font
-    ATTR_LOWINTENSITY = "\x1b[2m" # Low intensity/faint/dim
+    ATTR_DIM = "\x1b[2m" # Low intensity/faint/dim
     ATTR_ITALIC = "\x1b[3m"       # Low intensity/faint/dim
     ATTR_UNDERLINE = "\x1b[4m"    # Underline
     ATTR_SLOWBLINK = "\x1b[5m"    # Slow blink
     ATTR_FASTBLINK = "\x1b[6m"    # Fast blink
     ATTR_REVERSE = "\x1b[7m"      # Reverse video
+    ATTR_HIDE = "\x1b[8m"
     ATTR_CROSSED = "\x1b[9m"      # Crossed text
     ATTR_FRACTUR = "\x1b[20m"     # Gothic
     ATTR_FRAMED = "\x1b[51m"      # Framed 
     ATTR_OVERLINED = "\x1b[53m"   # Overlined 
     ATTR_SUPERSCRIPT = "\x1b[73m" # Superscript
     ATTR_SUBSCRIPT = "\x1b[74m"   # Subscript
+
+    ATTR_NORMAL = "\x1b[22m"      # Normal intensity
+    ATTR_NOT_ITALIC = "\x1b[23m"
+    ATTR_NOT_UNDERLINED = "\x1b[24m"
+    ATTR_NOT_BLINKING = "\x1b[25m"
+    ATTR_NOT_REVERSED = "\x1b[27m"
+    ATTR_REVEAL = "\x1b[28m"
+    ATTR_NOT_CROSSED = "\x1b[29m"
+    ATTR_NOT_SSCRIPT = "\x1b[75m"
     
     END = "\x1b[0m"
     CLEAR = "\x1b[2J"
@@ -720,19 +735,63 @@ CC256 = [
 ]
 
 
+xx = {
+    SGR.BOLD: "<b>",
+    SGR.ITALIC: "<i>",
+    SGR.UNDERLINE: "<u>",
+    SGR.SLOW_BLINK: "",
+    SGR.REVERSE_VIDEO: "",
+    SGR.CONCEAL: "",
+    SGR.CROSSED: "<s>",
+    SGR.SUPERSCRIPT: "<sup>",
+    SGR.SUBSCRIPT:"<sub>",
+    SGR.FG_COLOR_BLACK:TColor.BLACK,
+    SGR.FG_COLOR_RED:TColor.RED,
+    SGR.FG_COLOR_GREEN:TColor.GREEN,
+    SGR.FG_COLOR_YELLOW:TColor.YELLOW,
+    SGR.FG_COLOR_BLUE:TColor.BLUE,
+    SGR.FG_COLOR_MAGENTA:TColor.MAGENTA,
+    SGR.FG_COLOR_CYAN:TColor.CYAN,
+    SGR.FG_COLOR_WHITE:TColor.WHITE,
+    SGR.BG_COLOR_BLACK:TColor.BLACK,
+    SGR.BG_COLOR_RED:TColor.RED,
+    SGR.BG_COLOR_GREEN:TColor.GREEN,
+    SGR.BG_COLOR_YELLOW:TColor.YELLOW,
+    SGR.BG_COLOR_BLUE:TColor.BLUE,
+    SGR.BG_COLOR_MAGENTA:TColor.MAGENTA,
+    SGR.BG_COLOR_CYAN:TColor.CYAN,
+    SGR.BG_COLOR_WHITE:TColor.WHITE,
+    SGR.NORMAL_INTENSITY:["</b>", SGR.BOLD],
+    SGR.NOT_ITALIC:["</i>", SGR.ITALIC],
+    SGR.NOT_UNDERLINED:["</u>", SGR.UNDERLINE],
+    SGR.NOT_BLINKING:["", SGR.SLOW_BLINK],
+    SGR.NOT_REVERSED:["", SGR.REVERSE_VIDEO],
+    SGR.REVEAL:["", SGR.CONCEAL],
+    SGR.NOT_CROSSED:["</s>", SGR.CROSSED]
+}
+
+attr_list = [ SGR.BOLD, SGR.ITALIC, SGR.UNDERLINE, SGR.CROSSED, SGR.SUPERSCRIPT, SGR.SUBSCRIPT ]
+not_attr_list = [ SGR.NORMAL_INTENSITY, SGR.NOT_ITALIC, SGR.NOT_UNDERLINED, SGR.NOT_BLINKING, 
+             SGR.NOT_REVERSED, SGR.REVEAL, SGR.NOT_CROSSED ]
+
+fg_list = [ SGR.FG_COLOR_BLACK, SGR.FG_COLOR_RED, SGR.FG_COLOR_GREEN, SGR.FG_COLOR_YELLOW, 
+            SGR.FG_COLOR_BLUE, SGR.FG_COLOR_MAGENTA, SGR.FG_COLOR_CYAN, SGR.FG_COLOR_WHITE ] 
+bg_list = [ SGR.BG_COLOR_BLACK, SGR.BG_COLOR_RED, SGR.BG_COLOR_GREEN, SGR.BG_COLOR_YELLOW, 
+            SGR.BG_COLOR_BLUE, SGR.BG_COLOR_MAGENTA, SGR.BG_COLOR_CYAN, SGR.BG_COLOR_WHITE ]
+
 class TerminalState:
-    bold : bool = False
-    faint : bool = False
-    italic : bool = False
-    underline : bool = False
+    BOLD : bool = False
+    FAINT : bool = False
+    ITALIC : bool = False
+    UNDERLINE : bool = False
     slow_blink : bool = False
     rapid_blink : bool = False
     reverse_video : bool = False
-    crossed : bool = False
-    superscript : bool = False
-    subscript : bool = False
+    CROSSED : bool = False
+    SUPERSCRIPT : bool = False
+    SUBSCRIPT : bool = False
     
-    color : bool = False
+    span : bool = False
     bg_color:SGR = SGR.BG_COLOR_WHITE
     attribute:SGR = SGR.RESET
     cur_x = None
@@ -748,21 +807,42 @@ class TerminalState:
         self.reset()
         
     def reset(self):
-        self.bold = False
-        self.faint = False
-        self.italic = False
-        self.underline = False
+        self.BOLD = False
+        self.FAINT = False
+        self.ITALIC = False
+        self.UNDERLINE = False
         self.slow_blink = False
         self.rapid_blink = False
         self.reverse_video = False
-        self.crossed = False
-        self.color = False
-        self.bg_color = SGR.BG_COLOR_WHITE
+        self.CROSSED = False
+        self.span = False
+        self.bg_color = False
+        self.SUPERSCRIPT = False
+        self.SUBSCRIPT = False
         self.buf = ""
-        self.superscript = False
-        self.subscript = False
         self.et.clear()
-        
+
+    def add_span(self, span_text):
+        if self.span == True:
+            self.buf += "</span>"
+
+        self.buf += f"<span {span_text}>"
+        self.span = True
+
+    def set_fg_color(self, a):
+         self.add_span(f"style=\"color:{xx[a]}\"")
+         
+    def set_bg_color(self, a):
+        self.add_span(f"style=\"background-color:{xx[a]}\"")
+ 
+    def set_attr(self, a):
+        self.buf += xx[a]
+        setattr(self, a.name, True)
+
+    def clear_attr(self, a):
+        self.buf += xx[a][0]
+        setattr(self, xx[a][1].name, False)
+            
     def update(self, s : str) -> None:
         self.et.append_string(s)
 
@@ -773,107 +853,51 @@ class TerminalState:
                     sgrs = SGR.decode(token)
                     for s in sgrs:
                         a = s["SGR"]
-                        if a == SGR.BOLD:
-                            self.buf += "<b>"
-                            self.bold = True
-                        if a == SGR.ITALIC:
-                            self.buf += "<i>"
-                            self.italic = True
-                        if a == SGR.UNDERLINE:
-                            self.buf += "<u>"
-                            self.underline = True
-                        if a == SGR.CROSSED:
-                            self.buf += "<s>"
-                            self.crossed = True
-                        if a == SGR.SUPERSCRIPT:
-                            self.buf += "<sup>"
-                            self.superscript = True
-                        if a == SGR.SUBSCRIPT:
-                            self.buf += "<sub>"
-                            self.subscript = True
+                        
+                        if a in attr_list:
+                            self.set_attr(a)
 
-                        if a == SGR.FG_COLOR_BLACK:
-                            self.buf += f"<span style=\"color:{TColor.BLACK}\">"
-                            self.color = True
-                        if a == SGR.FG_COLOR_RED:
-                            self.buf += f"<span style=\"color:{TColor.RED}\">"
-                            self.color = True
-                        if a == SGR.FG_COLOR_GREEN:
-                            self.buf += f"<span style=\"color:{TColor.GREEN}\">"
-                            self.color = True
-                        if a == SGR.FG_COLOR_YELLOW:
-                            self.buf += f"<span style=\"color:{TColor.YELLOW}\">"
-                            self.color = True
-                        if a == SGR.FG_COLOR_BLUE:
-                            self.buf += f"<span style=\"color:{TColor.BLUE}\">"
-                            self.color = True
-                        if a == SGR.FG_COLOR_MAGENTA:
-                            self.buf += f"<span style=\"color:{TColor.MAGENTA}\">"
-                            self.color = True
-                        if a == SGR.FG_COLOR_CYAN:
-                            self.buf += f"<span style=\"color:{TColor.CYAN}\">"
-                            self.color = True
-                        if a == SGR.FG_COLOR_WHITE:
-                            self.buf += f"<span style=\"color:{TColor.WHITE}\">"
-                            self.color = True
-                            
-                        if a == SGR.BG_COLOR_BLACK:
-                            self.buf += f"<span style=\"background-color:{TColor.BLACK}\">"
-                            self.color = True
-                        if a == SGR.BG_COLOR_RED:
-                            self.buf += f"<span style=\"background-color:{TColor.RED}\">"
-                            self.color = True
-                        if a == SGR.BG_COLOR_GREEN:
-                            self.buf += f"<span style=\"background-color:{TColor.GREEN}\">"
-                            self.color = True
-                        if a == SGR.BG_COLOR_YELLOW:
-                            self.buf += f"<span style=\"background-color:{TColor.YELLOW}\">"
-                            self.color = True
-                        if a == SGR.BG_COLOR_BLUE:
-                            self.buf += f"<span style=\"background-color:{TColor.BLUE}\">"
-                            self.color = True
-                        if a == SGR.BG_COLOR_MAGENTA:
-                            self.buf += f"<span style=\"background-color:{TColor.MAGENTA}\">"
-                            self.color = True
-                        if a == SGR.BG_COLOR_CYAN:
-                            self.buf += f"<span style=\"background-color:{TColor.CYAN}\">"
-                            self.color = True
-                        if a == SGR.BG_COLOR_WHITE:
-                            self.buf += f"<span style=\"background-color:{TColor.WHITE}\">"
-                            self.color = True
+                        if a in not_attr_list:
+                            self.clear_attr(a)
+
+                        if a in fg_list: 
+                            self.set_fg_color(a)
+
+                        if a in bg_list:                            
+                            self.set_bg_color(a)
 
                         if a == SGR.SET_FG_COLOR: 
                             hex = CC256[s["color"]]["hex"]
-                            self.buf += f"<span style=\"color:{hex}\">"
-                            self.color = True
-
+                            self.add_span(f"style=\"color:{hex}\"")
+             
                         if a == SGR.SET_BG_COLOR: 
                             hex = CC256[s["color"]]["hex"]
-                            self.buf += f"<span style=\"background-color:{hex}\">"
-                            self.color = True
+                            self.add_span(f"style=\"background-color:{hex}\"")
                             
                         if a == SGR.RESET:
-                            if self.color is True: 
-                                self.color = False
+                            if self.span is True: 
+                                self.span = False
                                 self.buf += "</span>"
-                            if self.bold is True:
-                                self.bold = False
+                            if self.BOLD is True:
+                                self.BOLD = False
                                 self.buf += "</b>"
-                            if self.italic is True:
-                                self.italic = False
+                            if self.ITALIC is True:
+                                self.ITALIC = False
                                 self.buf += "</i>"
-                            if self.underline is True:
-                                self.underline = False
+                            if self.UNDERLINE is True:
+                                self.UNDERLINE = False
                                 self.buf += "</u>"
-                            if self.crossed is True:
-                                self.crossed = False
+                            if self.CROSSED is True:
+                                self.CROSSED = False
                                 self.buf += "</s>"
-                            if self.superscript is True:
-                                self.superscript = False
+                            if self.SUPERSCRIPT is True:
+                                self.SUPERSCRIPT = False
                                 self.buf += "</sup>"
-                            if self.subscript is True:
-                                self.subscript = False
-                                self.buf += "</sub>"                           
+                            if self.SUBSCRIPT is True:
+                                self.SUBSCRIPT = False
+                                self.buf += "</sub>"  
+                            if self.FAINT is True:
+                                self.FAINT = False                         
             else:
                 self.buf += token       
 
@@ -891,7 +915,6 @@ class TerminalState:
         return x
         
 
-
 FLAG_BLUE="\x1b[48;5;20m"
 FLAG_YELLOW="\x1b[48;5;226m"
 
@@ -905,23 +928,23 @@ flag = f"""
 escape_attribute_test = f"""  
 {Esc.ATTR_UNDERLINE}Font attributes{Esc.END}
 
-{Esc.ATTR_NORMAL}Normal text{Esc.END}
-{Esc.ATTR_BOLD}Bold text{Esc.ATTR_NORMAL}
-{Esc.ATTR_LOWINTENSITY}Dim text{Esc.ATTR_NORMAL}
-{Esc.ATTR_ITALIC}Italic text{Esc.ATTR_NORMAL}
-{Esc.ATTR_UNDERLINE}Underline text{Esc.ATTR_NORMAL}
-{Esc.ATTR_SLOWBLINK}Slow blinking text{Esc.ATTR_NORMAL}
-{Esc.ATTR_FASTBLINK}Fast blinking text{Esc.ATTR_NORMAL}
-{Esc.ATTR_FRAMED}Framed text{Esc.ATTR_NORMAL}
-Subscript{Esc.ATTR_SUBSCRIPT}text{Esc.ATTR_NORMAL}
-Superscript{Esc.ATTR_SUPERSCRIPT}text{Esc.ATTR_NORMAL}
-{Esc.ATTR_FRACTUR}Fractur/Gothic text{Esc.ATTR_NORMAL}
-{Esc.ATTR_CROSSED}Crossed text{Esc.ATTR_NORMAL}
+{Esc.ATTR_RESET}Normal text         {Esc.ATTR_RESET}
+{Esc.ATTR_BOLD}Bold text           {Esc.ATTR_NORMAL}Not Bold text{Esc.ATTR_RESET}
+{Esc.ATTR_DIM}Dim text            {Esc.ATTR_NORMAL}Not dim text{Esc.ATTR_RESET}
+{Esc.ATTR_ITALIC}Italic text         {Esc.ATTR_NOT_ITALIC}Not italic text{Esc.ATTR_RESET}
+{Esc.ATTR_UNDERLINE}Underline text      {Esc.ATTR_NOT_UNDERLINED}Not underline text{Esc.ATTR_RESET}
+{Esc.ATTR_SLOWBLINK}Slow blinking text  {Esc.ATTR_NOT_BLINKING}Not blinking text{Esc.ATTR_RESET}
+{Esc.ATTR_FASTBLINK}Fast blinking text  {Esc.ATTR_NOT_BLINKING}Not blinking text{Esc.ATTR_RESET}
+{Esc.ATTR_FRAMED}Framed text         {Esc.ATTR_RESET}
+{Esc.ATTR_SUBSCRIPT}Subscript text      {Esc.ATTR_NOT_SSCRIPT}Not subscript text{Esc.ATTR_RESET}
+{Esc.ATTR_SUPERSCRIPT}Superscript text    {Esc.ATTR_NOT_SSCRIPT}Not superscript text{Esc.ATTR_RESET}
+{Esc.ATTR_FRACTUR}Fractur/Gothic text {Esc.ATTR_RESET}
+{Esc.ATTR_CROSSED}Crossed text        {Esc.ATTR_NOT_CROSSED}Not crossed text{Esc.ATTR_RESET}
 
 {Esc.ATTR_UNDERLINE}Standard foreground color attributes{Esc.END}
 
 {Esc.BLACK}Black{Esc.END}
-{Esc.RED}Red{Esc.ATTR_NORMAL}
+{Esc.RED}Red{Esc.ATTR_RESET}
 {Esc.GREEN}Green{Esc.END}
 {Esc.YELLOW}Yellow{Esc.END}
 {Esc.BLUE}Blue{Esc.END}
@@ -961,6 +984,32 @@ cursor_test = f"""
 {Esc.CUR_DOWN} asdf {Esc.CUR_UP}  {Esc.CUR_BACK} {Esc.CUR_FORWARD} {Esc.ATTR_FRACTUR}
 """
 
+def color_256_test():
+    buf = ""
+    for c in range(0,8):
+        buf += f"{Esc.fg_8bit_color(c)}{c:^7} "
+    buf += "\n"
+    for c in range(8,16):
+        buf += f"{Esc.fg_8bit_color(c)}{c:^7} "
+    buf += "\n"
+    for r in range(0,36):
+        x = 16+r*6
+        for c in range(x, x+6):
+            buf += f"{Esc.fg_8bit_color(c)}{c:^7} "
+
+        buf += "\n"
+
+    buf += "\n"
+            
+    for c in range(232,244):
+        buf += f"{Esc.fg_8bit_color(c)}{c:^7} "
+    buf += "\n"
+    for c in range(244,256):
+        buf += f"{Esc.fg_8bit_color(c)}{c:^7} "
+    buf += "\n"
+
+    return buf
+
 
 incomplete_escape_sequence = f"""
 {Esc.BR_MAGENTA}Some colored text{Esc.END}
@@ -971,7 +1020,7 @@ end_with_newline = "Some text with newline end\n"
 def main() -> None:
     logging.basicConfig(format="[%(levelname)s] Line: %(lineno)d %(message)s", level=logging.DEBUG)
    
-    #print(escape_attribute_test)
+    print(escape_attribute_test)
     #print(flag)
 
     # dec = EscapeDecoder()
@@ -1024,7 +1073,6 @@ def main() -> None:
     et = TerminalState()
     et.update(escape_attribute_test)
     print("Buf:\n" + et.buf)
-    
 
 
 if __name__ == "__main__":

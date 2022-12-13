@@ -4,6 +4,6 @@
     "bitrate": "115200",
     "databits": "8",
     "parity": "None",
-    "stopbits": "1",
-    "flowcontrol": "None"
+    "stopbits": "2",
+    "flowcontrol": "Software"
 }
