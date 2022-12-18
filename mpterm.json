@@ -1,9 +1,10 @@
 {
     "alias": "default",
-    "port": "ttyUSB1",
+    "port": "ttyUSB2",
     "bitrate": "115200",
     "databits": "8",
     "parity": "None",
-    "stopbits": "2",
-    "flowcontrol": "Software"
+    "stopbits": "1",
+    "flowcontrol": "None",
+    "mode": "Ascii"
 }

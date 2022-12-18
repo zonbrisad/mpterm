@@ -244,6 +244,13 @@ cc() { ##D Continuous color
   done
 }
 
+ogg() { ##D output generator for some time
+  for x in {1..10}; do
+    attr
+    sleep .5
+  done
+}
+
 #---------------------------------------------------------------------
 # Bashplate modules
 #---------------------------------------------------------------------
@@ -1448,7 +1455,6 @@ iinfo() { ##I Show information about script
   fi
   settings
 }
-
 
 iview() { ##I View example
   # Singe command documentation

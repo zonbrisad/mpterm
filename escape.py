@@ -85,7 +85,7 @@ ascii = {  0x00:"NULL",
            0x1D:"GS",
            0x1E:"RS",
            0x1F:"US",
-           0x20:"Space"
+           0x20:"Spc"
 }
 
 def getc(c: str) -> str:

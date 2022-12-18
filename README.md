@@ -75,8 +75,12 @@
 - [x] Settings file
 - [ ] Multiple settings profiles
 - [ ] Terminal functions
-- [x] Color encoding
-- [ ] Truecolor
+- [x] Color encoding (8 colors)
+- [x] 256 color encoding
+- [ ] Truecolor (RGB)
+- [ ] Reverse text
+- [ ] Underline style
+- [ ] Dim text
 - [ ] Cursor management
 - [ ] Addon function
 - [ ] Logging
@@ -86,6 +90,9 @@
 - [ ] Programming button
 - [ ] Hex mode
 - [ ] Show pin status
+- [ ] Set pin status
+- [ ] Tab button
+- [ ] Loopback port
 
 
 ## Links

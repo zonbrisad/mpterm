@@ -15,10 +15,6 @@
 
 # Imports --------------------------------------------------------------------
 
-
-import traceback
-import os
-import sys
 import logging
 
 from PyQt5.QtCore import Qt, QTimer, QSettings, QIODevice
@@ -131,6 +127,7 @@ class TerminalWin(QTextEdit):
         self.setHtml(self.buf)
         logging.debug(b)
 
+
     def apps(self, s : str) -> None:
         self.ts.update(s)
         b = self.ts.get_buf()
@@ -140,11 +137,18 @@ class TerminalWin(QTextEdit):
         self.setHtml(self.buf)
         logging.debug(b)
 
+    # def apps_ba(self, ba:bytearray) -> None:
+    #     data_str = str(data, "utf-8")
+
         
     def keyPressEvent(self, e: QKeyEvent) -> None:
         logging.debug(f"  {e.key():x}  {get_description(e)}")   
         self.sp.send_string(get_key(e))
         super().keyPressEvent(e)
+
+    def scroll_down(self):
+        vsb=self.verticalScrollBar()
+        vsb.setValue(vsb.maximum())
 
 
 
