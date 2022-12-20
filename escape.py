@@ -444,9 +444,15 @@ class EscapeTokenizer():
             
             # Escape sequence not complete, abort iteration
             raise StopIteration
-            
+
+        if self.buf[j] in [ Ascii.NL ]:
+            res = self.buf[j]
+            self.buf = self.buf[j+1:]
+            return res
+
+                        
         # Handle normal text    
-        while j<l and self.buf[j] != Esc.ESCAPE:
+        while j<l and self.buf[j] not in [ Esc.ESCAPE, Ascii.NL ]:
            j += 1
         res = self.buf[0:j]
         self.buf = self.buf[j:]
@@ -456,7 +462,8 @@ class EscapeTokenizer():
 
 @dataclass
 class TColor():
-    BLACK : str = "#2e3436"
+    # BLACK : str = "#2e3436"
+    BLACK : str = "#000000"
     RED : str = "#cc0000"
     GREEN : str = "#4e9a06"
     YELLOW : str = "#c4a000"
@@ -736,15 +743,6 @@ CC256 = [
 
 
 xx = {
-    SGR.BOLD: "<b>",
-    SGR.ITALIC: "<i>",
-    SGR.UNDERLINE: "<u>",
-    SGR.SLOW_BLINK: "",
-    SGR.REVERSE_VIDEO: "",
-    SGR.CONCEAL: "",
-    SGR.CROSSED: "<s>",
-    SGR.SUPERSCRIPT: "<sup>",
-    SGR.SUBSCRIPT:"<sub>",
     SGR.FG_COLOR_BLACK:TColor.BLACK,
     SGR.FG_COLOR_RED:TColor.RED,
     SGR.FG_COLOR_GREEN:TColor.GREEN,
@@ -761,13 +759,6 @@ xx = {
     SGR.BG_COLOR_MAGENTA:TColor.MAGENTA,
     SGR.BG_COLOR_CYAN:TColor.CYAN,
     SGR.BG_COLOR_WHITE:TColor.WHITE,
-    SGR.NORMAL_INTENSITY:["</b>", SGR.BOLD],
-    SGR.NOT_ITALIC:["</i>", SGR.ITALIC],
-    SGR.NOT_UNDERLINED:["</u>", SGR.UNDERLINE],
-    SGR.NOT_BLINKING:["", SGR.SLOW_BLINK],
-    SGR.NOT_REVERSED:["", SGR.REVERSE_VIDEO],
-    SGR.REVEAL:["", SGR.CONCEAL],
-    SGR.NOT_CROSSED:["</s>", SGR.CROSSED]
 }
 
 attr_list = [ SGR.BOLD, SGR.ITALIC, SGR.UNDERLINE, SGR.CROSSED, SGR.SUPERSCRIPT, SGR.SUBSCRIPT ]
@@ -792,60 +783,67 @@ class TerminalState:
     SUBSCRIPT : bool = False
     
     span : bool = False
-    bg_color:SGR = SGR.BG_COLOR_WHITE
     attribute:SGR = SGR.RESET
     cur_x = None
     cur_y = None
 
-    default_fg_color: SGR = SGR.FG_COLOR_BLACK
-    default_bg_color: SGR = SGR.BG_COLOR_WHITE
+    default_fg_color:str = TColor.WHITE
+    default_bg_color:str = TColor.BLACK
 
-    buf : str = ""
+    html_buf : str = ""
 
     def __init__(self) -> None:
         self.et = EscapeTokenizer()
         self.reset()
-        
+
+    def attr_html(self) -> str:
+        b = f"<pre style=\"color:{self.fg_color};background-color:{self.bg_color};"
+
+        if self.BOLD:
+            b += "font-weight:bold;"
+        if self.ITALIC:
+            b += "font-style:italic;"
+        if self.UNDERLINE:
+            # b += f"text-decoration:underline;text-decoration-color:{self.fg_color};"
+            b += f"text-decoration:underline;text-decoration-color:Red;"
+        if self.CROSSED:
+            b += "text-decoration:line-through;"
+        b +="\">"
+        return b
+    
     def reset(self):
         self.BOLD = False
         self.FAINT = False
         self.ITALIC = False
+        self.CROSSED = False
         self.UNDERLINE = False
+        self.SUPERSCRIPT = False
+        self.SUBSCRIPT = False
         self.slow_blink = False
         self.rapid_blink = False
         self.reverse_video = False
-        self.CROSSED = False
         self.span = False
-        self.bg_color = False
-        self.SUPERSCRIPT = False
-        self.SUBSCRIPT = False
-        self.buf = ""
+        self.fg_color = TColor.WHITE
+        self.bg_color = TColor.BLACK
+        self.html_buf = ""
         self.et.clear()
 
-    def add_span(self, span_text):
-        if self.span == True:
-            self.buf += "</span>"
-
-        self.buf += f"<span {span_text}>"
-        self.span = True
-
-    def set_fg_color(self, a):
-         self.add_span(f"style=\"color:{xx[a]}\"")
+    def set_fg_color(self, a) -> str:
+        self.fg_color = xx[a]
          
-    def set_bg_color(self, a):
-        self.add_span(f"style=\"background-color:{xx[a]}\"")
+    def set_bg_color(self, a) -> str:
+        self.bg_color = xx[a]
  
-    def set_attr(self, a):
-        self.buf += xx[a]
+    def set_attr(self, a) -> str:
         setattr(self, a.name, True)
 
-    def clear_attr(self, a):
-        self.buf += xx[a][0]
+    def clear_attr(self, a) -> str:
         setattr(self, xx[a][1].name, False)
             
-    def update(self, s : str) -> None:
+    def update(self, s : str) -> list:
         self.et.append_string(s)
-
+        l = []
+        
         for token in self.et:
             if Esc.is_escape_seq(token):
                 x = CSI.decode(token)
@@ -855,10 +853,11 @@ class TerminalState:
                         a = s["SGR"]
                         
                         if a in attr_list:
-                            self.set_attr(a)
+                            setattr(self, a.name, True)
 
                         if a in not_attr_list:
-                            self.clear_attr(a)
+                            setattr(self, xx[a][1].name, False)
+                            #self.clear_attr(a)
 
                         if a in fg_list: 
                             self.set_fg_color(a)
@@ -867,53 +866,46 @@ class TerminalState:
                             self.set_bg_color(a)
 
                         if a == SGR.SET_FG_COLOR: 
-                            hex = CC256[s["color"]]["hex"]
-                            self.add_span(f"style=\"color:{hex}\"")
+                            self.fg_color = CC256[s["color"]]["hex"]
              
                         if a == SGR.SET_BG_COLOR: 
-                            hex = CC256[s["color"]]["hex"]
-                            self.add_span(f"style=\"background-color:{hex}\"")
+                            self.bg_color = CC256[s["color"]]["hex"]
                             
                         if a == SGR.RESET:
+                            self.fg_color = self.default_fg_color
+                            self.bg_color = self.default_bg_color
+                            
                             if self.span is True: 
                                 self.span = False
-                                self.buf += "</span>"
+
                             if self.BOLD is True:
                                 self.BOLD = False
-                                self.buf += "</b>"
+
                             if self.ITALIC is True:
                                 self.ITALIC = False
-                                self.buf += "</i>"
+
                             if self.UNDERLINE is True:
                                 self.UNDERLINE = False
-                                self.buf += "</u>"
+
                             if self.CROSSED is True:
                                 self.CROSSED = False
-                                self.buf += "</s>"
+
                             if self.SUPERSCRIPT is True:
                                 self.SUPERSCRIPT = False
-                                self.buf += "</sup>"
+
                             if self.SUBSCRIPT is True:
                                 self.SUBSCRIPT = False
-                                self.buf += "</sub>"  
+  
                             if self.FAINT is True:
                                 self.FAINT = False                         
             else:
-                self.buf += token       
+                if token == Ascii.NL:
+                    l.append("<br>")
+                else:    
+                    l.append(f"{self.attr_html()}{token}</pre>")
+                
+        return l
 
-
-    def state2html(self, s: str) -> str:
-        #x = f"""<span style="color:{esc2html(self.color)};background-color:{};font-weight:{}">{s}</span>"""
-        #x = f"""<pre><span style="color:{esc2html(self.color)}">{s}</span></pre>"""
-        #logging.debug(x)
-        #return x
-        return ""
-
-    def get_buf(self):
-        x = self.buf
-        self.buf = ""
-        return x
-        
 
 FLAG_BLUE="\x1b[48;5;20m"
 FLAG_YELLOW="\x1b[48;5;226m"
@@ -941,24 +933,18 @@ escape_attribute_test = f"""
 {Esc.ATTR_FRACTUR}Fractur/Gothic text {Esc.ATTR_RESET}
 {Esc.ATTR_CROSSED}Crossed text        {Esc.ATTR_NOT_CROSSED}Not crossed text{Esc.ATTR_RESET}
 
+{Esc.ATTR_BOLD}{Esc.ATTR_ITALIC}{Esc.ATTR_UNDERLINE}Bold and italic and underlined{Esc.ATTR_RESET}
+
 {Esc.ATTR_UNDERLINE}Standard foreground color attributes{Esc.END}
 
-{Esc.BLACK}Black{Esc.END}
-{Esc.RED}Red{Esc.ATTR_RESET}
-{Esc.GREEN}Green{Esc.END}
-{Esc.YELLOW}Yellow{Esc.END}
-{Esc.BLUE}Blue{Esc.END}
-{Esc.MAGENTA}Magenta{Esc.END}
-{Esc.CYAN}Cyan{Esc.END}
-{Esc.WHITE}WHITE{Esc.END}
-{Esc.WHITE}White{Esc.END}
-{Esc.DARKGRAY}Dark Gray{Esc.END}
-{Esc.BR_RED}Bright Red{Esc.END}
-{Esc.BR_GREEN}Bright Green{Esc.END}
-{Esc.BR_YELLOW}Bright Yellow{Esc.END}
-{Esc.BR_BLUE}Bright Blue{Esc.END}
-{Esc.BR_MAGENTA}Bright Magenta{Esc.END}
-{Esc.BR_CYAN}Bright Cyan{Esc.END}
+{Esc.BLACK}Black{Esc.END} {Esc.DARKGRAY}Dark Gray{Esc.END}
+{Esc.RED}Red{Esc.ATTR_RESET}     {Esc.BR_RED}Bright Red{Esc.END}
+{Esc.GREEN}Green{Esc.END}   {Esc.BR_GREEN}Bright Green{Esc.END}
+{Esc.YELLOW}Yellow{Esc.END}  {Esc.BR_YELLOW}Bright Yellow{Esc.END}
+{Esc.BLUE}Blue{Esc.END}    {Esc.BR_BLUE}Bright Blue{Esc.END}
+{Esc.MAGENTA}Magenta{Esc.END} {Esc.BR_MAGENTA}Bright Magenta{Esc.END}
+{Esc.CYAN}Cyan{Esc.END}    {Esc.BR_CYAN}Bright Cyan{Esc.END}
+{Esc.WHITE}White{Esc.END}   {Esc.BR_WHITE}Bright White{Esc.END}
 
 {Esc.ATTR_UNDERLINE}Standard background color attributes{Esc.END}
 
@@ -971,6 +957,7 @@ escape_attribute_test = f"""
 {Esc.ON_CYAN} Cyan {Esc.END}
 
 {Esc.ATTR_UNDERLINE}256 Color attributes{Esc.END}
+
 {Esc.fg_8bit_color(12)}Color 12{Esc.END}
 {Esc.fg_8bit_color(45)}Color 45{Esc.END}
 {Esc.fg_8bit_color(240)}Color 240{Esc.END}
@@ -987,11 +974,11 @@ cursor_test = f"""
 def color_256_test():
     buf = ""
     for c in range(0,8):
-        buf += f"{Esc.fg_8bit_color(c)}{c:^7} "
+        buf += f"{Esc.fg_8bit_color(c)}{c:^7}"
     buf += "\n"
     for c in range(8,16):
-        buf += f"{Esc.fg_8bit_color(c)}{c:^7} "
-    buf += "\n"
+        buf += f"{Esc.fg_8bit_color(c)}{c:^7}"
+    buf += "\n\n"
     for r in range(0,36):
         x = 16+r*6
         for c in range(x, x+6):
@@ -1002,10 +989,10 @@ def color_256_test():
     buf += "\n"
             
     for c in range(232,244):
-        buf += f"{Esc.fg_8bit_color(c)}{c:^7} "
+        buf += f"{Esc.fg_8bit_color(c)}{c:^5}"
     buf += "\n"
     for c in range(244,256):
-        buf += f"{Esc.fg_8bit_color(c)}{c:^7} "
+        buf += f"{Esc.fg_8bit_color(c)}{c:^5}"
     buf += "\n"
 
     return buf
@@ -1072,7 +1059,7 @@ def main() -> None:
 
     et = TerminalState()
     et.update(escape_attribute_test)
-    print("Buf:\n" + et.buf)
+    print("Buf:\n" + et.html_buf)
 
 
 if __name__ == "__main__":

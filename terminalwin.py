@@ -21,7 +21,7 @@ from PyQt5.QtCore import Qt, QTimer, QSettings, QIODevice
 from PyQt5.QtGui import QTextCursor, QFont, QKeyEvent, QColor
 from PyQt5.QtWidgets import (
     QTextEdit,
-
+    QPlainTextEdit
 )
 
 from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
@@ -89,9 +89,9 @@ def get_key(key: QKeyEvent) -> str:
     return key.text()
 
 
-template="""<pre>"""
+template="""<pre>Mpterm\n"""
 
-class TerminalWin(QTextEdit):
+class TerminalWin(QPlainTextEdit):
     
     def __init__(self, parent=None, sp=None, init=""):
         super().__init__(parent)
@@ -116,30 +116,30 @@ class TerminalWin(QTextEdit):
 
     def clear(self, init = ""):
         super().clear()
-        self.setHtml(template+init)
+        #self.setHtml(template+init)
+        
+        # self.appendHtml(template)
+        # self.appendHtml("Kalle\n")
         self.moveCursor(QTextCursor.End)
-        self.buf = template
+        #self.buf = ""template
 
     def update(self, s : str) -> str:
         self.ts.update(s)
         b = template + self.ts.get_buf()
         self.buf += b
-        self.setHtml(self.buf)
+        #self.setHtml(self.buf)
         logging.debug(b)
 
+    def append_html(self, html):
+        cur = QTextCursor(self.document())
+        cur.movePosition(QTextCursor.End)
+        cur.insertHtml(html)
 
     def apps(self, s : str) -> None:
-        self.ts.update(s)
-        b = self.ts.get_buf()
-        #logging.debug(b.replace("\x1b", "\\e").replace("\x0a", "\\n").replace("\x0d", '\\r'))
-        self.moveCursor(QTextCursor.End)
-        self.buf += b
-        self.setHtml(self.buf)
-        logging.debug(b)
-
-    # def apps_ba(self, ba:bytearray) -> None:
-    #     data_str = str(data, "utf-8")
-
+        lines = self.ts.update(s)
+        
+        for line in lines:
+            self.append_html(line)
         
     def keyPressEvent(self, e: QKeyEvent) -> None:
         logging.debug(f"  {e.key():x}  {get_description(e)}")   

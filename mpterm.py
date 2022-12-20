@@ -70,7 +70,7 @@ import AboutDialogXX
 self_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
 
 class App:
-    NAME = "mpterm"
+    NAME = "mpterm plainText branch"
     VERSION = "0.2"
     DESCRIPTION = "MpTerm is a simple serial terminal program"
     LICENSE = ""
@@ -885,6 +885,9 @@ class MainForm(QMainWindow):
         data = self.sp.read()
         data_str = str(data, "utf-8")
 
+        db = data_str.replace("\x1b", "\\e").replace("\x0a", "\\n").replace("\x0d", '\\r')
+        logging.debug(f"Data received: {self.sp.count} {db}")
+
         DisplayMode = self.ui.cbDisplay.currentData()
 
         if DisplayMode == MpTerm.Ascii:  # Standard ascii display mode
@@ -892,9 +895,6 @@ class MainForm(QMainWindow):
 
         if DisplayMode != MpTerm.Ascii:  # Hexadecimal display mode
             self.terminal.apps(self.formater.update(data))
-
-        db = data_str.replace("\x1b", "\\e").replace("\x0a", "\\n").replace("\x0d", '\\r')
-        logging.debug(f"Data received: {self.sp.count} {db}")
 
         self.terminal.scroll_down()
         self.update_ui()
