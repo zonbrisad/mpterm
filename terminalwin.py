@@ -18,7 +18,7 @@
 import logging
 
 from PyQt5.QtCore import Qt, QTimer, QSettings, QIODevice
-from PyQt5.QtGui import QTextCursor, QFont, QKeyEvent, QColor
+from PyQt5.QtGui import QTextCursor, QFont, QKeyEvent, QColor, QTextOption
 from PyQt5.QtWidgets import (
     QTextEdit,
     QPlainTextEdit
@@ -103,6 +103,11 @@ class TerminalWin(QPlainTextEdit):
 
         self.setStyleSheet("background-color: rgb(0, 0, 0); color : White")
 
+        # doc = self.document()
+        # settings = QTextOption()
+        # settings.setFlags(QTextOption.IncludeTrailingSpaces | QTextOption.ShowTabsAndSpaces )
+        # doc.setDefaultTextOption(settings)
+
         # p = self.viewport().palette()
         # p.setColor(self.viewport().backgroundRole(), QColor(0,0,0))
         # self.viewport().setPalette(p)
@@ -140,6 +145,7 @@ class TerminalWin(QPlainTextEdit):
         
         for line in lines:
             self.append_html(line)
+            logging.debug(line)
         
     def keyPressEvent(self, e: QKeyEvent) -> None:
         logging.debug(f"  {e.key():x}  {get_description(e)}")   

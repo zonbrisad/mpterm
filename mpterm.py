@@ -631,6 +631,33 @@ class MainForm(QMainWindow):
         colorAction = QAction("Color test", self)
         colorAction.triggered.connect(lambda: self.send_string(color_256_test()))
         self.testMenu.addAction(colorAction)
+
+        self.colorMenu = self.ui.menuSend.addMenu("Colors")
+        self.add_menu("Red", self.colorMenu, lambda:self.send_string(Esc.RED))
+        self.add_menu("Green", self.colorMenu, lambda:self.send_string(Esc.GREEN))
+        self.add_menu("Yellow", self.colorMenu, lambda:self.send_string(Esc.YELLOW))
+        self.add_menu("Blue", self.colorMenu, lambda:self.send_string(Esc.BLUE))
+        self.add_menu("Magenta", self.colorMenu, lambda:self.send_string(Esc.MAGENTA))
+        self.add_menu("Cyan", self.colorMenu, lambda:self.send_string(Esc.CYAN))
+        self.add_menu("White", self.colorMenu, lambda:self.send_string(Esc.WHITE))
+
+        self.add_menu("Bg Red", self.colorMenu, lambda:self.send_string(Esc.ON_RED))
+        self.add_menu("Bg Green", self.colorMenu, lambda:self.send_string(Esc.ON_GREEN))
+        self.add_menu("Bg Yellow", self.colorMenu, lambda:self.send_string(Esc.ON_YELLOW))
+        self.add_menu("Bg Blue", self.colorMenu, lambda:self.send_string(Esc.ON_BLUE))
+        self.add_menu("Bg Magenta", self.colorMenu, lambda:self.send_string(Esc.ON_MAGENTA))
+        self.add_menu("Bg Cyan", self.colorMenu, lambda:self.send_string(Esc.ON_CYAN))
+        self.add_menu("Bg White", self.colorMenu, lambda:self.send_string(Esc.ON_WHITE))
+
+        self.attrMenu = self.ui.menuSend.addMenu("Attributes")
+        self.add_menu("Reset", self.attrMenu, lambda:self.send_string(Esc.ATTR_RESET))
+        self.add_menu("Bold", self.attrMenu, lambda:self.send_string(Esc.ATTR_BOLD))
+        self.add_menu("Italic", self.attrMenu, lambda:self.send_string(Esc.ATTR_ITALIC))
+        self.add_menu("Dim", self.attrMenu, lambda:self.send_string(Esc.ATTR_DIM))
+        self.add_menu("Reverse", self.attrMenu, lambda:self.send_string(Esc.ATTR_REVERSE))
+        self.add_menu("Underline", self.attrMenu, lambda:self.send_string(Esc.ATTR_UNDERLINE))
+        self.add_menu("Crossed", self.attrMenu, lambda:self.send_string(Esc.ATTR_CROSSED))
+        
         
         # event slots
         self.ui.cbBitrate.activated.connect(self.set_sp)
@@ -688,6 +715,12 @@ class MainForm(QMainWindow):
         self.process.finished.connect(self.program_finished)
            
         self.update_ui()
+
+
+    def add_menu(self, name, menu, function):
+        action = QAction(name, self)
+        menu.addAction(action)
+        action.triggered.connect(function)        
 
     def suspend(self):
         self.sp.set_state(State.SUSPENDED)

@@ -772,32 +772,40 @@ bg_list = [ SGR.BG_COLOR_BLACK, SGR.BG_COLOR_RED, SGR.BG_COLOR_GREEN, SGR.BG_COL
 
 class TerminalState:
     BOLD : bool = False
-    FAINT : bool = False
+    DIM : bool = False
     ITALIC : bool = False
     UNDERLINE : bool = False
     slow_blink : bool = False
     rapid_blink : bool = False
-    reverse_video : bool = False
+    REVERSE : bool = False
     CROSSED : bool = False
     SUPERSCRIPT : bool = False
     SUBSCRIPT : bool = False
     
-    span : bool = False
-    attribute:SGR = SGR.RESET
+    # span : bool = False
+    # attribute:SGR = SGR.RESET
     cur_x = None
     cur_y = None
 
     default_fg_color:str = TColor.WHITE
     default_bg_color:str = TColor.BLACK
 
-    html_buf : str = ""
+    # html_buf : str = ""
 
     def __init__(self) -> None:
         self.et = EscapeTokenizer()
         self.reset()
 
     def attr_html(self) -> str:
-        b = f"<pre style=\"color:{self.fg_color};background-color:{self.bg_color};"
+
+        if self.REVERSE:
+            bg_color = self.fg_color
+            fg_color = self.bg_color       
+        else:
+            fg_color = self.fg_color
+            bg_color = self.bg_color       
+            
+        b = f"<p style=\"color:{fg_color};background-color:{bg_color};"
 
         if self.BOLD:
             b += "font-weight:bold;"
@@ -813,7 +821,7 @@ class TerminalState:
     
     def reset(self):
         self.BOLD = False
-        self.FAINT = False
+        self.DIM = False
         self.ITALIC = False
         self.CROSSED = False
         self.UNDERLINE = False
@@ -821,24 +829,17 @@ class TerminalState:
         self.SUBSCRIPT = False
         self.slow_blink = False
         self.rapid_blink = False
-        self.reverse_video = False
+        self.REVERSE = False
         self.span = False
-        self.fg_color = TColor.WHITE
-        self.bg_color = TColor.BLACK
-        self.html_buf = ""
+        self.fg_color = self.default_fg_color
+        self.bg_color = self.default_bg_color
         self.et.clear()
 
-    def set_fg_color(self, a) -> str:
-        self.fg_color = xx[a]
+    # def set_fg_color(self, a) -> str:
+    #     self.fg_color = xx[a]
          
-    def set_bg_color(self, a) -> str:
-        self.bg_color = xx[a]
- 
-    def set_attr(self, a) -> str:
-        setattr(self, a.name, True)
-
-    def clear_attr(self, a) -> str:
-        setattr(self, xx[a][1].name, False)
+    # def set_bg_color(self, a) -> str:
+    #     self.bg_color = xx[a]
             
     def update(self, s : str) -> list:
         self.et.append_string(s)
@@ -860,49 +861,42 @@ class TerminalState:
                             #self.clear_attr(a)
 
                         if a in fg_list: 
-                            self.set_fg_color(a)
+                            self.fg_color = xx[a]
+                            #self.set_fg_color(a)
 
                         if a in bg_list:                            
-                            self.set_bg_color(a)
+                            # self.set_bg_color(a)
+                            self.bg_color = xx[a]
 
                         if a == SGR.SET_FG_COLOR: 
                             self.fg_color = CC256[s["color"]]["hex"]
              
                         if a == SGR.SET_BG_COLOR: 
                             self.bg_color = CC256[s["color"]]["hex"]
-                            
+
+                        if a == SGR.REVERSE_VIDEO:
+                            self.REVERSE = True
+
+                        if a == SGR.NOT_REVERSED:
+                            self.REVERSE = False
+
                         if a == SGR.RESET:
                             self.fg_color = self.default_fg_color
-                            self.bg_color = self.default_bg_color
-                            
-                            if self.span is True: 
-                                self.span = False
-
-                            if self.BOLD is True:
-                                self.BOLD = False
-
-                            if self.ITALIC is True:
-                                self.ITALIC = False
-
-                            if self.UNDERLINE is True:
-                                self.UNDERLINE = False
-
-                            if self.CROSSED is True:
-                                self.CROSSED = False
-
-                            if self.SUPERSCRIPT is True:
-                                self.SUPERSCRIPT = False
-
-                            if self.SUBSCRIPT is True:
-                                self.SUBSCRIPT = False
-  
-                            if self.FAINT is True:
-                                self.FAINT = False                         
+                            self.bg_color = self.default_bg_color                        
+                            self.BOLD = False                        
+                            self.ITALIC = False                        
+                            self.UNDERLINE = False                        
+                            self.CROSSED = False                        
+                            self.SUPERSCRIPT = False                        
+                            self.SUBSCRIPT = False                        
+                            self.DIM = False    
+                            self.REVERSE = False                     
             else:
                 if token == Ascii.NL:
                     l.append("<br>")
                 else:    
-                    l.append(f"{self.attr_html()}{token}</pre>")
+                    token_space = token.replace(" ", "&nbsp;")
+                    l.append(f"{self.attr_html()}{token_space}</p>")
                 
         return l
 
@@ -932,6 +926,7 @@ escape_attribute_test = f"""
 {Esc.ATTR_SUPERSCRIPT}Superscript text    {Esc.ATTR_NOT_SSCRIPT}Not superscript text{Esc.ATTR_RESET}
 {Esc.ATTR_FRACTUR}Fractur/Gothic text {Esc.ATTR_RESET}
 {Esc.ATTR_CROSSED}Crossed text        {Esc.ATTR_NOT_CROSSED}Not crossed text{Esc.ATTR_RESET}
+{Esc.ATTR_REVERSE}Reversed text       {Esc.ATTR_NOT_REVERSED}Not reversed text{Esc.ATTR_RESET}
 
 {Esc.ATTR_BOLD}{Esc.ATTR_ITALIC}{Esc.ATTR_UNDERLINE}Bold and italic and underlined{Esc.ATTR_RESET}
 
@@ -975,24 +970,29 @@ def color_256_test():
     buf = ""
     for c in range(0,8):
         buf += f"{Esc.fg_8bit_color(c)}{c:^7}"
+        
     buf += "\n"
     for c in range(8,16):
         buf += f"{Esc.fg_8bit_color(c)}{c:^7}"
     buf += "\n\n"
     for r in range(0,36):
         x = 16+r*6
+        buf2 = ""
         for c in range(x, x+6):
-            buf += f"{Esc.fg_8bit_color(c)}{c:^7} "
+            buf += f"{Esc.fg_8bit_color(c)}{c:>5}"
+            buf2 += f"{Esc.BLACK}{Esc.bg_8bit_color(c)}{c:^5}{Esc.RESET} "
+            
+        buf += "  " + buf2    
 
         buf += "\n"
 
     buf += "\n"
             
     for c in range(232,244):
-        buf += f"{Esc.fg_8bit_color(c)}{c:^5}"
+        buf += f"{Esc.fg_8bit_color(c)}{c:>3} "
     buf += "\n"
     for c in range(244,256):
-        buf += f"{Esc.fg_8bit_color(c)}{c:^5}"
+        buf += f"{Esc.fg_8bit_color(c)}{c:>3} "
     buf += "\n"
 
     return buf
