@@ -557,6 +557,12 @@ class MainForm(QMainWindow):
         self.ui.statusbar.addPermanentWidget(self.rxLabel, stretch=0)
         self.ui.statusbar.addPermanentWidget(self.txLabel, stretch=0)
 
+        # Statusbar button test
+        #self.customSignal = QtCore.Signal()
+        self.statusButton= QPushButton("XX")
+        self.ui.statusbar.addPermanentWidget(self.statusButton, stretch=0)
+        self.statusButton.clicked.connect(lambda: print("Button XX clicked"))
+        
         self.ui.cbStopBits.addItem("1", QSerialPort.OneStop)
         self.ui.cbStopBits.addItem("1.5", QSerialPort.OneAndHalfStop)
         self.ui.cbStopBits.addItem("2", QSerialPort.TwoStop)
@@ -1107,6 +1113,7 @@ def main():
     app = QApplication(sys.argv)
     app.setStyle("Fusion")   # 'cleanlooks', 'gtk2', 'cde', 'motif', 'plastique', 'qt5ct-style', 'Windows', 'Fusion'
     app.setAttribute(Qt.AA_UseHighDpiPixmaps)
+    
     
     mainForm = MainForm()
     mainForm.show()

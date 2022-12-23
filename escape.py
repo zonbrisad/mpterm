@@ -88,11 +88,13 @@ ascii = {  0x00:"NULL",
            0x20:"Spc"
 }
 
+
 def getc(c: str) -> str:
     for a, b in ascii.items():
         if ord(c) == a:
             return b
     return c
+
 
 def hex2str(c: int) -> str:
     for a, b in ascii.items():
@@ -445,14 +447,14 @@ class EscapeTokenizer():
             # Escape sequence not complete, abort iteration
             raise StopIteration
 
-        if self.buf[j] in [ Ascii.NL ]:
+        if self.buf[j] in [ Ascii.NL , Ascii.BEL, Ascii.BS ]:
             res = self.buf[j]
             self.buf = self.buf[j+1:]
             return res
 
                         
         # Handle normal text    
-        while j<l and self.buf[j] not in [ Esc.ESCAPE, Ascii.NL ]:
+        while j<l and self.buf[j] not in [ Esc.ESCAPE, Ascii.NL, Ascii.BEL, Ascii.BS ]:
            j += 1
         res = self.buf[0:j]
         self.buf = self.buf[j:]
@@ -481,7 +483,6 @@ class TColor():
     BRIGHT_WHITE : str = "#eeeeec"
 
 
-    # { "name": "Black", "hex" : "#000000"}
 CC256 = [
 { "name":"Black (SYSTEM)", "hex":"#000000"},
 { "name":"Maroon (SYSTEM)", "hex":"#800000"},
@@ -770,6 +771,42 @@ fg_list = [ SGR.FG_COLOR_BLACK, SGR.FG_COLOR_RED, SGR.FG_COLOR_GREEN, SGR.FG_COL
 bg_list = [ SGR.BG_COLOR_BLACK, SGR.BG_COLOR_RED, SGR.BG_COLOR_GREEN, SGR.BG_COLOR_YELLOW, 
             SGR.BG_COLOR_BLUE, SGR.BG_COLOR_MAGENTA, SGR.BG_COLOR_CYAN, SGR.BG_COLOR_WHITE ]
 
+
+class CharacterState:
+    BOLD : bool = False
+    DIM : bool = False
+    ITALIC : bool = False
+    UNDERLINE : bool = False
+    BLINK : bool = False
+ #   rapid_blink : bool = False
+    REVERSE : bool = False
+    CROSSED : bool = False
+    SUPERSCRIPT : bool = False
+    SUBSCRIPT : bool = False
+
+    FG_COLOR : str
+    BG_COLOR : str
+
+    ch : str
+
+    def __eq__(self, __o: CharacterState) -> bool:
+        X = ["BOLD", "DIM", "ITALIC", "UNDERLINE", "BLINK", "REVERSE", "CROSSED", "FG_COLOR", "BG_COLOR" ]
+        for x in X:
+            if getattr(self, x) != getattr(__o, x):
+                return False
+            
+        return True
+
+
+class TerminalLine:
+    def __init__(self, len:int = 80) -> None:
+        self.line = []
+        for x in range(80):
+            ch = CharacterState()
+            self.line.append(ch) 
+        pass
+    
+
 class TerminalState:
     BOLD : bool = False
     DIM : bool = False
@@ -796,7 +833,7 @@ class TerminalState:
         self.et = EscapeTokenizer()
         self.reset()
 
-    def attr_html(self) -> str:
+    def attr_html(self, data) -> str:
 
         if self.REVERSE:
             bg_color = self.fg_color
@@ -817,6 +854,8 @@ class TerminalState:
         if self.CROSSED:
             b += "text-decoration:line-through;"
         b +="\">"
+        b += data
+        b += "</p>"
         return b
     
     def reset(self):
@@ -834,12 +873,6 @@ class TerminalState:
         self.fg_color = self.default_fg_color
         self.bg_color = self.default_bg_color
         self.et.clear()
-
-    # def set_fg_color(self, a) -> str:
-    #     self.fg_color = xx[a]
-         
-    # def set_bg_color(self, a) -> str:
-    #     self.bg_color = xx[a]
             
     def update(self, s : str) -> list:
         self.et.append_string(s)
@@ -858,14 +891,11 @@ class TerminalState:
 
                         if a in not_attr_list:
                             setattr(self, xx[a][1].name, False)
-                            #self.clear_attr(a)
 
                         if a in fg_list: 
                             self.fg_color = xx[a]
-                            #self.set_fg_color(a)
 
                         if a in bg_list:                            
-                            # self.set_bg_color(a)
                             self.bg_color = xx[a]
 
                         if a == SGR.SET_FG_COLOR: 
@@ -894,9 +924,17 @@ class TerminalState:
             else:
                 if token == Ascii.NL:
                     l.append("<br>")
-                else:    
-                    token_space = token.replace(" ", "&nbsp;")
-                    l.append(f"{self.attr_html()}{token_space}</p>")
+                    continue
+
+                if token == Ascii.BS:
+                    l.append(Ascii.BS)
+                    continue
+
+                if token in [Ascii.BEL]:
+                    continue
+                    
+                token_space = token.replace(" ", "&nbsp;")
+                l.append(self.attr_html(token_space))
                 
         return l
 
@@ -959,12 +997,12 @@ escape_attribute_test = f"""
 {Esc.bg_8bit_color(32)}Color 32{Esc.END}
 {Esc.bg_8bit_color(78)}Color 78{Esc.END}
 {Esc.bg_8bit_color(249)}Color 249{Esc.END}
-
 """
 
 cursor_test = f"""
 {Esc.CUR_DOWN} asdf {Esc.CUR_UP}  {Esc.CUR_BACK} {Esc.CUR_FORWARD} {Esc.ATTR_FRACTUR}
 """
+
 
 def color_256_test():
     buf = ""
@@ -1003,7 +1041,8 @@ incomplete_escape_sequence = f"""
 {Esc.GREEN}Some more text with incomplete escape sequence \x1b["""
 
 end_with_newline = "Some text with newline end\n"
-    
+
+
 def main() -> None:
     logging.basicConfig(format="[%(levelname)s] Line: %(lineno)d %(message)s", level=logging.DEBUG)
    
@@ -1055,7 +1094,6 @@ def main() -> None:
     # dec6.append_string(cursor_test)
     # for x in dec6:
     #     pass 
-
 
     et = TerminalState()
     et.update(escape_attribute_test)

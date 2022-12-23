@@ -43,7 +43,7 @@ keys = { Qt.Key_Enter:("\n", "Enter"),
          Qt.Key_Up:("", "Up"),
          Qt.Key_Down:("", "Down"),
          Qt.Key_Insert:("", "Insert"),
-         Qt.Key_Backspace:("", "Backspace"),
+         Qt.Key_Backspace:("\b", "Backspace"),
          Qt.Key_Home:("", "Home"),
          Qt.Key_End:("", "End"),
          Qt.Key_PageDown:("", "Page down"),
@@ -103,6 +103,7 @@ class TerminalWin(QPlainTextEdit):
 
         self.setStyleSheet("background-color: rgb(0, 0, 0); color : White")
 
+        self.cursor = QTextCursor(self.document())
         # doc = self.document()
         # settings = QTextOption()
         # settings.setFlags(QTextOption.IncludeTrailingSpaces | QTextOption.ShowTabsAndSpaces )
@@ -116,6 +117,7 @@ class TerminalWin(QPlainTextEdit):
         self.clear(init=init)
         self.ensureCursorVisible()
         self.setCursorWidth(2)
+        self.overwrite = False
 
         self.ts = TerminalState()
 
@@ -136,6 +138,24 @@ class TerminalWin(QPlainTextEdit):
         logging.debug(b)
 
     def append_html(self, html):
+
+        if self.overwrite:
+            #self.setOverwriteMode(True)
+            
+            cur = QTextCursor(self.document())
+            cur.movePosition(QTextCursor.End)
+            # cur.movePosition(QTextCursor.Left)
+            cur.movePosition(QTextCursor.Left)
+            cur.deleteChar()
+            # cur.insertText("x")
+            # cur.insertBlock("x")
+            cur.insertText("XX")
+            # self.insertPlainText(html)
+            
+            #self.setOverwriteMode(False)
+            self.overwrite = False
+            return
+            
         cur = QTextCursor(self.document())
         cur.movePosition(QTextCursor.End)
         cur.insertHtml(html)
@@ -144,8 +164,24 @@ class TerminalWin(QPlainTextEdit):
         lines = self.ts.update(s)
         
         for line in lines:
+            logging.debug(line) 
+            if line == Ascii.BS:
+                print("Backspace")
+                cur = QTextCursor(self.document())
+                # cur.movePosition(QTextCursor.End)
+                # cur.movePosition(QTextCursor.Left)
+                # self.moveCursor(QTextCursor.End)
+                # self.moveCursor(QTextCursor.Left)
+                #self.overwrite = True
+                # self.setOverwriteMode(True)
+                
+                cur.movePosition(QTextCursor.End)
+                cur.movePosition(QTextCursor.Left)
+                cur.deleteChar()
+                #cur.insertText("XX")
+                continue
+            
             self.append_html(line)
-            logging.debug(line)
         
     def keyPressEvent(self, e: QKeyEvent) -> None:
         logging.debug(f"  {e.key():x}  {get_description(e)}")   

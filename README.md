@@ -78,11 +78,11 @@
 - [x] Color encoding (8 colors)
 - [x] 256 color encoding
 - [ ] Truecolor (RGB)
-- [ ] Reverse text
+- [x] Reverse text
 - [ ] Underline style
 - [ ] Dim text
 - [ ] Cursor management
-- [ ] Addon function
+- [ ] Plugin function
 - [ ] Logging
 - [x] Echo mode
 - [x] Suspend button
@@ -91,8 +91,10 @@
 - [ ] Hex mode
 - [ ] Show pin status
 - [ ] Set pin status
-- [ ] Tab button
 - [ ] Loopback port
+- [ ] backspace, delete, tab, FXX, home, end, arrow button support 
+- [ ] Terminal state monitor ( mabye as plugin)
+- [ ] Manage Bell character
 
 
 ## Links
