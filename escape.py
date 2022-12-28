@@ -115,7 +115,7 @@ class CSI(Enum):
     CURSOR_FORWARD = "C"
     CURSOR_BACK = "D"
     CURSOR_NEXT_LINE = "E"
-    CURSOR_PREVOIUS_LINE = "F"
+    CURSOR_PREVIOUS_LINE = "F"
     CURSOR_HORIZONTAL_ABSOLUTE = "G"
     CURSOR_POSITION = "H"
     ERASE_IN_DISPLAY = "J"
@@ -129,16 +129,16 @@ class CSI(Enum):
     UNSUPPORED = "UNSUP"
 
     @staticmethod
-    def decode(s) -> CSI:
+    def decode(s : str) -> CSI:
         if not s[0] == Esc.ESCAPE:
             return None
 
         tc = s[-1] # termination character in Escape sequence
 
-        for x in CSI:
-            if tc == x.value:
-                logging.debug(f"Found {x}")
-                return x
+        for csi in CSI:
+            if tc == csi.value:
+                logging.debug(f"Found {csi}")
+                return csi
 
         logging.debug(f"Found {CSI.UNSUPPORED}")
         return CSI.UNSUPPORED
@@ -441,24 +441,24 @@ class EscapeTokenizer():
             if self.buf[j].isalpha():  # Termination character found
                 res = self.buf[0:j+1]
                 self.buf = self.buf[j+1:]
-                logging.debug(f"Found escape sequence: '\\e{res[1:]}' ")
+                #logging.debug(f"Found escape sequence: '\\e{res[1:]}' ")
                 return res
             
             # Escape sequence not complete, abort iteration
             raise StopIteration
 
-        if self.buf[j] in [ Ascii.NL , Ascii.BEL, Ascii.BS ]:
+        if self.buf[j] in [ Ascii.NL , Ascii.BEL, Ascii.BS, Ascii.CR ]:
             res = self.buf[j]
             self.buf = self.buf[j+1:]
             return res
 
                         
         # Handle normal text    
-        while j<l and self.buf[j] not in [ Esc.ESCAPE, Ascii.NL, Ascii.BEL, Ascii.BS ]:
+        while j<l and self.buf[j] not in [ Esc.ESCAPE, Ascii.NL, Ascii.BEL, Ascii.BS, Ascii.CR ]:
            j += 1
         res = self.buf[0:j]
         self.buf = self.buf[j:]
-        logging.debug(f"Found text sequence: '" + res.replace("\x1b", "\\e").replace("\x0a", "\\n").replace("\x0d", '\\r')+"'")
+        #logging.debug(f"Found text sequence: '" + res.replace("\x1b", "\\e").replace("\x0a", "\\n").replace("\x0d", '\\r')+"'")
         return res
 
 
@@ -819,15 +819,11 @@ class TerminalState:
     SUPERSCRIPT : bool = False
     SUBSCRIPT : bool = False
     
-    # span : bool = False
-    # attribute:SGR = SGR.RESET
     cur_x = None
     cur_y = None
 
     default_fg_color:str = TColor.WHITE
     default_bg_color:str = TColor.BLACK
-
-    # html_buf : str = ""
 
     def __init__(self) -> None:
         self.et = EscapeTokenizer()
@@ -842,7 +838,7 @@ class TerminalState:
             fg_color = self.fg_color
             bg_color = self.bg_color       
             
-        b = f"<p style=\"color:{fg_color};background-color:{bg_color};"
+        b = f"<span style=\"color:{fg_color};background-color:{bg_color};"
 
         if self.BOLD:
             b += "font-weight:bold;"
@@ -855,7 +851,7 @@ class TerminalState:
             b += "text-decoration:line-through;"
         b +="\">"
         b += data
-        b += "</p>"
+        b += "</span>"
         return b
     
     def reset(self):
@@ -881,15 +877,20 @@ class TerminalState:
         for token in self.et:
             if Esc.is_escape_seq(token):
                 x = CSI.decode(token)
+
+                if x in [CSI.CURSOR_UP, CSI.CURSOR_PREVIOUS_LINE]:
+                    l.append(x)
+                
                 if x == CSI.SGR:
                     sgrs = SGR.decode(token)
                     for s in sgrs:
                         a = s["SGR"]
                         
-                        if a in attr_list:
+                        if a in [ SGR.BOLD, SGR.ITALIC, SGR.UNDERLINE, SGR.CROSSED, SGR.SUPERSCRIPT, SGR.SUBSCRIPT ]:
                             setattr(self, a.name, True)
 
-                        if a in not_attr_list:
+                        if a in [ SGR.NORMAL_INTENSITY, SGR.NOT_ITALIC, SGR.NOT_UNDERLINED, SGR.NOT_BLINKING, 
+                                  SGR.NOT_REVERSED, SGR.REVEAL, SGR.NOT_CROSSED ]:
                             setattr(self, xx[a][1].name, False)
 
                         if a in fg_list: 
@@ -920,21 +921,27 @@ class TerminalState:
                             self.SUPERSCRIPT = False                        
                             self.SUBSCRIPT = False                        
                             self.DIM = False    
-                            self.REVERSE = False                     
-            else:
-                if token == Ascii.NL:
-                    l.append("<br>")
-                    continue
+                            self.REVERSE = False
+                continue                        
 
-                if token == Ascii.BS:
-                    l.append(Ascii.BS)
-                    continue
+            if token == Ascii.NL:
+                l.append("<br>")
+                continue
 
-                if token in [Ascii.BEL]:
-                    continue
-                    
-                token_space = token.replace(" ", "&nbsp;")
-                l.append(self.attr_html(token_space))
+            if token == Ascii.CR:
+                #l.append("<br>")
+                continue
+            
+            if token == Ascii.BS:
+                l.append(Ascii.BS)
+                continue
+            
+            if token in [Ascii.BEL]:
+                continue
+
+                
+            token_space = token.replace(" ", "&nbsp;")
+            l.append(self.attr_html(token_space))
                 
         return l
 

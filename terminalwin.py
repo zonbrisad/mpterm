@@ -26,7 +26,7 @@ from PyQt5.QtWidgets import (
 
 from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
 from dataclasses import dataclass
-from escape import Esc, Ascii, TerminalState
+from escape import Esc, Ascii, TerminalState, CSI, SGR
 
 # Variables ------------------------------------------------------------------
 
@@ -40,8 +40,8 @@ keys = { Qt.Key_Enter:("\n", "Enter"),
          Qt.Key_Delete:("", "Delete"), 
          Qt.Key_Left:("", "Left"),
          Qt.Key_Right:("", "Right"),
-         Qt.Key_Up:("", "Up"),
-         Qt.Key_Down:("", "Down"),
+         Qt.Key_Up:(Esc.CUR_UP, "Up"),
+         Qt.Key_Down:(Esc.CUR_DOWN, "Down"),
          Qt.Key_Insert:("", "Insert"),
          Qt.Key_Backspace:("\b", "Backspace"),
          Qt.Key_Home:("", "Home"),
@@ -89,10 +89,8 @@ def get_key(key: QKeyEvent) -> str:
     return key.text()
 
 
-template="""<pre>Mpterm\n"""
-
 class TerminalWin(QPlainTextEdit):
-    
+
     def __init__(self, parent=None, sp=None, init=""):
         super().__init__(parent)
         self.sp=sp
@@ -100,10 +98,10 @@ class TerminalWin(QPlainTextEdit):
         font.setFamily("Monospace")
         self.setFont(font)
         self.setObjectName("textEdit")
-
+        #self.setFocusPolicy(Qt.NoFocus)
         self.setStyleSheet("background-color: rgb(0, 0, 0); color : White")
 
-        self.cursor = QTextCursor(self.document())
+        self.cur = QTextCursor(self.document())
         # doc = self.document()
         # settings = QTextOption()
         # settings.setFlags(QTextOption.IncludeTrailingSpaces | QTextOption.ShowTabsAndSpaces )
@@ -112,86 +110,134 @@ class TerminalWin(QPlainTextEdit):
         # p = self.viewport().palette()
         # p.setColor(self.viewport().backgroundRole(), QColor(0,0,0))
         # self.viewport().setPalette(p)
+        self.ts = TerminalState()
         
         self.setReadOnly(True)
-        self.clear(init=init)
+        self.clear()
         self.ensureCursorVisible()
         self.setCursorWidth(2)
         self.overwrite = False
+        self.idx = 0
+        self.maxLines = 100
 
-        self.ts = TerminalState()
+    def setMaxLines(self, maxLines):
+        self.maxLines = maxLines
 
-    def clear(self, init = ""):
+    def clear(self):
         super().clear()
-        #self.setHtml(template+init)
-        
-        # self.appendHtml(template)
-        # self.appendHtml("Kalle\n")
+        self.ts.reset()
         self.moveCursor(QTextCursor.End)
-        #self.buf = ""template
-
+        
     def update(self, s : str) -> str:
         self.ts.update(s)
-        b = template + self.ts.get_buf()
+        #b = template + self.ts.get_buf()
         self.buf += b
-        #self.setHtml(self.buf)
         logging.debug(b)
+
+    def printpos(self, newPos : QTextCursor ) -> None:
+        pos = self.cur.position() 
+        bpos = self.cur.positionInBlock()
+        print(f"Cursor moved: abs:{pos}  block:{bpos}  newpos: {newPos}") 
+        
+    def insert(self, html):
+        self.cur.insertHtml(html)
+        #self.printpos(None)
+
+    def move(self, newPos : QTextCursor) -> None:
+        self.cur.movePosition(newPos)
+        #self.printpos(newPos)
+
+    def limit(self):
+        lines = self.document().lineCount()
+
+        if lines > self.maxLines:
+            cursor = QTextCursor(self.document())  
+            cursor.movePosition(QTextCursor.Start, QTextCursor.MoveAnchor)
+            cursor.movePosition(QTextCursor.Down, 2)
+            cursor.removeSelectedText()  
+
+        
 
     def append_html(self, html):
 
+        #cur = QTextCursor(self.document())
         if self.overwrite:
-            #self.setOverwriteMode(True)
-            
-            cur = QTextCursor(self.document())
-            cur.movePosition(QTextCursor.End)
-            # cur.movePosition(QTextCursor.Left)
-            cur.movePosition(QTextCursor.Left)
-            cur.deleteChar()
-            # cur.insertText("x")
-            # cur.insertBlock("x")
-            cur.insertText("XX")
-            # self.insertPlainText(html)
-            
-            #self.setOverwriteMode(False)
+            print("XXX")
+            # cur = QTextCursor(self.document())
+            # cur.movePosition(QTextCursor.Up)
+            # self.move(QTextCursor.End)
+            self.move(QTextCursor.StartOfLine)
+            #self.move(QTextCursor.Up)
+            #self.move(QTextCursor.Up)
+            # self.move(QTextCursor.Up)
+            # self.move(QTextCursor.Up)
+            # self.move(QTextCursor.StartOfBlock)
+            # cur.movePosition(QTextCursor.Up)
+            #cur.movePosition(QTextCursor.StartOfLine)
+            # self.move(QTextCursor.LineUnderCursor)
+            self.cur.select(QTextCursor.LineUnderCursor)
+            s = f"Y{self.idx}"
+            self.idx += 1
+            #cur.insertText(s)
+            #logging.debug(s)
+
+            # cur.movePosition(QTextCursor.Up)
+            # cur.removeSelectedText()
+            self.insert(html)
+            # self.insert(html)
+            #cur.insertHtml(s)
             self.overwrite = False
             return
-            
-        cur = QTextCursor(self.document())
-        cur.movePosition(QTextCursor.End)
-        cur.insertHtml(html)
+
+        self.move(QTextCursor.End)
+        self.insert(html)
 
     def apps(self, s : str) -> None:
         lines = self.ts.update(s)
         
         for line in lines:
-            logging.debug(line) 
-            if line == Ascii.BS:
-                print("Backspace")
-                cur = QTextCursor(self.document())
-                # cur.movePosition(QTextCursor.End)
-                # cur.movePosition(QTextCursor.Left)
-                # self.moveCursor(QTextCursor.End)
-                # self.moveCursor(QTextCursor.Left)
-                #self.overwrite = True
-                # self.setOverwriteMode(True)
-                
-                cur.movePosition(QTextCursor.End)
-                cur.movePosition(QTextCursor.Left)
-                cur.deleteChar()
-                #cur.insertText("XX")
+            if line == CSI.CURSOR_UP:
+                #logging.debug("Cur up") 
+                self.overwrite = True
+                continue
+
+            
+            if line == CSI.CURSOR_PREVIOUS_LINE:
+                logging.debug("Cursor previous line") 
+                self.overwrite = True
+                continue
+
+            if type(line) == CSI:
                 continue
             
+            if line == Ascii.BS:
+                logging.debug("Backspace")
+                #cur = QTextCursor(self.document())
+                self.move(QTextCursor.End)
+                self.move(QTextCursor.Left)
+                self.cur.deleteChar()
+                continue
+
+            if line == Ascii.CR:
+                logging.debug("Carriage return")
+                # cur.movePosition(QTextCursor.End)
+                # cur.movePosition(QTextCursor.StartOfBlock)
+                self.overwrite = True
+                continue
+                
+            logging.debug(line) 
             self.append_html(line)
+
+        self.limit()
         
     def keyPressEvent(self, e: QKeyEvent) -> None:
         logging.debug(f"  {e.key():x}  {get_description(e)}")   
         self.sp.send_string(get_key(e))
-        super().keyPressEvent(e)
+        #super().keyPressEvent(e)
 
     def scroll_down(self):
         vsb=self.verticalScrollBar()
         vsb.setValue(vsb.maximum())
-
 
 
 def main() -> None:

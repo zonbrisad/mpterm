@@ -82,7 +82,7 @@
 - [ ] Underline style
 - [ ] Dim text
 - [ ] Cursor management
-- [ ] Plugin function
+- [ ] Plugin system
 - [ ] Logging
 - [x] Echo mode
 - [x] Suspend button
@@ -93,6 +93,7 @@
 - [ ] Set pin status
 - [ ] Loopback port
 - [ ] backspace, delete, tab, FXX, home, end, arrow button support 
+- [ ] Fix tab cycling
 - [ ] Terminal state monitor ( mabye as plugin)
 - [ ] Manage Bell character
 
