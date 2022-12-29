@@ -26,6 +26,7 @@
 - [Freqlenty asked Questions](#freqlenty-asked-questions)
 - [History](#history)
 - [ToDo](#todo)
+- [Known Bugs](#known-bugs)
 - [Links](#links)
 - [Contribute](#contribute)
 - [License](#license)
@@ -79,9 +80,10 @@
 - [x] 256 color encoding
 - [ ] Truecolor (RGB)
 - [x] Reverse text
+- [ ] backspace, delete, tab, FXX, home, end, arrow button support 
 - [ ] Underline style
-- [ ] Dim text
 - [ ] Cursor management
+- [ ] Dim text
 - [ ] Plugin system
 - [ ] Logging
 - [x] Echo mode
@@ -92,10 +94,13 @@
 - [ ] Show pin status
 - [ ] Set pin status
 - [ ] Loopback port
-- [ ] backspace, delete, tab, FXX, home, end, arrow button support 
 - [ ] Fix tab cycling
-- [ ] Terminal state monitor ( mabye as plugin)
+- [ ] Terminal state monitor (mabye as plugin)
 - [ ] Manage Bell character
+
+## Known Bugs
+- Underline dissapears
+- Fix bright(bold) colors
 
 
 ## Links

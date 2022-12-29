@@ -110,6 +110,7 @@ class TerminalWin(QPlainTextEdit):
         # p = self.viewport().palette()
         # p.setColor(self.viewport().backgroundRole(), QColor(0,0,0))
         # self.viewport().setPalette(p)
+        
         self.ts = TerminalState()
         
         self.setReadOnly(True)
@@ -156,13 +157,11 @@ class TerminalWin(QPlainTextEdit):
             cursor.movePosition(QTextCursor.Down, 2)
             cursor.removeSelectedText()  
 
-        
 
     def append_html(self, html):
 
         #cur = QTextCursor(self.document())
         if self.overwrite:
-            print("XXX")
             # cur = QTextCursor(self.document())
             # cur.movePosition(QTextCursor.Up)
             # self.move(QTextCursor.End)
@@ -194,39 +193,51 @@ class TerminalWin(QPlainTextEdit):
 
     def apps(self, s : str) -> None:
         lines = self.ts.update(s)
+
+        rows = self.document().lineCount()
+        
         
         for line in lines:
             if line == CSI.CURSOR_UP:
-                #logging.debug("Cur up") 
-                self.overwrite = True
+                self.move(QTextCursor.Up)
                 continue
 
+            if line == CSI.CURSOR_DOWN:
+                self.move(QTextCursor.Down)
+                continue
+
+            if line == CSI.CURSOR_NEXT_LINE:
+                continue
             
             if line == CSI.CURSOR_PREVIOUS_LINE:
                 logging.debug("Cursor previous line") 
-                self.overwrite = True
-                continue
-
-            if type(line) == CSI:
+                self.move(QTextCursor.StartOfLine)
+                self.move(QTextCursor.Up)
+                #self.cur.select(QTextCursor.LineUnderCursor)
+                #self.insert(html)
                 continue
             
             if line == Ascii.BS:
                 logging.debug("Backspace")
-                #cur = QTextCursor(self.document())
-                self.move(QTextCursor.End)
-                self.move(QTextCursor.Left)
-                self.cur.deleteChar()
+                self.cur.deletePreviousChar()
                 continue
 
             if line == Ascii.CR:
                 logging.debug("Carriage return")
                 # cur.movePosition(QTextCursor.End)
                 # cur.movePosition(QTextCursor.StartOfBlock)
-                self.overwrite = True
+                #self.overwrite = True
                 continue
                 
-            logging.debug(line) 
-            self.append_html(line)
+            #logging.debug(line) 
+            #self.append_html(line)
+            l = len(line)
+            if not self.cur.atEnd:
+                self.cur.movePosition(QTextCursor.NoMove, QTextCursor.MoveAnchor, l)
+                self.cur.select()
+                
+            self.cur.insertHtml(line)
+            self.cur.movePosition(QTextCursor.Right,l)
 
         self.limit()
         

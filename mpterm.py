@@ -987,8 +987,9 @@ class MainForm(QMainWindow):
             data_str.replace("\x1b", "\\e")
             .replace("\x0a", "\\n")
             .replace("\x0d", "\\r")
+            .replace("\x08", "\\b")
         )
-        logging.debug(f"Data received: {self.sp.count} {db}")
+        logging.debug(f"Data received: {self.sp.count} \"{db}\"")
 
         DisplayMode = self.ui.cbDisplay.currentData()
 
