@@ -80,7 +80,13 @@
 - [x] 256 color encoding
 - [ ] Truecolor (RGB)
 - [x] Reverse text
-- [ ] backspace, delete, tab, FXX, home, end, arrow button support 
+- [x] backspace
+- [ ] delete
+- [ ] tab 
+- [ ] FXX 
+- [ ] home
+- [ ] end 
+- [ ] arrow button support 
 - [ ] Underline style
 - [ ] Cursor management
 - [ ] Dim text
@@ -89,6 +95,8 @@
 - [x] Echo mode
 - [x] Suspend button
 - [ ] Sync feature
+- [x] Pause button
+- [ ] Pause history
 - [ ] Programming button
 - [ ] Hex mode
 - [ ] Show pin status

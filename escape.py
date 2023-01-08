@@ -60,8 +60,8 @@ ascii = {  0x00:"NULL",
            0x04:"EOT",
            0x05:"ENQ",
            0x06:"ACK",
-           0x07:"BEL",
-           0x08:"BS",
+           0x07:"BEL", # Bell
+           0x08:"BS",  # Backspace
            0x09:"TAB", # Horizontal tab
            0x0A:"LF",  # Line feed
            0x0B:"VT",  # Vertical tab
@@ -85,7 +85,7 @@ ascii = {  0x00:"NULL",
            0x1D:"GS",
            0x1E:"RS",
            0x1F:"US",
-           0x20:"Spc"
+           0x20:"Spc" # Space
 }
 
 
@@ -101,8 +101,7 @@ def hex2str(c: int) -> str:
         if c == a:
             return b
     return chr(c)
-
-
+    
 class CSI(Enum):
     """Control Sequence Introducer
 
@@ -124,7 +123,7 @@ class CSI(Enum):
     ERASE_SCROLL_DOWN = "T"
     SGR = "m" # Select graphics rendition (SGR)
     AUX = "i"
-    DSR = "n" # Device statur report
+    DSR = "n" # Device status report
 
     UNSUPPORED = "UNSUP"
 
@@ -256,7 +255,13 @@ class SGR(Enum):
         # if isinstance(t, SGR):
         logging.debug(f"SGR: {attr_list}")
         return attr_list          
-                
+
+@dataclass
+class EscapeObj():
+    csi : CSI = CSI.UNSUPPORED
+    sgr : SGR = SGR.UNSUPPORTED
+    n : int = 1
+    m : int = 1                
             
 class Esc:
     ETX = '\x03'               # End of text(ETX), CTRL-C
@@ -878,7 +883,7 @@ class TerminalState:
             if Esc.is_escape_seq(token):
                 x = CSI.decode(token)
 
-                if x in [CSI.CURSOR_UP, CSI.CURSOR_PREVIOUS_LINE]:
+                if x in [CSI.CURSOR_UP, CSI.CURSOR_DOWN, CSI.CURSOR_PREVIOUS_LINE]:
                     l.append(x)
                 
                 if x == CSI.SGR:
@@ -924,17 +929,23 @@ class TerminalState:
                             self.REVERSE = False
                 continue                        
 
-            if token == Ascii.NL:
-                l.append("<br>")
+
+            if token in [Ascii.NL, Ascii.CR, Ascii.BS]:
+                l.append(token)
                 continue
 
-            if token == Ascii.CR:
-                #l.append("<br>")
-                continue
+            # if token == Ascii.NL:
+            #     l.append("<br>")
+            #     continue
+
+            # if token == Ascii.CR:
+            #     #l.append("<br>")
+            #     l.append(Ascii.CR)
+            #     continue
             
-            if token == Ascii.BS:
-                l.append(Ascii.BS)
-                continue
+            # if token == Ascii.BS:
+            #     l.append(Ascii.BS)
+            #     continue
             
             if token in [Ascii.BEL]:
                 continue

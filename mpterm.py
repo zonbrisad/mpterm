@@ -50,6 +50,7 @@ from PyQt5.QtWidgets import (
     QTextEdit,
     QDialogButtonBox,
     QPushButton,
+    QToolButton,
     QComboBox,
     QMessageBox,
     QWidget,
@@ -672,46 +673,46 @@ class MainForm(QMainWindow):
         colorAction = QAction("Color test", self)
         colorAction.triggered.connect(lambda: self.send_string(color_256_test()))
         self.testMenu.addAction(colorAction)
-
+        
         self.colorMenu = self.ui.menuSend.addMenu("Colors")
-        self.add_menu("Red", self.colorMenu, lambda: self.send_string(Esc.RED))
-        self.add_menu("Green", self.colorMenu, lambda: self.send_string(Esc.GREEN))
-        self.add_menu("Yellow", self.colorMenu, lambda: self.send_string(Esc.YELLOW))
-        self.add_menu("Blue", self.colorMenu, lambda: self.send_string(Esc.BLUE))
-        self.add_menu("Magenta", self.colorMenu, lambda: self.send_string(Esc.MAGENTA))
-        self.add_menu("Cyan", self.colorMenu, lambda: self.send_string(Esc.CYAN))
-        self.add_menu("White", self.colorMenu, lambda: self.send_string(Esc.WHITE))
+        self.add_action("Red", self.colorMenu, lambda: self.send_string(Esc.RED))
+        self.add_action("Green", self.colorMenu, lambda: self.send_string(Esc.GREEN))
+        self.add_action("Yellow", self.colorMenu, lambda: self.send_string(Esc.YELLOW))
+        self.add_action("Blue", self.colorMenu, lambda: self.send_string(Esc.BLUE))
+        self.add_action("Magenta", self.colorMenu, lambda: self.send_string(Esc.MAGENTA))
+        self.add_action("Cyan", self.colorMenu, lambda: self.send_string(Esc.CYAN))
+        self.add_action("White", self.colorMenu, lambda: self.send_string(Esc.WHITE))
 
-        self.add_menu("Bg Red", self.colorMenu, lambda: self.send_string(Esc.ON_RED))
-        self.add_menu(
+        self.add_action("Bg Red", self.colorMenu, lambda: self.send_string(Esc.ON_RED))
+        self.add_action(
             "Bg Green", self.colorMenu, lambda: self.send_string(Esc.ON_GREEN)
         )
-        self.add_menu(
+        self.add_action(
             "Bg Yellow", self.colorMenu, lambda: self.send_string(Esc.ON_YELLOW)
         )
-        self.add_menu("Bg Blue", self.colorMenu, lambda: self.send_string(Esc.ON_BLUE))
-        self.add_menu(
+        self.add_action("Bg Blue", self.colorMenu, lambda: self.send_string(Esc.ON_BLUE))
+        self.add_action(
             "Bg Magenta", self.colorMenu, lambda: self.send_string(Esc.ON_MAGENTA)
         )
-        self.add_menu("Bg Cyan", self.colorMenu, lambda: self.send_string(Esc.ON_CYAN))
-        self.add_menu(
+        self.add_action("Bg Cyan", self.colorMenu, lambda: self.send_string(Esc.ON_CYAN))
+        self.add_action(
             "Bg White", self.colorMenu, lambda: self.send_string(Esc.ON_WHITE)
         )
 
         self.attrMenu = self.ui.menuSend.addMenu("Attributes")
-        self.add_menu("Reset", self.attrMenu, lambda: self.send_string(Esc.ATTR_RESET))
-        self.add_menu("Bold", self.attrMenu, lambda: self.send_string(Esc.ATTR_BOLD))
-        self.add_menu(
+        self.add_action("Reset", self.attrMenu, lambda: self.send_string(Esc.ATTR_RESET))
+        self.add_action("Bold", self.attrMenu, lambda: self.send_string(Esc.ATTR_BOLD))
+        self.add_action(
             "Italic", self.attrMenu, lambda: self.send_string(Esc.ATTR_ITALIC)
         )
-        self.add_menu("Dim", self.attrMenu, lambda: self.send_string(Esc.ATTR_DIM))
-        self.add_menu(
+        self.add_action("Dim", self.attrMenu, lambda: self.send_string(Esc.ATTR_DIM))
+        self.add_action(
             "Reverse", self.attrMenu, lambda: self.send_string(Esc.ATTR_REVERSE)
         )
-        self.add_menu(
+        self.add_action(
             "Underline", self.attrMenu, lambda: self.send_string(Esc.ATTR_UNDERLINE)
         )
-        self.add_menu(
+        self.add_action(
             "Crossed", self.attrMenu, lambda: self.send_string(Esc.ATTR_CROSSED)
         )
 
@@ -746,6 +747,16 @@ class MainForm(QMainWindow):
         self.ui.verticalLayout_4.insertWidget(12, self.bpProgram)
         self.bpProgram.pressed.connect(self.program)
 
+        self.bpPause = QPushButton("Pause", self.ui.centralwidget)
+        # self.bpPause = QToolButton(self.ui.centralwidget)
+        # self.bpPause.setText("Pause")
+        self.ui.verticalLayout_4.insertWidget(12, self.bpPause)
+        self.bpPause.pressed.connect(self.pause)
+
+        # self.pMenu = QMenu("X")
+        # self.add_action("AA",self.pMenu, self.pause)
+        # self.bpPause.setMenu(self.pMenu)
+
         self.loadSettings()
 
         self.mode_change()
@@ -770,18 +781,34 @@ class MainForm(QMainWindow):
         self.process.readyReadStandardOutput.connect(self.program_data_available)
         self.process.finished.connect(self.program_finished)
 
+        self.isPaused = False
+
         self.update_ui()
+
+        # testAction = QAction("Testactopm", self)
+        # testAction.triggered.connect(lambda: print("TestAction"))
+        # self.terminal.addAction(testAction)
+        # self.terminal.contex
 
     # def keyPressEvent(self, a0: QKeyEvent) -> None:
     #     return super().keyPressEvent(a0)
     #     #print("Key")
     #     pass
-    
 
-    def add_menu(self, name, menu, function):
+
+    def add_action(self, name, menu, function):
         action = QAction(name, self)
         menu.addAction(action)
         action.triggered.connect(function)
+ 
+        
+    def pause(self):
+        if self.isPaused:
+            self.isPaused = False
+            self.bpPause.setText("Pause")
+        else:
+            self.isPaused = True
+            self.bpPause.setText("Paused")
 
     def suspend(self):
         self.sp.set_state(State.SUSPENDED)
@@ -790,7 +817,7 @@ class MainForm(QMainWindow):
     def program_data_available(self):
         data = self.process.readAllStandardOutput()
         # data = self.process.readAllStandardError()
-        #self.process.re
+        # self.process.re
         data_str = str(data, "utf-8")
         print(data_str)
         self.terminal.apps(data_str)
@@ -959,7 +986,7 @@ class MainForm(QMainWindow):
         # self.ui.statusbar.setStyleSheet("color: black")
         self.ui.statusbar.setStyleSheet(StyleS.normal)
         self._message(msg)
-        
+
         logging.debug(msg)
 
     # Show error message in status bar
@@ -989,8 +1016,11 @@ class MainForm(QMainWindow):
             .replace("\x0d", "\\r")
             .replace("\x08", "\\b")
         )
-        logging.debug(f"Data received: {self.sp.count} \"{db}\"")
+        logging.debug(f'Data received: {self.sp.count} "{db}"')
 
+        if self.isPaused:
+            return
+        
         DisplayMode = self.ui.cbDisplay.currentData()
 
         if DisplayMode == MpTerm.Ascii:  # Standard ascii display mode

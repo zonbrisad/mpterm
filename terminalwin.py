@@ -112,7 +112,7 @@ class TerminalWin(QPlainTextEdit):
         # self.viewport().setPalette(p)
         
         self.ts = TerminalState()
-        
+
         self.setReadOnly(True)
         self.clear()
         self.ensureCursorVisible()
@@ -120,6 +120,7 @@ class TerminalWin(QPlainTextEdit):
         self.overwrite = False
         self.idx = 0
         self.maxLines = 100
+        self.cr = False
 
     def setMaxLines(self, maxLines):
         self.maxLines = maxLines
@@ -135,7 +136,7 @@ class TerminalWin(QPlainTextEdit):
         self.buf += b
         logging.debug(b)
 
-    def printpos(self, newPos : QTextCursor ) -> None:
+    def printpos(self, newPos : QTextCursor.MoveOperation ) -> None:
         pos = self.cur.position() 
         bpos = self.cur.positionInBlock()
         print(f"Cursor moved: abs:{pos}  block:{bpos}  newpos: {newPos}") 
@@ -159,34 +160,6 @@ class TerminalWin(QPlainTextEdit):
 
 
     def append_html(self, html):
-
-        #cur = QTextCursor(self.document())
-        if self.overwrite:
-            # cur = QTextCursor(self.document())
-            # cur.movePosition(QTextCursor.Up)
-            # self.move(QTextCursor.End)
-            self.move(QTextCursor.StartOfLine)
-            #self.move(QTextCursor.Up)
-            #self.move(QTextCursor.Up)
-            # self.move(QTextCursor.Up)
-            # self.move(QTextCursor.Up)
-            # self.move(QTextCursor.StartOfBlock)
-            # cur.movePosition(QTextCursor.Up)
-            #cur.movePosition(QTextCursor.StartOfLine)
-            # self.move(QTextCursor.LineUnderCursor)
-            self.cur.select(QTextCursor.LineUnderCursor)
-            s = f"Y{self.idx}"
-            self.idx += 1
-            #cur.insertText(s)
-            #logging.debug(s)
-
-            # cur.movePosition(QTextCursor.Up)
-            # cur.removeSelectedText()
-            self.insert(html)
-            # self.insert(html)
-            #cur.insertHtml(s)
-            self.overwrite = False
-            return
 
         self.move(QTextCursor.End)
         self.insert(html)
@@ -213,8 +186,6 @@ class TerminalWin(QPlainTextEdit):
                 logging.debug("Cursor previous line") 
                 self.move(QTextCursor.StartOfLine)
                 self.move(QTextCursor.Up)
-                #self.cur.select(QTextCursor.LineUnderCursor)
-                #self.insert(html)
                 continue
             
             if line == Ascii.BS:
@@ -224,20 +195,33 @@ class TerminalWin(QPlainTextEdit):
 
             if line == Ascii.CR:
                 logging.debug("Carriage return")
-                # cur.movePosition(QTextCursor.End)
-                # cur.movePosition(QTextCursor.StartOfBlock)
-                #self.overwrite = True
+                self.move(QTextCursor.StartOfLine)
+                self.cr = True
+                continue
+
+            if line == Ascii.NL:
+                logging.debug("Newline")
+                if self.cr:
+                    self.move(QTextCursor.EndOfLine)
+                    self.cr = False
+                self.cur.insertHtml("<br>")
                 continue
                 
             #logging.debug(line) 
             #self.append_html(line)
             l = len(line)
-            if not self.cur.atEnd:
-                self.cur.movePosition(QTextCursor.NoMove, QTextCursor.MoveAnchor, l)
-                self.cur.select()
+            if not self.cur.atEnd():
+                self.cur.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, l)
+                #print(f"Distance to end: {l}")
+                #self.cur.setPosition()
+                #self.cur.removeSelectedText()
+                self.cur.insertHtml(line)
+                self.cur.movePosition(QTextCursor.Right, l)
+                continue
                 
             self.cur.insertHtml(line)
-            self.cur.movePosition(QTextCursor.Right,l)
+            self.cur.movePosition(QTextCursor.Right, l)
+            self.cr = False
 
         self.limit()
         
