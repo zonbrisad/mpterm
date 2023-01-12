@@ -26,7 +26,7 @@ from PyQt5.QtWidgets import (
 
 from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
 from dataclasses import dataclass
-from escape import Esc, Ascii, TerminalState, CSI, SGR
+from escape import Esc, Ascii, TerminalState2, CSI, SGR, EscapeObj
 
 # Variables ------------------------------------------------------------------
 
@@ -38,8 +38,8 @@ keys = { Qt.Key_Enter:("\n", "Enter"),
          Qt.Key_Return:("\n", "Return"), 
          Qt.Key_Escape:("", "Escape"), 
          Qt.Key_Delete:("", "Delete"), 
-         Qt.Key_Left:("", "Left"),
-         Qt.Key_Right:("", "Right"),
+         Qt.Key_Left:(Esc.CUR_BACK, "Left"),
+         Qt.Key_Right:(Esc.CUR_FORWARD, "Right"),
          Qt.Key_Up:(Esc.CUR_UP, "Up"),
          Qt.Key_Down:(Esc.CUR_DOWN, "Down"),
          Qt.Key_Insert:("", "Insert"),
@@ -111,7 +111,7 @@ class TerminalWin(QPlainTextEdit):
         # p.setColor(self.viewport().backgroundRole(), QColor(0,0,0))
         # self.viewport().setPalette(p)
         
-        self.ts = TerminalState()
+        self.ts = TerminalState2()
 
         self.setReadOnly(True)
         self.clear()
@@ -169,28 +169,38 @@ class TerminalWin(QPlainTextEdit):
 
         rows = self.document().lineCount()
         
-        
         for line in lines:
-            if line == CSI.CURSOR_UP:
-                self.move(QTextCursor.Up)
-                continue
-
-            if line == CSI.CURSOR_DOWN:
-                self.move(QTextCursor.Down)
-                continue
-
-            if line == CSI.CURSOR_NEXT_LINE:
-                continue
             
-            if line == CSI.CURSOR_PREVIOUS_LINE:
-                logging.debug("Cursor previous line") 
-                self.move(QTextCursor.StartOfLine)
-                self.move(QTextCursor.Up)
-                continue
-            
+            if type(line) == EscapeObj:
+                if line.csi == CSI.CURSOR_UP:
+                    self.move(QTextCursor.Up)
+                    continue
+
+                if line.csi == CSI.CURSOR_DOWN:
+                    self.move(QTextCursor.Down)
+                    continue
+
+                if line.csi == CSI.CURSOR_NEXT_LINE:
+                    continue
+
+                if line.csi == CSI.ERASE_IN_DISPLAY:
+                    self.clear()
+                    continue
+
+                if line.csi == CSI.CURSOR_POSITION:
+                    
+                    continue
+                
+                if line.csi == CSI.CURSOR_PREVIOUS_LINE:
+                    logging.debug("Cursor previous line") 
+                    self.move(QTextCursor.StartOfLine)
+                    self.move(QTextCursor.Up)
+                    continue
+                
             if line == Ascii.BS:
                 logging.debug("Backspace")
-                self.cur.deletePreviousChar()
+                # self.cur.deletePreviousChar()
+                self.move(QTextCursor.Left)
                 continue
 
             if line == Ascii.CR:

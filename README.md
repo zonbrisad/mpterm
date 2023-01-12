@@ -105,6 +105,7 @@
 - [ ] Fix tab cycling
 - [ ] Terminal state monitor (mabye as plugin)
 - [ ] Manage Bell character
+- [ ] Support for Bluetooth serialports
 
 ## Known Bugs
 - Underline dissapears
