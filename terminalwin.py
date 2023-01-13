@@ -193,7 +193,14 @@ class TerminalWin(QPlainTextEdit):
                     continue
 
                 if line.csi == CSI.CURSOR_POSITION:
-                    
+                    self.move(QTextCursor.End)
+                    self.move(QTextCursor.StartOfLine)
+                    # self.move(QTextCursor.StartOfLine)
+                    for a in range(0, 25-line.n):
+                        self.move(QTextCursor.Up)
+                        
+                    logging.debug(f"Cursor position: n: {line.n}  m: {line.m}")
+                    # self.cur.ro
                     continue
                 
                 if line.csi == CSI.CURSOR_PREVIOUS_LINE:

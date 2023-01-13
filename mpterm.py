@@ -72,7 +72,7 @@ from escape import (
 from terminalwin import TerminalWin
 from serialport import SerialPort, State
 
-import AboutDialogXX
+from aboutdialog import AboutDialog
 
 # Settings ------------------------------------------------------------------
 
@@ -100,15 +100,6 @@ class Mode(enum.Enum):
     Normal = 0
     Echo = 1
 
-
-class StateHandler:
-    def __init__(self) -> None:
-        self.state = State.DISCONNECTED
-
-    def set_state(self, new_state):
-        pass
-
-
 class MpTerm(enum.Enum):
     # Display modes
     Ascii = "Ascii"
@@ -122,7 +113,6 @@ class MpTerm(enum.Enum):
     NlCr = 2
 
 
-# Code ----------------------------------------------------------------------
 
 about_html = f"""
 <center><img src={App.ICON} width="54" height="54"></center>
@@ -171,37 +161,7 @@ about_html = f"""
 <br>
 """
 
-
-class AboutDialog(QDialog):
-    def __init__(self, parent=None):
-        super(AboutDialog, self).__init__(parent)
-
-        self.setWindowTitle(App.NAME)
-        self.setWindowModality(Qt.ApplicationModal)
-        self.resize(400, 300)
-
-        self.verticalLayout = QVBoxLayout(self)
-        self.verticalLayout.setSpacing(2)
-        self.setLayout(self.verticalLayout)
-
-        # TextEdit
-        self.textEdit = QTextEdit(self)
-        self.textEdit.setReadOnly(True)
-        self.verticalLayout.addWidget(self.textEdit)
-        self.textEdit.insertHtml(about_html)
-
-        # Buttonbox
-        self.buttonBox = QDialogButtonBox(self)
-        self.buttonBox.setStandardButtons(QDialogButtonBox.Ok)
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.setCenterButtons(True)
-        self.verticalLayout.addWidget(self.buttonBox)
-
-    @staticmethod
-    def about(parent=None):
-        dialog = AboutDialog(parent)
-        result = dialog.exec_()
-        return result == QDialog.Accepted
+# Code ----------------------------------------------------------------------
 
 
 @dataclass
@@ -633,13 +593,9 @@ class MainForm(QMainWindow):
         self.update_ui()
 
     def about(self) -> None:
-        AboutDialog.about()
+        AboutDialog.about(App.NAME, about_html)
 
-    # def port_handler(self):
-    #     if self.sp.state == State.DISCONNECTED:
-    #         pass
-
-    def port_handler(self):
+    def port_handler(self) -> None:
         portNames = [x.portName() for x in QSerialPortInfo.availablePorts()]
 
         # Check if current port is still connecter (USB to serial adapters), if not close port

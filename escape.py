@@ -288,7 +288,9 @@ class EscapeObj:
         if self.csi == CSI.CURSOR_POSITION:
             paramstring = seq[2:-1]
             params = paramstring.replace(":", ";").split(";")
-            if len(params) == 0:
+            #logging.debug(f"Paramstring len: {len(paramstring)}  len: {len(params)}")
+
+            if len(paramstring) == 0:
                 return
             if len(params) == 1:
                 self.n = int(params[0])
@@ -296,10 +298,6 @@ class EscapeObj:
                 self.n = int(params[0])
                 self.m = int(params[1])
                 
-            
-            
-            
-
     @staticmethod
     def find_sgr(sgr_code: str) -> SGR:
         for e in SGR:
