@@ -854,7 +854,7 @@ CC256 = [
 ]
 
 
-xx = {
+sgr_to_escape_color = {
     SGR.FG_COLOR_BLACK: TColor.BLACK,
     SGR.FG_COLOR_RED: TColor.RED,
     SGR.FG_COLOR_GREEN: TColor.GREEN,
@@ -872,47 +872,6 @@ xx = {
     SGR.BG_COLOR_CYAN: TColor.CYAN,
     SGR.BG_COLOR_WHITE: TColor.WHITE,
 }
-
-attr_list = [
-    SGR.BOLD,
-    SGR.ITALIC,
-    SGR.UNDERLINE,
-    SGR.CROSSED,
-    SGR.SUPERSCRIPT,
-    SGR.SUBSCRIPT,
-]
-not_attr_list = [
-    SGR.NORMAL_INTENSITY,
-    SGR.NOT_ITALIC,
-    SGR.NOT_UNDERLINED,
-    SGR.NOT_BLINKING,
-    SGR.NOT_REVERSED,
-    SGR.REVEAL,
-    SGR.NOT_CROSSED,
-]
-
-
-fg_list = [
-    SGR.FG_COLOR_BLACK,
-    SGR.FG_COLOR_RED,
-    SGR.FG_COLOR_GREEN,
-    SGR.FG_COLOR_YELLOW,
-    SGR.FG_COLOR_BLUE,
-    SGR.FG_COLOR_MAGENTA,
-    SGR.FG_COLOR_CYAN,
-    SGR.FG_COLOR_WHITE,
-]
-bg_list = [
-    SGR.BG_COLOR_BLACK,
-    SGR.BG_COLOR_RED,
-    SGR.BG_COLOR_GREEN,
-    SGR.BG_COLOR_YELLOW,
-    SGR.BG_COLOR_BLUE,
-    SGR.BG_COLOR_MAGENTA,
-    SGR.BG_COLOR_CYAN,
-    SGR.BG_COLOR_WHITE,
-]
-
 
 class CharacterState:
     BOLD: bool = False
@@ -958,171 +917,7 @@ class TerminalLine:
             self.line.append(ch)
         pass
 
-
 class TerminalState:
-    BOLD: bool = False
-    DIM: bool = False
-    ITALIC: bool = False
-    UNDERLINE: bool = False
-    slow_blink: bool = False
-    rapid_blink: bool = False
-    REVERSE: bool = False
-    CROSSED: bool = False
-    SUPERSCRIPT: bool = False
-    SUBSCRIPT: bool = False
-
-    cur_x = None
-    cur_y = None
-
-    default_fg_color: str = TColor.WHITE
-    default_bg_color: str = TColor.BLACK
-
-    def __init__(self) -> None:
-        self.et = EscapeTokenizer()
-        self.reset()
-
-    def attr_html(self, data) -> str:
-
-        if self.REVERSE:
-            bg_color = self.fg_color
-            fg_color = self.bg_color
-        else:
-            fg_color = self.fg_color
-            bg_color = self.bg_color
-
-        b = f'<span style="color:{fg_color};background-color:{bg_color};'
-
-        if self.BOLD:
-            b += "font-weight:bold;"
-        if self.ITALIC:
-            b += "font-style:italic;"
-        if self.UNDERLINE:
-            # b += f"text-decoration:underline;text-decoration-color:{self.fg_color};"
-            b += f"text-decoration:underline;text-decoration-color:Red;"
-        if self.CROSSED:
-            b += "text-decoration:line-through;"
-        b += '">'
-        b += data
-        b += "</span>"
-        return b
-
-    def reset(self):
-        self.BOLD = False
-        self.DIM = False
-        self.ITALIC = False
-        self.CROSSED = False
-        self.UNDERLINE = False
-        self.SUPERSCRIPT = False
-        self.SUBSCRIPT = False
-        self.slow_blink = False
-        self.rapid_blink = False
-        self.REVERSE = False
-        self.span = False
-        self.fg_color = self.default_fg_color
-        self.bg_color = self.default_bg_color
-        self.et.clear()
-
-    def update(self, s: str) -> list:
-        self.et.append_string(s)
-        l = []
-
-        for token in self.et:
-            if Esc.is_escape_seq(token):
-                x = CSI.decode(token)
-
-                if x in [
-                    CSI.CURSOR_UP,
-                    CSI.CURSOR_DOWN,
-                    CSI.CURSOR_PREVIOUS_LINE,
-                    CSI.ERASE_IN_DISPLAY,
-                    CSI.CURSOR_POSITION,
-                ]:
-                    l.append(x)
-
-                if x == CSI.SGR:
-                    sgrs = SGR.decode(token)
-                    for s in sgrs:
-                        a = s["SGR"]
-
-                        if a in [
-                            SGR.BOLD,
-                            SGR.ITALIC,
-                            SGR.UNDERLINE,
-                            SGR.CROSSED,
-                            SGR.SUPERSCRIPT,
-                            SGR.SUBSCRIPT,
-                        ]:
-                            setattr(self, a.name, True)
-
-                        if a in [
-                            SGR.NORMAL_INTENSITY,
-                            SGR.NOT_ITALIC,
-                            SGR.NOT_UNDERLINED,
-                            SGR.NOT_BLINKING,
-                            SGR.NOT_REVERSED,
-                            SGR.REVEAL,
-                            SGR.NOT_CROSSED,
-                        ]:
-                            setattr(self, xx[a][1].name, False)
-
-                        if a in fg_list:
-                            self.fg_color = xx[a]
-
-                        if a in bg_list:
-                            self.bg_color = xx[a]
-
-                        if a == SGR.SET_FG_COLOR:
-                            self.fg_color = CC256[s["color"]]["hex"]
-
-                        if a == SGR.SET_BG_COLOR:
-                            self.bg_color = CC256[s["color"]]["hex"]
-
-                        if a == SGR.REVERSE_VIDEO:
-                            self.REVERSE = True
-
-                        if a == SGR.NOT_REVERSED:
-                            self.REVERSE = False
-
-                        if a == SGR.RESET:
-                            self.fg_color = self.default_fg_color
-                            self.bg_color = self.default_bg_color
-                            self.BOLD = False
-                            self.ITALIC = False
-                            self.UNDERLINE = False
-                            self.CROSSED = False
-                            self.SUPERSCRIPT = False
-                            self.SUBSCRIPT = False
-                            self.DIM = False
-                            self.REVERSE = False
-                continue
-
-            if token in [Ascii.NL, Ascii.CR, Ascii.BS]:
-                l.append(token)
-                continue
-
-            # if token == Ascii.NL:
-            #     l.append("<br>")
-            #     continue
-
-            # if token == Ascii.CR:
-            #     #l.append("<br>")
-            #     l.append(Ascii.CR)
-            #     continue
-
-            # if token == Ascii.BS:
-            #     l.append(Ascii.BS)
-            #     continue
-
-            if token in [Ascii.BEL]:
-                continue
-
-            token_space = token.replace(" ", "&nbsp;")
-            l.append(self.attr_html(token_space))
-
-        return l
-
-
-class TerminalState2:
     BOLD: bool = False
     DIM: bool = False
     ITALIC: bool = False
@@ -1226,13 +1021,31 @@ class TerminalState2:
                             SGR.REVEAL,
                             SGR.NOT_CROSSED,
                         ]:
-                            setattr(self, xx[a][1].name, False)
+                            setattr(self, sgr_to_escape_color[a][1].name, False)
 
-                        if a in fg_list:
-                            self.fg_color = xx[a]
+                        if a in [
+                            SGR.FG_COLOR_BLACK,
+                            SGR.FG_COLOR_RED,
+                            SGR.FG_COLOR_GREEN,
+                            SGR.FG_COLOR_YELLOW,
+                            SGR.FG_COLOR_BLUE,
+                            SGR.FG_COLOR_MAGENTA,
+                            SGR.FG_COLOR_CYAN,
+                            SGR.FG_COLOR_WHITE
+                        ]:
+                            self.fg_color = sgr_to_escape_color[a]
 
-                        if a in bg_list:
-                            self.bg_color = xx[a]
+                        if a in [
+                            SGR.BG_COLOR_BLACK,
+                            SGR.BG_COLOR_RED,
+                            SGR.BG_COLOR_GREEN,
+                            SGR.BG_COLOR_YELLOW,
+                            SGR.BG_COLOR_BLUE,
+                            SGR.BG_COLOR_MAGENTA,
+                            SGR.BG_COLOR_CYAN,
+                            SGR.BG_COLOR_WHITE,
+                        ]:
+                            self.bg_color = sgr_to_escape_color[a]
 
                         if a == SGR.SET_FG_COLOR:
                             self.fg_color = CC256[s["color"]]["hex"]

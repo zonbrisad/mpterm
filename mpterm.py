@@ -345,7 +345,6 @@ class MainForm(QMainWindow):
         self.terminal = TerminalWin(
             self.ui.centralwidget,
             sp=self.sp,
-            init=f"""MpTerm Ver: <b>{App.VERSION}</b>\n""",
         )
         self.ui.horizontalLayout.insertWidget(1, self.terminal)
 
@@ -359,10 +358,9 @@ class MainForm(QMainWindow):
         self.ui.statusbar.addPermanentWidget(self.txLabel, stretch=0)
 
         # Statusbar button test
-        # self.customSignal = QtCore.Signal()
-        self.statusButton = QPushButton("XX")
-        self.ui.statusbar.addPermanentWidget(self.statusButton, stretch=0)
-        self.statusButton.clicked.connect(lambda: print("Button XX clicked"))
+        # self.statusButton = QPushButton("XX")
+        # self.ui.statusbar.addPermanentWidget(self.statusButton, stretch=0)
+        # self.statusButton.clicked.connect(lambda: print("Button XX clicked"))
 
         self.ui.cbStopBits.addItem("1", QSerialPort.OneStop)
         self.ui.cbStopBits.addItem("1.5", QSerialPort.OneAndHalfStop)
@@ -523,8 +521,6 @@ class MainForm(QMainWindow):
         self.bpProgram.pressed.connect(self.program)
 
         self.bpPause = QPushButton("Pause", self.ui.centralwidget)
-        # self.bpPause = QToolButton(self.ui.centralwidget)
-        # self.bpPause.setText("Pause")
         self.ui.verticalLayout_4.insertWidget(12, self.bpPause)
         self.bpPause.pressed.connect(self.pause)
 
@@ -533,7 +529,6 @@ class MainForm(QMainWindow):
         # self.bpPause.setMenu(self.pMenu)
 
         self.loadSettings()
-
         self.mode_change()
 
         # Configure signal handler
@@ -558,8 +553,10 @@ class MainForm(QMainWindow):
 
         self.isPaused = False
 
-        self.update_ui()
+        self.terminal.insert(f"""MpTerm Ver: <b>{App.VERSION}</b><br><br>""")
 
+        self.update_ui()
+        self.init_port()
         # testAction = QAction("Testactopm", self)
         # testAction.triggered.connect(lambda: print("TestAction"))
         # self.terminal.addAction(testAction)
@@ -760,10 +757,8 @@ class MainForm(QMainWindow):
 
     # Show message in status bar
     def message(self, msg):
-        # self.ui.statusbar.setStyleSheet("color: black")
         self.ui.statusbar.setStyleSheet(StyleS.normal)
         self._message(msg)
-
         logging.debug(msg)
 
     # Show error message in status bar
@@ -778,9 +773,8 @@ class MainForm(QMainWindow):
         logging.debug(f"Setting display mode {self.ui.cbDisplay.currentData()}")
 
     def appendHtml(self, str):
-        # move cursor to end of buffer
         self.terminal.moveCursor(QTextCursor.End)
-        self.terminal.insertHtml(str)
+        self.terminal.append_html(str)
 
     def read(self):
 
@@ -848,12 +842,13 @@ class MainForm(QMainWindow):
         self.sp.setPortName(f"/dev/{self.ui.cbPort.currentText()}")
 
     def set_sp(self):
-        logging.debug(self.ui.cbBitrate.currentData())
+        br = self.ui.cbBitrate.currentData()
         self.sp.setBaudRate(self.ui.cbBitrate.currentData())
         self.sp.setStopBits(self.ui.cbStopBits.currentData())
         self.sp.setDataBits(self.ui.cbBits.currentData())
         self.sp.setParity(self.ui.cbParity.currentData())
         self.sp.setFlowControl(self.ui.cbFlowControl.currentData())
+        logging.debug(self.ui.cbBitrate.currentData())
 
     def setCbText(self, cb, txt):
         a = cb.findText(txt)
@@ -881,26 +876,41 @@ class MainForm(QMainWindow):
         # self.prof.sync = self.ui.leSyncString.text()
         self.prof.write()
 
+    def loadSetting(self, cb, setting):
+        idx = cb.findText(setting)
+        if idx != -1:
+            cb.setCurrentIndex(idx)
+
     def loadSettings(self):
 
         # Handle settings
         self.prof = mpProfile(filename=mp_settings)
         self.prof.load()
 
-        self.ui.cbPort.setCurrentText(self.prof.port)
-        self.ui.cbBitrate.setCurrentText(self.prof.bitrate)
-        self.ui.cbStopBits.setCurrentText(self.prof.stopbits)
-        self.ui.cbBits.setCurrentText(self.prof.databits)
-        self.ui.cbParity.setCurrentText(self.prof.parity)
-        self.ui.cbFlowControl.setCurrentText(self.prof.flowcontrol)
+        # idx = self.ui.cbBitrate.findText(self.prof.bitrate)
+        # if idx != -1:
+        #     self.ui.cbBitrate.setCurrentIndex(idx)
+        self.loadSetting(self.ui.cbBitrate, self.prof.bitrate)
+                
+        # self.ui.cbBitrate.setCurrentText(self.prof.bitrate)
+        # self.ui.cbPort.setCurrentText(self.prof.port)
+        # self.ui.cbStopBits.setCurrentText(self.prof.stopbits)
+        # self.ui.cbBits.setCurrentText(self.prof.databits)
+        # self.ui.cbParity.setCurrentText(self.prof.parity)
+        # self.ui.cbFlowControl.setCurrentText(self.prof.flowcontrol)
+        self.loadSetting(self.ui.cbBitrate, self.prof.bitrate)
+        self.loadSetting(self.ui.cbPort, self.prof.port)
+        self.loadSetting(self.ui.cbStopBits, self.prof.stopbits)
+        self.loadSetting(self.ui.cbBits, self.prof.databits)
+        self.loadSetting(self.ui.cbParity, self.prof.parity)
+        self.loadSetting(self.ui.cbFlowControl, self.prof.flowcontrol)
 
         idx = self.ui.cbDisplay.findData(MpTerm(self.prof.mode))
         self.ui.cbDisplay.setCurrentIndex(idx)
 
-        # self.ui.leSyncString.setText(prof.sync)
 
     def exitProgram(self, e):
-        self.sp.serial_port.close()
+        self.sp.close()
         self.saveSettings()
         self.close()
 
@@ -915,8 +925,8 @@ class MainForm(QMainWindow):
         self.appendHtml(f"<b>{self.ss(desc)}</b><code><font color='Green'>{data}<br>")
 
     def portInfo(self):
-        if not self.sp.state == State.DISCONNECTED:
-            return
+        # if not self.sp.state == State.DISCONNECTED:
+        #     return
         ports = QSerialPortInfo.availablePorts()
         for port in ports:
             self.appendInfo("Port:", port.portName())

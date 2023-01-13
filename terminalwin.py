@@ -26,7 +26,7 @@ from PyQt5.QtWidgets import (
 
 from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
 from dataclasses import dataclass
-from escape import Esc, Ascii, TerminalState2, CSI, SGR, EscapeObj
+from escape import Esc, Ascii, TerminalState, CSI, SGR, EscapeObj
 
 # Variables ------------------------------------------------------------------
 
@@ -102,6 +102,8 @@ class TerminalWin(QPlainTextEdit):
         self.setStyleSheet("background-color: rgb(0, 0, 0); color : White")
 
         self.cur = QTextCursor(self.document())
+
+        self.insert(init)
         # doc = self.document()
         # settings = QTextOption()
         # settings.setFlags(QTextOption.IncludeTrailingSpaces | QTextOption.ShowTabsAndSpaces )
@@ -110,11 +112,14 @@ class TerminalWin(QPlainTextEdit):
         # p = self.viewport().palette()
         # p.setColor(self.viewport().backgroundRole(), QColor(0,0,0))
         # self.viewport().setPalette(p)
+
+
         
-        self.ts = TerminalState2()
+        self.ts = TerminalState()
 
         self.setReadOnly(True)
         self.clear()
+        
         self.ensureCursorVisible()
         self.setCursorWidth(2)
         self.overwrite = False
