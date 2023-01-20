@@ -25,7 +25,6 @@ from PyQt5.QtWidgets import (
 )
 
 from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
-from dataclasses import dataclass
 from escape import Esc, Ascii, TerminalState, CSI, SGR, EscapeObj
 
 # Variables ------------------------------------------------------------------
@@ -96,6 +95,7 @@ class TerminalWin(QPlainTextEdit):
         self.sp=sp
         font = QFont()
         font.setFamily("Monospace")
+        
         self.setFont(font)
         self.setObjectName("textEdit")
         #self.setFocusPolicy(Qt.NoFocus)
@@ -108,12 +108,9 @@ class TerminalWin(QPlainTextEdit):
         # settings = QTextOption()
         # settings.setFlags(QTextOption.IncludeTrailingSpaces | QTextOption.ShowTabsAndSpaces )
         # doc.setDefaultTextOption(settings)
-
         # p = self.viewport().palette()
         # p.setColor(self.viewport().backgroundRole(), QColor(0,0,0))
         # self.viewport().setPalette(p)
-
-
         
         self.ts = TerminalState()
 
@@ -144,7 +141,7 @@ class TerminalWin(QPlainTextEdit):
     def printpos(self, newPos : QTextCursor.MoveOperation ) -> None:
         pos = self.cur.position() 
         bpos = self.cur.positionInBlock()
-        print(f"Cursor moved: abs:{pos}  block:{bpos}  newpos: {newPos}") 
+        logging.debug(f"Cursor moved: abs:{pos}  block:{bpos}  newpos: {newPos}") 
         
     def insert(self, html):
         self.cur.insertHtml(html)
@@ -165,9 +162,13 @@ class TerminalWin(QPlainTextEdit):
 
 
     def append_html(self, html):
-
         self.move(QTextCursor.End)
         self.insert(html)
+
+    def insertHtml(self, html):    
+        l = len(html)
+        self.cur.insertHtml(html)
+        self.cur.movePosition(QTextCursor.Right, l)
 
     def apps(self, s : str) -> None:
         lines = self.ts.update(s)

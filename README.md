@@ -95,21 +95,22 @@
 - [x] Echo mode
 - [x] Suspend button
 - [ ] Sync feature
-- [x] Pause button
+- [x] Pause button 
 - [ ] Pause history
 - [ ] Programming button
 - [ ] Hex mode
 - [ ] Show pin status
 - [ ] Set pin status
 - [ ] Loopback port
-- [ ] Fix tab cycling
 - [ ] Terminal state monitor (mabye as plugin)
 - [ ] Manage Bell character
 - [ ] Support for Bluetooth serialports
 
 ## Known Bugs
 - Underline dissapears
-- Fix bright(bold) colors
+- Real bright(bold) colors
+- anoying Tab cycling 
+
 
 
 ## Links

@@ -304,7 +304,7 @@ class MainForm(QMainWindow):
 
         self.terminal = TerminalWin(
             self.ui.centralwidget,
-            sp=self.sp,
+            sp=self.sp
         )
         self.ui.horizontalLayout.insertWidget(1, self.terminal)
 
@@ -460,7 +460,7 @@ class MainForm(QMainWindow):
         self.ui.actionNew.triggered.connect(self.new)
         self.ui.actionExit.triggered.connect(self.exitProgram)
         self.ui.actionClear.triggered.connect(self.actionClear)
-        self.ui.actionAbout.triggered.connect(self.about)
+        self.ui.actionAbout.triggered.connect(lambda: AboutDialog.about(App.NAME, about_html))
         self.ui.actionPortInfo.triggered.connect(self.portInfo)
 
         self.ui.pbOpen.pressed.connect(self.openPort)
@@ -531,10 +531,11 @@ class MainForm(QMainWindow):
         # self.sp.send_string(get_key(e))
         print("Keypressed")
 
-    def add_action(self, name, menu, function):
+    def add_action(self, name, menu, function) -> QAction:
         action = QAction(name, self)
         menu.addAction(action)
         action.triggered.connect(function)
+        return action
 
     def pause(self):
         if self.isPaused:
@@ -560,6 +561,7 @@ class MainForm(QMainWindow):
 
     def program_finished(self):
         logging.debug("External program finnished executing")
+        self.terminal.append_html("<br>")
         if self.sp.state == State.SUSPENDED:
             self.sp.set_state(State.RECONNECTING)
 
@@ -571,10 +573,11 @@ class MainForm(QMainWindow):
 
         if self.sp.state == State.CONNECTED:
             self.sp.set_state(State.SUSPENDED, timeout=-1)
-
-        # self.process.start("bpdev attr")
+        self.terminal.append_html("<br>")
+        self.process.start("bpdev attr")
+        # self.process.start("bpexample shade")
         # self.process.start("avrdude 2>&1")
-        self.process.start("wget")
+        #self.process.start("wget")
         logging.debug("Runing external program")
         self.update_ui()
         self.terminal.scroll_down()
@@ -591,9 +594,7 @@ class MainForm(QMainWindow):
         #        pins = self.sp.serial_port.PinoutSignal()
 
         self.update_ui()
-
-    def about(self) -> None:
-        AboutDialog.about(App.NAME, about_html)
+        
 
     def port_handler(self) -> None:
         portNames = [x.portName() for x in QSerialPortInfo.availablePorts()]
@@ -920,15 +921,12 @@ def main():
     parser.add_argument("--list", action="store_true", help="List serialports")
     # parser.add_argument("--build", action="store_true", help="Build ui code")
     parser.add_argument("--debug", action="store_true", help="Activate debug printout")
+    parser.add_argument("--program", action="store", type=str, help="Program to run", default="")
 
     args = parser.parse_args()
 
     if args.debug:
         logging.basicConfig(format=logging_format, level=logging.DEBUG)
-
-    # if args.build:
-    #     os.system("pyuic5 mpTerminal.ui -o ui_MainWindow.py")
-    #     sys.exit()
 
     if args.list:
         list_ports()
@@ -954,6 +952,7 @@ def main():
     app.setAttribute(Qt.AA_UseHighDpiPixmaps)
 
     mainForm = MainForm()
+    mainForm.args = args
     mainForm.show()
     sys.exit(app.exec_())
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # shellcheck disable=2034
+# shellcheck disable=2317
 # shellcheck disable=1090
 #---------------------------------------------------------------------
 #
@@ -57,6 +58,14 @@ terminal() { ##D Start login terminal on serial port
   sudo getty --autologin lpmg -L "$2" 115200 vt100
 }
 
+ard() { ##D Program testprogram to arduiono
+
+  firmware=arduino-blink.hex
+  AVRDUDE_PORT=/dev/ttyUSB0
+  AVRDUDE_WRITE_FLASH="-U flash:w:$(firmware):i"
+  avrdude -v -v -p m328p -P "${AVRDUDE_PORT}" -c arduino -b 57600 -D
+}
+
 ##- Terminal tests
 
 underline() { ##D Test of extended underline attributes
@@ -112,10 +121,10 @@ attr() { ##D demonstrate font attributes
   print_attr "E_ATTR_FRAME" "Frame"
   print_attr "E_ATTR_OVERLINED" "Overlined"
   echo
-	
-	echo -e "${E_ATTR_BOLD}${E_ATTR_ITALIC}${E_ATTR_UNDERLINE}Bold, italic and underline${E_RESET}"
-	echo -e "${E_ATTR_DIM}${E_ATTR_ITALIC}${E_ATTR_CROSSED}Dim, italic and crossed${E_RESET}"
-	
+
+  echo -e "${E_ATTR_BOLD}${E_ATTR_ITALIC}${E_ATTR_UNDERLINE}Bold, italic and underline${E_RESET}"
+  echo -e "${E_ATTR_DIM}${E_ATTR_ITALIC}${E_ATTR_CROSSED}Dim, italic and crossed${E_RESET}"
+
 }
 
 text_attr() { ##D Font color attributes
@@ -174,9 +183,7 @@ text_attr() { ##D Font color attributes
   print_attr2 "E_UL_GRAY" "Underline gray"
   print_attr2 "E_UL_WHITE" "Underline white"
   echo
-	
-	
-	
+
 }
 
 __color() { ## Standard 16 colors
