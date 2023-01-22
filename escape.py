@@ -32,7 +32,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 import logging
-from enum import Enum, auto
+from enum import Enum
 
 
 class Ascii:
@@ -134,17 +134,17 @@ class CSI(Enum):
 
     @staticmethod
     def decode(s: str) -> CSI:
-        if not s[0] == Esc.ESCAPE:
+        if not s[0] == Escape.ESCAPE:
             return None
 
         tc = s[-1]  # termination character in Escape sequence
 
         for csi in CSI:
             if tc == csi.value:
-                logging.debug(f'Found {csi}  "{Esc.to_str(s)}"')
+                logging.debug(f'Found {csi}  "{Escape.to_str(s)}"')
                 return csi
 
-        logging.debug(f'Found {CSI.UNSUPPORED}  "{Esc.to_str(s)}"')
+        logging.debug(f'Found {CSI.UNSUPPORED}  "{Escape.to_str(s)}"')
         return CSI.UNSUPPORED
 
 
@@ -211,7 +211,7 @@ class SGR(Enum):
 
     @staticmethod
     def is_sgr(s: str) -> bool:
-        if s[0] == Esc.ESCAPE and s[-1] == "m":
+        if s[0] == Escape.ESCAPE and s[-1] == "m":
             return True
         return False
 
@@ -274,7 +274,7 @@ class EscapeObj:
     m: int = 1
 
     def decode(self, seq: str) -> CSI:
-        if not seq[0] == Esc.ESCAPE:
+        if not seq[0] == Escape.ESCAPE:
             return
 
         tc = seq[-1]  # termination character in Escape sequence
@@ -283,7 +283,7 @@ class EscapeObj:
             if tc == csi.value:
                 self.csi = csi
 
-        logging.debug(f'Found {self.csi}  "{Esc.to_str(seq)}"')
+        logging.debug(f'Found {self.csi}  "{Escape.to_str(seq)}"')
 
         if self.csi == CSI.SGR:
             self.decode_sgr(seq)
@@ -347,7 +347,7 @@ class EscapeObj:
         self.sgr = attr_list
 
 
-class Esc:
+class Escape:
     ETX = "\x03"  # End of text(ETX), CTRL-C
     ESCAPE = "\x1b"
 
@@ -371,41 +371,40 @@ class Esc:
 
     # ANSI background color codes
     #
-    ON_BLACK = "\x1b[40m"  # Black
-    ON_RED = "\x1b[41m"  # Red
-    ON_GREEN = "\x1b[42m"  # Green
-    ON_YELLOW = "\x1b[43m"  # Yellow
-    ON_BLUE = "\x1b[44m"  # Blue
-    ON_MAGENTA = "\x1b[45m"  # Magenta
-    ON_CYAN = "\x1b[46m"  # Cyan
-    ON_WHITE = "\x1b[47m"  # White
+    BG_BLACK = "\x1b[40m"  # Black
+    BG_RED = "\x1b[41m"  # Red
+    BG_GREEN = "\x1b[42m"  # Green
+    BG_YELLOW = "\x1b[43m"  # Yellow
+    BG_BLUE = "\x1b[44m"  # Blue
+    BG_MAGENTA = "\x1b[45m"  # Magenta
+    BG_CYAN = "\x1b[46m"  # Cyan
+    BG_WHITE = "\x1b[47m"  # White
 
     # ANSI Text attributes
-    ATTR_RESET = "\x1b[0m"  # Reset attributes
-    ATTR_BOLD = "\x1b[1m"  # bold font
-    ATTR_DIM = "\x1b[2m"  # Low intensity/faint/dim
-    ATTR_ITALIC = "\x1b[3m"  # Low intensity/faint/dim
-    ATTR_UNDERLINE = "\x1b[4m"  # Underline
-    ATTR_SLOWBLINK = "\x1b[5m"  # Slow blink
-    ATTR_FASTBLINK = "\x1b[6m"  # Fast blink
-    ATTR_REVERSE = "\x1b[7m"  # Reverse video
-    ATTR_HIDE = "\x1b[8m"
-    ATTR_CROSSED = "\x1b[9m"  # Crossed text
-    ATTR_FRACTUR = "\x1b[20m"  # Gothic
-    ATTR_FRAMED = "\x1b[51m"  # Framed
-    ATTR_OVERLINE = "\x1b[53m"  # Overlined
-    ATTR_SUPERSCRIPT = "\x1b[73m"  # Superscript
-    ATTR_SUBSCRIPT = "\x1b[74m"  # Subscript
-
-    ATTR_NORMAL = "\x1b[22m"  # Normal intensity
-    ATTR_NOT_ITALIC = "\x1b[23m"
-    ATTR_NOT_UNDERLINED = "\x1b[24m"
-    ATTR_NOT_BLINKING = "\x1b[25m"
-    ATTR_NOT_REVERSED = "\x1b[27m"
-    ATTR_REVEAL = "\x1b[28m"
-    ATTR_NOT_CROSSED = "\x1b[29m"
-    ATTR_NOT_SSCRIPT = "\x1b[75m"
-    ATTR_NOT_OVERLINE = "\x1b[55m"
+    RESET = "\x1b[0m"  # Reset attributes
+    BOLD = "\x1b[1m"  # bold font
+    DIM = "\x1b[2m"  # Low intensity/faint/dim
+    ITALIC = "\x1b[3m"  # Low intensity/faint/dim
+    UNDERLINE = "\x1b[4m"  # Underline
+    SLOWBLINK = "\x1b[5m"  # Slow blink
+    FASTBLINK = "\x1b[6m"  # Fast blink
+    REVERSE = "\x1b[7m"  # Reverse video
+    HIDE = "\x1b[8m"
+    CROSSED = "\x1b[9m"  # Crossed text
+    FRACTUR = "\x1b[20m"  # Gothic
+    FRAMED = "\x1b[51m"  # Framed
+    OVERLINE = "\x1b[53m"  # Overlined
+    SUPERSCRIPT = "\x1b[73m"  # Superscript
+    SUBSCRIPT = "\x1b[74m"  # Subscript
+    NORMAL = "\x1b[22m"  # Normal intensity
+    NOT_ITALIC = "\x1b[23m"
+    NOT_UNDERLINED = "\x1b[24m"
+    NOT_BLINKING = "\x1b[25m"
+    NOT_REVERSED = "\x1b[27m"
+    REVEAL = "\x1b[28m"
+    NOT_CROSSED = "\x1b[29m"
+    NOT_SSCRIPT = "\x1b[75m"
+    NOT_OVERLINE = "\x1b[55m"
 
     END = "\x1b[0m"
     CLEAR = "\x1b[2J"
@@ -424,14 +423,13 @@ class Esc:
     END = "\x1b[m"  # Clear Attributes
 
     # ANSI movement codes
-    CUR_UP = "\x1b[A"  # cursor up
-    CUR_DOWN = "\x1b[B"  # cursor down
-    CUR_FORWARD = "\x1b[C"  # cursor forward
-    CUR_BACK = "\x1b[D"  # cursor back
-    CUR_RETURN = "\x1b[F"  # cursor return
-
-    CUR_HIDE = "\x1b[?25l"  # hide cursor
-    CUR_SHOW = "\x1b[?25h"  # show cursor
+    UP = "\x1b[A"  # cursor up
+    DOWN = "\x1b[B"  # cursor down
+    FORWARD = "\x1b[C"  # cursor forward
+    BACK = "\x1b[D"  # cursor back
+    RETURN = "\x1b[F"  # cursor return
+    HIDE = "\x1b[?25l"  # hide cursor
+    SHOW = "\x1b[?25h"  # show cursor
 
     KEY_HOME = "\x1b[1~"  # Home
     KEY_INSERT = "\x1b[2~"  #
@@ -463,8 +461,8 @@ class Esc:
     E_UP = 101
     E_DOWN = 102
 
-    x = [CUR_RETURN, CUR_UP, CUR_DOWN]
-    y = {E_RET: CUR_RETURN, E_UP: CUR_UP, E_DOWN: CUR_DOWN}
+    x = [RETURN, UP, DOWN]
+    y = {E_RET: RETURN, E_UP: UP, E_DOWN: DOWN}
 
     @staticmethod
     def fg_8bit_color(c: int) -> str:
@@ -487,7 +485,7 @@ class Esc:
 
     @staticmethod
     def is_escape_seq(s: str) -> bool:
-        if s[0] == Esc.ESCAPE:
+        if s[0] == Escape.ESCAPE:
             return True
         else:
             return False
@@ -540,7 +538,7 @@ class EscapeTokenizer:
 
         j = 0
 
-        if self.buf[j] == Esc.ESCAPE:  # Escape sequence start character found
+        if self.buf[j] == Escape.ESCAPE:  # Escape sequence start character found
             while j < l and not self.isTerminator(self.buf[j]): 
                 j += 1
             if j == l:
@@ -562,7 +560,7 @@ class EscapeTokenizer:
 
         # Handle normal text
         while j < l and self.buf[j] not in [
-            Esc.ESCAPE,
+            Escape.ESCAPE,
             Ascii.NL,
             Ascii.BEL,
             Ascii.BS,
@@ -875,6 +873,19 @@ sgr_to_escape_color = {
     SGR.BG_COLOR_WHITE: TColor.WHITE,
 }
 
+
+sgr_to_escape_color_bold = {
+    SGR.FG_COLOR_BLACK: TColor.BRIGHT_BLACK,
+    SGR.FG_COLOR_RED: TColor.BRIGHT_RED,
+    SGR.FG_COLOR_GREEN: TColor.BRIGHT_GREEN,
+    SGR.FG_COLOR_YELLOW: TColor.BRIGHT_YELLOW,
+    SGR.FG_COLOR_BLUE: TColor.BRIGHT_BLUE,
+    SGR.FG_COLOR_MAGENTA: TColor.BRIGHT_MAGENTA,
+    SGR.FG_COLOR_CYAN: TColor.BRIGHT_CYAN,
+    SGR.FG_COLOR_WHITE: TColor.BRIGHT_WHITE,
+}
+
+
 class CharacterState:
     BOLD: bool = False
     DIM: bool = False
@@ -952,7 +963,8 @@ class TerminalState:
             fg_color = self.fg_color
             bg_color = self.bg_color
 
-        b = f'<span style="color:{fg_color};background-color:{bg_color};'
+        # b = f'<span style="color:{fg_color};background-color:{bg_color};font-size:10pt;line-height:1.38;'
+        b = f'<span style="color:{fg_color};background-color:{bg_color};font-size:10pt;'
 
         if self.BOLD:
             b += "font-weight:bold;"
@@ -985,7 +997,6 @@ class TerminalState:
         self.slow_blink = False
         self.rapid_blink = False
         self.REVERSE = False
-        # self.span = False
         self.OVERLINE = False
         self.fg_color = self.default_fg_color
         self.bg_color = self.default_bg_color
@@ -995,7 +1006,7 @@ class TerminalState:
         l = []
 
         for token in self.et:
-            if Esc.is_escape_seq(token):
+            if Escape.is_escape_seq(token):
                 eo = EscapeObj()
                 eo.decode(token)
 
@@ -1061,9 +1072,6 @@ class TerminalState:
                         if a == SGR.NOT_CROSSED:
                             self.CROSSED = False
 
-
-                            
-
                         if a in [
                             SGR.FG_COLOR_BLACK,
                             SGR.FG_COLOR_RED,
@@ -1074,7 +1082,10 @@ class TerminalState:
                             SGR.FG_COLOR_CYAN,
                             SGR.FG_COLOR_WHITE
                         ]:
-                            self.fg_color = sgr_to_escape_color[a]
+                            if self.BOLD:
+                                self.fg_color = sgr_to_escape_color_bold[a]
+                            else:
+                                self.fg_color = sgr_to_escape_color[a]
 
                         if a in [
                             SGR.BG_COLOR_BLACK,
@@ -1134,82 +1145,82 @@ FLAG_BLUE = "\x1b[48;5;20m"
 FLAG_YELLOW = "\x1b[48;5;226m"
 
 flag = f"""
-{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Esc.END}
-{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Esc.END}
-{FLAG_YELLOW}                 {Esc.END}
-{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Esc.END}
-{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Esc.END}
+{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Escape.END}
+{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Escape.END}
+{FLAG_YELLOW}                 {Escape.END}
+{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Escape.END}
+{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Escape.END}
 """
 escape_attribute_test = f"""  
-{Esc.ATTR_UNDERLINE}Font attributes{Esc.END}
-{Esc.ATTR_RESET}Normal text         {Esc.ATTR_RESET}
-{Esc.ATTR_BOLD}Bold text           {Esc.ATTR_NORMAL}Not Bold text{Esc.ATTR_RESET}
-{Esc.ATTR_DIM}Dim text            {Esc.ATTR_NORMAL}Not dim text{Esc.ATTR_RESET}
-{Esc.ATTR_ITALIC}Italic text         {Esc.ATTR_NOT_ITALIC}Not italic text{Esc.ATTR_RESET}
-{Esc.ATTR_UNDERLINE}Underline text      {Esc.ATTR_NOT_UNDERLINED}Not underline text{Esc.ATTR_RESET}
-{Esc.ATTR_SLOWBLINK}Slow blinking text  {Esc.ATTR_NOT_BLINKING}Not blinking text{Esc.ATTR_RESET}
-{Esc.ATTR_FASTBLINK}Fast blinking text  {Esc.ATTR_NOT_BLINKING}Not blinking text{Esc.ATTR_RESET}
-{Esc.ATTR_FRAMED}Framed text         {Esc.ATTR_RESET}
-{Esc.ATTR_SUBSCRIPT}Subscript text      {Esc.ATTR_NOT_SSCRIPT}Not subscript text{Esc.ATTR_RESET}
-{Esc.ATTR_SUPERSCRIPT}Superscript text    {Esc.ATTR_NOT_SSCRIPT}Not superscript text{Esc.ATTR_RESET}
-{Esc.ATTR_FRACTUR}Fractur/Gothic text {Esc.ATTR_RESET}
-{Esc.ATTR_CROSSED}Crossed text        {Esc.ATTR_NOT_CROSSED}Not crossed text{Esc.ATTR_RESET}
-{Esc.ATTR_OVERLINE}Overlined text      {Esc.ATTR_NOT_OVERLINE}Not overlined text{Esc.ATTR_RESET}
-{Esc.ATTR_REVERSE}Reversed text       {Esc.ATTR_NOT_REVERSED}Not reversed text{Esc.ATTR_RESET}
+{Escape.UNDERLINE}Font attributes{Escape.END}
+{Escape.RESET}Normal text         {Escape.RESET}
+{Escape.BOLD}Bold text           {Escape.NORMAL}Not Bold text{Escape.RESET}
+{Escape.DIM}Dim text            {Escape.NORMAL}Not dim text{Escape.RESET}
+{Escape.ITALIC}Italic text         {Escape.NOT_ITALIC}Not italic text{Escape.RESET}
+{Escape.UNDERLINE}Underline text      {Escape.NOT_UNDERLINED}Not underline text{Escape.RESET}
+{Escape.SLOWBLINK}Slow blinking text  {Escape.NOT_BLINKING}Not blinking text{Escape.RESET}
+{Escape.FASTBLINK}Fast blinking text  {Escape.NOT_BLINKING}Not blinking text{Escape.RESET}
+{Escape.FRAMED}Framed text         {Escape.RESET}
+{Escape.SUBSCRIPT}Subscript text      {Escape.NOT_SSCRIPT}Not subscript text{Escape.RESET}
+{Escape.SUPERSCRIPT}Superscript text    {Escape.NOT_SSCRIPT}Not superscript text{Escape.RESET}
+{Escape.FRACTUR}Fractur/Gothic text {Escape.RESET}
+{Escape.CROSSED}Crossed text        {Escape.NOT_CROSSED}Not crossed text{Escape.RESET}
+{Escape.OVERLINE}Overlined text      {Escape.NOT_OVERLINE}Not overlined text{Escape.RESET}
+{Escape.REVERSE}Reversed text       {Escape.NOT_REVERSED}Not reversed text{Escape.RESET}
 
-{Esc.ATTR_BOLD}{Esc.ATTR_ITALIC}{Esc.ATTR_UNDERLINE}Bold and italic and underlined{Esc.ATTR_RESET}
+{Escape.BOLD}{Escape.ITALIC}{Escape.UNDERLINE}Bold and italic and underlined{Escape.RESET}
 
-{Esc.ATTR_UNDERLINE}Standard foreground color attributes{Esc.END}
+{Escape.UNDERLINE}Standard foreground color attributes{Escape.END}
 
-{Esc.BLACK}Black{Esc.END} {Esc.DARKGRAY}Dark Gray{Esc.END}
-{Esc.RED}Red{Esc.ATTR_RESET}     {Esc.BR_RED}Bright Red{Esc.END}
-{Esc.GREEN}Green{Esc.END}   {Esc.BR_GREEN}Bright Green{Esc.END}
-{Esc.YELLOW}Yellow{Esc.END}  {Esc.BR_YELLOW}Bright Yellow{Esc.END}
-{Esc.BLUE}Blue{Esc.END}    {Esc.BR_BLUE}Bright Blue{Esc.END}
-{Esc.MAGENTA}Magenta{Esc.END} {Esc.BR_MAGENTA}Bright Magenta{Esc.END}
-{Esc.CYAN}Cyan{Esc.END}    {Esc.BR_CYAN}Bright Cyan{Esc.END}
-{Esc.WHITE}White{Esc.END}   {Esc.BR_WHITE}Bright White{Esc.END}
+{Escape.BLACK}Black{Escape.END} {Escape.DARKGRAY}Dark Gray{Escape.END}
+{Escape.RED}Red{Escape.RESET}     {Escape.BR_RED}Bright Red{Escape.END}
+{Escape.GREEN}Green{Escape.END}   {Escape.BR_GREEN}Bright Green{Escape.END}
+{Escape.YELLOW}Yellow{Escape.END}  {Escape.BR_YELLOW}Bright Yellow{Escape.END}
+{Escape.BLUE}Blue{Escape.END}    {Escape.BR_BLUE}Bright Blue{Escape.END}
+{Escape.MAGENTA}Magenta{Escape.END} {Escape.BR_MAGENTA}Bright Magenta{Escape.END}
+{Escape.CYAN}Cyan{Escape.END}    {Escape.BR_CYAN}Bright Cyan{Escape.END}
+{Escape.WHITE}White{Escape.END}   {Escape.BR_WHITE}Bright White{Escape.END}
 
-{Esc.ATTR_UNDERLINE}Standard background color attributes{Esc.END}
+{Escape.UNDERLINE}Standard background color attributes{Escape.END}
 
-{Esc.ON_BLACK} Black {Esc.END}
-{Esc.ON_RED} Red {Esc.END}
-{Esc.ON_GREEN} Green {Esc.END}
-{Esc.ON_YELLOW} Yellow {Esc.END}
-{Esc.ON_BLUE} Blue {Esc.END}
-{Esc.ON_MAGENTA} Magenta {Esc.END}
-{Esc.ON_CYAN} Cyan {Esc.END}
+{Escape.BG_BLACK} Black {Escape.END}
+{Escape.BG_RED} Red {Escape.END}
+{Escape.BG_GREEN} Green {Escape.END}
+{Escape.BG_YELLOW} Yellow {Escape.END}
+{Escape.BG_BLUE} Blue {Escape.END}
+{Escape.BG_MAGENTA} Magenta {Escape.END}
+{Escape.BG_CYAN} Cyan {Escape.END}
 
-{Esc.ATTR_UNDERLINE}256 Color attributes{Esc.END}
+{Escape.UNDERLINE}256 Color attributes{Escape.END}
 
-{Esc.fg_8bit_color(12)}Color 12{Esc.END}
-{Esc.fg_8bit_color(45)}Color 45{Esc.END}
-{Esc.fg_8bit_color(240)}Color 240{Esc.END}
-{Esc.bg_8bit_color(32)}Color 32{Esc.END}
-{Esc.bg_8bit_color(78)}Color 78{Esc.END}
-{Esc.bg_8bit_color(249)}Color 249{Esc.END}
+{Escape.fg_8bit_color(12)}Color 12{Escape.END}
+{Escape.fg_8bit_color(45)}Color 45{Escape.END}
+{Escape.fg_8bit_color(240)}Color 240{Escape.END}
+{Escape.bg_8bit_color(32)}Color 32{Escape.END}
+{Escape.bg_8bit_color(78)}Color 78{Escape.END}
+{Escape.bg_8bit_color(249)}Color 249{Escape.END}
 """
 
 cursor_test = f"""
-{Esc.CUR_DOWN} asdf {Esc.CUR_UP}  {Esc.CUR_BACK} {Esc.CUR_FORWARD} {Esc.ATTR_FRACTUR}
+{Escape.DOWN} asdf {Escape.UP}  {Escape.BACK} {Escape.FORWARD} {Escape.FRACTUR}
 """
 
 
 def color_256_test():
     buf = ""
     for c in range(0, 8):
-        buf += f"{Esc.fg_8bit_color(c)}{c:^7}"
+        buf += f"{Escape.fg_8bit_color(c)}{c:^7}"
 
     buf += "\n"
     for c in range(8, 16):
-        buf += f"{Esc.fg_8bit_color(c)}{c:^7}"
+        buf += f"{Escape.fg_8bit_color(c)}{c:^7}"
     buf += "\n\n"
     for r in range(0, 36):
         x = 16 + r * 6
         buf2 = ""
         for c in range(x, x + 6):
-            buf += f"{Esc.fg_8bit_color(c)}{c:>5}"
-            buf2 += f"{Esc.BLACK}{Esc.bg_8bit_color(c)}{c:^5}{Esc.RESET} "
+            buf += f"{Escape.fg_8bit_color(c)}{c:>5}"
+            buf2 += f"{Escape.BLACK}{Escape.bg_8bit_color(c)}{c:^5}{Escape.RESET} "
 
         buf += "  " + buf2
 
@@ -1218,18 +1229,18 @@ def color_256_test():
     buf += "\n"
 
     for c in range(232, 244):
-        buf += f"{Esc.fg_8bit_color(c)}{c:>3} "
+        buf += f"{Escape.fg_8bit_color(c)}{c:>3} "
     buf += "\n"
     for c in range(244, 256):
-        buf += f"{Esc.fg_8bit_color(c)}{c:>3} "
+        buf += f"{Escape.fg_8bit_color(c)}{c:>3} "
     buf += "\n"
 
     return buf
 
 
 incomplete_escape_sequence = f"""
-{Esc.BR_MAGENTA}Some colored text{Esc.END}
-{Esc.GREEN}Some more text with incomplete escape sequence \x1b["""
+{Escape.BR_MAGENTA}Some colored text{Escape.END}
+{Escape.GREEN}Some more text with incomplete escape sequence \x1b["""
 
 end_with_newline = "Some text with newline end\n"
 

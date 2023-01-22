@@ -61,7 +61,7 @@ from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
 from ui_MainWindow import Ui_MainWindow
 from dataclasses import dataclass
 from escape import (
-    Esc,
+    Escape,
     Ascii,
     TerminalState,
     flag,
@@ -375,7 +375,7 @@ class MainForm(QMainWindow):
 
         # Send menu
         ctrlcAction = QAction("Ctrl-C (ETX)", self)
-        ctrlcAction.triggered.connect(lambda: self.send_string(Esc.ETX))
+        ctrlcAction.triggered.connect(lambda: self.send_string(Escape.ETX))
         self.ui.menuSend.addAction(ctrlcAction)
         ctrlcAction = QAction("Break (NULL)", self)
         ctrlcAction.triggered.connect(lambda: self.send_string(Ascii.NULL))
@@ -401,53 +401,53 @@ class MainForm(QMainWindow):
         self.testMenu.addAction(colorAction)
 
         self.colorMenu = self.ui.menuSend.addMenu("Colors")
-        self.add_action("Red", self.colorMenu, lambda: self.send_string(Esc.RED))
-        self.add_action("Green", self.colorMenu, lambda: self.send_string(Esc.GREEN))
-        self.add_action("Yellow", self.colorMenu, lambda: self.send_string(Esc.YELLOW))
-        self.add_action("Blue", self.colorMenu, lambda: self.send_string(Esc.BLUE))
+        self.add_action("Red", self.colorMenu, lambda: self.send_string(Escape.RED))
+        self.add_action("Green", self.colorMenu, lambda: self.send_string(Escape.GREEN))
+        self.add_action("Yellow", self.colorMenu, lambda: self.send_string(Escape.YELLOW))
+        self.add_action("Blue", self.colorMenu, lambda: self.send_string(Escape.BLUE))
         self.add_action(
-            "Magenta", self.colorMenu, lambda: self.send_string(Esc.MAGENTA)
+            "Magenta", self.colorMenu, lambda: self.send_string(Escape.MAGENTA)
         )
-        self.add_action("Cyan", self.colorMenu, lambda: self.send_string(Esc.CYAN))
-        self.add_action("White", self.colorMenu, lambda: self.send_string(Esc.WHITE))
+        self.add_action("Cyan", self.colorMenu, lambda: self.send_string(Escape.CYAN))
+        self.add_action("White", self.colorMenu, lambda: self.send_string(Escape.WHITE))
 
-        self.add_action("Bg Red", self.colorMenu, lambda: self.send_string(Esc.ON_RED))
+        self.add_action("Bg Red", self.colorMenu, lambda: self.send_string(Escape.BG_RED))
         self.add_action(
-            "Bg Green", self.colorMenu, lambda: self.send_string(Esc.ON_GREEN)
+            "Bg Green", self.colorMenu, lambda: self.send_string(Escape.BG_GREEN)
         )
         self.add_action(
-            "Bg Yellow", self.colorMenu, lambda: self.send_string(Esc.ON_YELLOW)
+            "Bg Yellow", self.colorMenu, lambda: self.send_string(Escape.BG_YELLOW)
         )
         self.add_action(
-            "Bg Blue", self.colorMenu, lambda: self.send_string(Esc.ON_BLUE)
+            "Bg Blue", self.colorMenu, lambda: self.send_string(Escape.BG_BLUE)
         )
         self.add_action(
-            "Bg Magenta", self.colorMenu, lambda: self.send_string(Esc.ON_MAGENTA)
+            "Bg Magenta", self.colorMenu, lambda: self.send_string(Escape.BG_MAGENTA)
         )
         self.add_action(
-            "Bg Cyan", self.colorMenu, lambda: self.send_string(Esc.ON_CYAN)
+            "Bg Cyan", self.colorMenu, lambda: self.send_string(Escape.BG_CYAN)
         )
         self.add_action(
-            "Bg White", self.colorMenu, lambda: self.send_string(Esc.ON_WHITE)
+            "Bg White", self.colorMenu, lambda: self.send_string(Escape.BG_WHITE)
         )
 
         self.attrMenu = self.ui.menuSend.addMenu("Attributes")
         self.add_action(
-            "Reset", self.attrMenu, lambda: self.send_string(Esc.ATTR_RESET)
+            "Reset", self.attrMenu, lambda: self.send_string(Escape.RESET)
         )
-        self.add_action("Bold", self.attrMenu, lambda: self.send_string(Esc.ATTR_BOLD))
+        self.add_action("Bold", self.attrMenu, lambda: self.send_string(Escape.BOLD))
         self.add_action(
-            "Italic", self.attrMenu, lambda: self.send_string(Esc.ATTR_ITALIC)
+            "Italic", self.attrMenu, lambda: self.send_string(Escape.ITALIC)
         )
-        self.add_action("Dim", self.attrMenu, lambda: self.send_string(Esc.ATTR_DIM))
+        self.add_action("Dim", self.attrMenu, lambda: self.send_string(Escape.DIM))
         self.add_action(
-            "Reverse", self.attrMenu, lambda: self.send_string(Esc.ATTR_REVERSE)
-        )
-        self.add_action(
-            "Underline", self.attrMenu, lambda: self.send_string(Esc.ATTR_UNDERLINE)
+            "Reverse", self.attrMenu, lambda: self.send_string(Escape.REVERSE)
         )
         self.add_action(
-            "Crossed", self.attrMenu, lambda: self.send_string(Esc.ATTR_CROSSED)
+            "Underline", self.attrMenu, lambda: self.send_string(Escape.UNDERLINE)
+        )
+        self.add_action(
+            "Crossed", self.attrMenu, lambda: self.send_string(Escape.CROSSED)
         )
 
         # event slots
@@ -514,7 +514,8 @@ class MainForm(QMainWindow):
 
         self.isPaused = False
 
-        self.terminal.insert(f"""MpTerm Ver: <b>{App.VERSION}</b><br><br>""")
+        # self.terminal.insert(f"""MpTerm Ver: <b>{App.VERSION}</b><br><br>""")
+        self.terminal.apps(f"""MpTerm Ver: <b>{App.VERSION}</b><br><br>""")
 
         self.update_ui()
         self.init_port()
@@ -740,7 +741,7 @@ class MainForm(QMainWindow):
         data = self.sp.read()
         data_str = str(data, "utf-8")
 
-        db = Esc.to_str(data_str)
+        db = Escape.to_str(data_str)
 
         logging.debug(f'Data received: {len(data)} "{db}"')
 

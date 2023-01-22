@@ -25,7 +25,7 @@ from PyQt5.QtWidgets import (
 )
 
 from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
-from escape import Esc, Ascii, TerminalState, CSI, SGR, EscapeObj
+from escape import Escape, Ascii, TerminalState, CSI, SGR, EscapeObj
 
 # Variables ------------------------------------------------------------------
 
@@ -37,10 +37,10 @@ keys = { Qt.Key_Enter:("\n", "Enter"),
          Qt.Key_Return:("\n", "Return"), 
          Qt.Key_Escape:("", "Escape"), 
          Qt.Key_Delete:("", "Delete"), 
-         Qt.Key_Left:(Esc.CUR_BACK, "Left"),
-         Qt.Key_Right:(Esc.CUR_FORWARD, "Right"),
-         Qt.Key_Up:(Esc.CUR_UP, "Up"),
-         Qt.Key_Down:(Esc.CUR_DOWN, "Down"),
+         Qt.Key_Left:(Escape.BACK, "Left"),
+         Qt.Key_Right:(Escape.FORWARD, "Right"),
+         Qt.Key_Up:(Escape.UP, "Up"),
+         Qt.Key_Down:(Escape.DOWN, "Down"),
          Qt.Key_Insert:("", "Insert"),
          Qt.Key_Backspace:("\b", "Backspace"),
          Qt.Key_Home:("", "Home"),
@@ -93,18 +93,21 @@ class TerminalWin(QPlainTextEdit):
     def __init__(self, parent=None, sp=None, init=""):
         super().__init__(parent)
         self.sp=sp
-        font = QFont()
-        # font.setFamily("Monospace")
-        # font.setFamily("Terminal")
-        font.setFamily("Courier New")
-        font.setPointSize(11)
-        
-        self.setFont(font)
         self.setObjectName("textEdit")
+
+        font = QFont()
+        font.setFamily("Monospace")
+        font.setPointSize(11)
+        self.setFont(font)
+        
         #self.setFocusPolicy(Qt.NoFocus)
-        self.setStyleSheet("background-color: rgb(0, 0, 0); color : White")
+        self.setStyleSheet("background-color: rgb(0, 0, 0); color : White; font-family:Monospace; font-size:large; line-height:1.5;")
+        # self.setStyleSheet("background-color: rgb(0, 0, 0); color : White; line-height:20pt; font-family:Monospace")
+
+        #self.insertHtml("<style")
 
         self.cur = QTextCursor(self.document())
+        
 
         self.insert(init)
         # doc = self.document()

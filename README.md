@@ -26,6 +26,7 @@
 - [Freqlenty asked Questions](#freqlenty-asked-questions)
 - [History](#history)
 - [ToDo](#todo)
+- [Future ideas](#future-ideas)
 - [Known Bugs](#known-bugs)
 - [Links](#links)
 - [Contribute](#contribute)
@@ -103,17 +104,30 @@
 - [ ] Loopback port
 - [ ] Manage Bell character
 
-## Future ideas
-- [ ] Plugin system
-- [ ] Support for Bluetooth serialports
-- [ ] Terminal state monitor (mabye as plugin)
-- [ ] http server
-- [ ] Quick macro's
-
 ## Known Bugs
-- Underline dissapears
-- Real bright(bold) colors
+- ~~~Underline dissapears~~~
+- ~~~Real bright(bold) colors~~~
 - anoying Tab cycling 
+
+## Future ideas
+
+### Plugin system
+Enable user to add extra features like protocol analyzers
+
+### Bluetooth 
+Support for Bluetooth serialports
+
+### http server
+Enable access from network
+
+### Terminal state monitor (mabye as plugin)
+
+### Quick macro's
+Add send macros for often used sequences
+
+### Logg tag 
+  Define some sort of tag that indicates that data should be redirected to another stream
+  (escape or html) ex. <logg> </logg> or \e[XX for ansi terminal
 
 
 

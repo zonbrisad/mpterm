@@ -37,7 +37,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 from terminalwin import TerminalWin
-from escape import Esc, escape_attribute_test 
+from escape import Escape, escape_attribute_test 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
