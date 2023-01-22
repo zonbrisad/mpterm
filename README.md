@@ -90,7 +90,6 @@
 - [ ] Underline style
 - [ ] Cursor management
 - [ ] Dim text
-- [ ] Plugin system
 - [ ] Logging
 - [x] Echo mode
 - [x] Suspend button
@@ -102,9 +101,14 @@
 - [ ] Show pin status
 - [ ] Set pin status
 - [ ] Loopback port
-- [ ] Terminal state monitor (mabye as plugin)
 - [ ] Manage Bell character
+
+## Future ideas
+- [ ] Plugin system
 - [ ] Support for Bluetooth serialports
+- [ ] Terminal state monitor (mabye as plugin)
+- [ ] http server
+- [ ] Quick macro's
 
 ## Known Bugs
 - Underline dissapears

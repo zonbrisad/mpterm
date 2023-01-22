@@ -308,6 +308,7 @@ class MainForm(QMainWindow):
         )
         self.ui.horizontalLayout.insertWidget(1, self.terminal)
 
+
         self.formater = FormatHex()
 
         self.rxLabel = QLabel("")
@@ -551,6 +552,7 @@ class MainForm(QMainWindow):
 
     def program_data_available(self):
         data = self.process.readAllStandardOutput()
+        logging.debug("Program received data")
         # data = self.process.readAllStandardError()
         # self.process.re
         data_str = str(data, "utf-8")
@@ -574,10 +576,10 @@ class MainForm(QMainWindow):
         if self.sp.state == State.CONNECTED:
             self.sp.set_state(State.SUSPENDED, timeout=-1)
         self.terminal.append_html("<br>")
-        self.process.start("bpdev attr")
+        #self.process.start("bpdev attr")
         # self.process.start("bpexample shade")
         # self.process.start("avrdude 2>&1")
-        #self.process.start("wget")
+        self.process.start("mpt ard 2>&1")
         logging.debug("Runing external program")
         self.update_ui()
         self.terminal.scroll_down()

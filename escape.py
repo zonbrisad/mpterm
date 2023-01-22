@@ -196,6 +196,9 @@ class SGR(Enum):
     BG_COLOR_CYAN = "46"
     BG_COLOR_WHITE = "47"
 
+    OVERLINE = "53"
+    NOT_OVERLINE = "55"
+
     SET_FG_COLOR = "38"  # Select 256 color or RGB color foreground
     SET_BG_COLOR = "48"  # Select 256 color or RGB color background
     SET_UL_COLOR = "58"  # Select underline color
@@ -390,7 +393,7 @@ class Esc:
     ATTR_CROSSED = "\x1b[9m"  # Crossed text
     ATTR_FRACTUR = "\x1b[20m"  # Gothic
     ATTR_FRAMED = "\x1b[51m"  # Framed
-    ATTR_OVERLINED = "\x1b[53m"  # Overlined
+    ATTR_OVERLINE = "\x1b[53m"  # Overlined
     ATTR_SUPERSCRIPT = "\x1b[73m"  # Superscript
     ATTR_SUBSCRIPT = "\x1b[74m"  # Subscript
 
@@ -402,6 +405,7 @@ class Esc:
     ATTR_REVEAL = "\x1b[28m"
     ATTR_NOT_CROSSED = "\x1b[29m"
     ATTR_NOT_SSCRIPT = "\x1b[75m"
+    ATTR_NOT_OVERLINE = "\x1b[55m"
 
     END = "\x1b[0m"
     CLEAR = "\x1b[2J"
@@ -882,6 +886,7 @@ class CharacterState:
     CROSSED: bool = False
     SUPERSCRIPT: bool = False
     SUBSCRIPT: bool = False
+    OVERLINE: bool = False
 
     FG_COLOR: str
     BG_COLOR: str
@@ -926,6 +931,7 @@ class TerminalState:
     CROSSED: bool = False
     SUPERSCRIPT: bool = False
     SUBSCRIPT: bool = False
+    OVERLINE: bool = False
 
     cur_x = None
     cur_y = None
@@ -953,16 +959,22 @@ class TerminalState:
         if self.ITALIC:
             b += "font-style:italic;"
         if self.UNDERLINE:
-            # b += f"text-decoration:underline;text-decoration-color:{self.fg_color};"
-            b += f"text-decoration:underline;text-decoration-color:Red;"
+            b += f"text-decoration:underline;"
         if self.CROSSED:
             b += "text-decoration:line-through;"
+        if self.OVERLINE:
+            b += "text-decoration:overline;"
+        
         b += '">'
         b += data
         b += "</span>"
         return b
 
     def reset(self):
+        self.reset_attr()
+        self.et.clear()
+        
+    def reset_attr(self):
         self.BOLD = False
         self.DIM = False
         self.ITALIC = False
@@ -973,10 +985,10 @@ class TerminalState:
         self.slow_blink = False
         self.rapid_blink = False
         self.REVERSE = False
-        self.span = False
+        # self.span = False
+        self.OVERLINE = False
         self.fg_color = self.default_fg_color
         self.bg_color = self.default_bg_color
-        self.et.clear()
 
     def update(self, s: str) -> list:
         self.et.append_string(s)
@@ -1010,16 +1022,47 @@ class TerminalState:
                         ]:
                             setattr(self, a.name, True)
 
-                        if a in [
-                            SGR.NORMAL_INTENSITY,
-                            SGR.NOT_ITALIC,
-                            SGR.NOT_UNDERLINED,
-                            SGR.NOT_BLINKING,
-                            SGR.NOT_REVERSED,
-                            SGR.REVEAL,
-                            SGR.NOT_CROSSED,
-                        ]:
-                            setattr(self, sgr_to_escape_color[a][1].name, False)
+                        if a == SGR.OVERLINE:
+                            self.OVERLINE = True
+                            self.UNDERLINE = False
+                            self.CROSSED = False
+
+                        if a == SGR.NOT_OVERLINE: 
+                            self.OVERLINE = False
+
+                        # if a in [
+                        #     SGR.NORMAL_INTENSITY,
+                        #     SGR.NOT_ITALIC,
+                        #     SGR.NOT_UNDERLINED,
+                        #     SGR.NOT_BLINKING,
+                        #     SGR.NOT_REVERSED,
+                        #     SGR.REVEAL,
+                        #     SGR.NOT_CROSSED,
+                        # ]:
+                        #     setattr(self, a.name, False)
+                            # setattr(self, sgr_to_escape_color[a][1].name, False)
+
+                        if a == SGR.NORMAL_INTENSITY:
+                            self.BOLD = False
+                            self.DIM = False
+                            
+                        if a == SGR.NOT_ITALIC:
+                            self.ITALIC = False
+                            
+                        if a == SGR.NOT_UNDERLINED:
+                            self.UNDERLINE = False
+                        # if a == SGR.NOT_BLINKING:
+                        #     self.BLINKING = False
+                        if a == SGR.NOT_REVERSED:
+                            self.REVERSE = False
+                        # if a == SGR.REVEAL:
+                        #     self.Reveal = 
+                            
+                        if a == SGR.NOT_CROSSED:
+                            self.CROSSED = False
+
+
+                            
 
                         if a in [
                             SGR.FG_COLOR_BLACK,
@@ -1058,16 +1101,7 @@ class TerminalState:
                             self.REVERSE = False
 
                         if a == SGR.RESET:
-                            self.fg_color = self.default_fg_color
-                            self.bg_color = self.default_bg_color
-                            self.BOLD = False
-                            self.ITALIC = False
-                            self.UNDERLINE = False
-                            self.CROSSED = False
-                            self.SUPERSCRIPT = False
-                            self.SUBSCRIPT = False
-                            self.DIM = False
-                            self.REVERSE = False
+                            self.reset_attr()
                 continue
 
             if token in [Ascii.NL, Ascii.CR, Ascii.BS]:
@@ -1108,7 +1142,6 @@ flag = f"""
 """
 escape_attribute_test = f"""  
 {Esc.ATTR_UNDERLINE}Font attributes{Esc.END}
-
 {Esc.ATTR_RESET}Normal text         {Esc.ATTR_RESET}
 {Esc.ATTR_BOLD}Bold text           {Esc.ATTR_NORMAL}Not Bold text{Esc.ATTR_RESET}
 {Esc.ATTR_DIM}Dim text            {Esc.ATTR_NORMAL}Not dim text{Esc.ATTR_RESET}
@@ -1121,6 +1154,7 @@ escape_attribute_test = f"""
 {Esc.ATTR_SUPERSCRIPT}Superscript text    {Esc.ATTR_NOT_SSCRIPT}Not superscript text{Esc.ATTR_RESET}
 {Esc.ATTR_FRACTUR}Fractur/Gothic text {Esc.ATTR_RESET}
 {Esc.ATTR_CROSSED}Crossed text        {Esc.ATTR_NOT_CROSSED}Not crossed text{Esc.ATTR_RESET}
+{Esc.ATTR_OVERLINE}Overlined text      {Esc.ATTR_NOT_OVERLINE}Not overlined text{Esc.ATTR_RESET}
 {Esc.ATTR_REVERSE}Reversed text       {Esc.ATTR_NOT_REVERSED}Not reversed text{Esc.ATTR_RESET}
 
 {Esc.ATTR_BOLD}{Esc.ATTR_ITALIC}{Esc.ATTR_UNDERLINE}Bold and italic and underlined{Esc.ATTR_RESET}

@@ -59,11 +59,10 @@ terminal() { ##D Start login terminal on serial port
 }
 
 ard() { ##D Program testprogram to arduiono
-
   firmware=arduino-blink.hex
   AVRDUDE_PORT=/dev/ttyUSB0
-  AVRDUDE_WRITE_FLASH="-U flash:w:$(firmware):i"
-  avrdude -v -v -p m328p -P "${AVRDUDE_PORT}" -c arduino -b 57600 -D
+  #AVRDUDE_WRITE_FLASH=-U flash:w:arduino-blink.hex:i
+  avrdude -v -v -p m328p -P "${AVRDUDE_PORT}" -c arduino -b 57600 -D -U flash:w:arduino-blink.hex:i
 }
 
 ##- Terminal tests

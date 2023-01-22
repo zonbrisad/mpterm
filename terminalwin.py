@@ -94,7 +94,10 @@ class TerminalWin(QPlainTextEdit):
         super().__init__(parent)
         self.sp=sp
         font = QFont()
-        font.setFamily("Monospace")
+        # font.setFamily("Monospace")
+        # font.setFamily("Terminal")
+        font.setFamily("Courier New")
+        font.setPointSize(11)
         
         self.setFont(font)
         self.setObjectName("textEdit")
