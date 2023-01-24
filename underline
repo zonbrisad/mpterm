@@ -1,0 +1,155 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# ----------------------------------------------------------------------------
+#
+# test of underline bug
+#
+# File:     underline
+# Author:   Peter Malmberg  <peter.malmberg@gmail.com>
+# Org:      __ORGANISTATION__
+# Date:     2023-01-13
+# License:
+# Python:   >= 3.0
+#
+# ----------------------------------------------------------------------------
+
+# Imports --------------------------------------------------------------------
+
+
+import logging
+import traceback
+import os
+import sys
+from PyQt5.QtCore import Qt, QTimer, QSettings, QIODevice
+from PyQt5.QtGui import QIcon, QCloseEvent, QFont
+from PyQt5.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QMenu,
+    QMenuBar,
+    QAction,
+    QStatusBar,
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QTextEdit,
+    QDialogButtonBox,
+    QPushButton,
+    QMessageBox,
+    QWidget,
+    QLabel,
+    QFileDialog,
+    QSpacerItem,
+    QSizePolicy,
+    QPlainTextEdit,
+)
+
+# Variables ------------------------------------------------------------------
+
+
+class App:
+    NAME = "underline"
+    VERSION = "0.01"
+    DESCRIPTION = "test of underline bug"
+    LICENSE = ""
+    AUTHOR = "Peter Malmberg"
+    EMAIL = "<peter.malmberg@gmail.com>"
+    ORG = "__ORGANISATION__"
+    HOME = ""
+    ICON = ""
+
+
+# Qt main window settings
+win_title = App.NAME
+win_x_size = 320
+win_y_size = 240
+
+# Code -----------------------------------------------------------------------
+
+
+class MainWindow(QMainWindow):
+    def __init__(self, parent=None):
+        super(MainWindow, self).__init__(parent)
+
+        self.resize(win_y_size, win_y_size)
+        self.setWindowTitle(win_title)
+        # self.setWindowIcon(QIcon(App.ICON))
+
+        # Create central widget
+        self.centralwidget = QWidget(self)
+        self.setCentralWidget(self.centralwidget)
+        self.verticalLayout = QVBoxLayout(self.centralwidget)
+        self.verticalLayout.setSpacing(2)
+
+        # TextEdit
+        # self.textEdit = QTextEdit(self.centralwidget)
+        self.textEdit = QPlainTextEdit(self.centralwidget)
+        self.verticalLayout.addWidget(self.textEdit)
+        font = QFont()
+        font.setFamily("Monospace")
+        self.textEdit.setFont(font)
+        self.textEdit.setStyleSheet("background-color: rgb(0, 0, 0); color : White")
+
+        self.textEdit.setReadOnly(True)
+        self.textEdit.clear()
+
+        self.textEdit.ensureCursorVisible()
+        self.textEdit.setCursorWidth(2)
+
+        self.insertHtml("<u>Row 1 with underline</u><br><br>")
+        self.insertHtml("<u>Row 2 with underline</u>")
+        self.insertHtml("Row 3 direct under row 2<br>")
+        # self.textEdit.insertHtml("<u>Row 1 with underline</u><br><br>")
+        # self.textEdit.insertHtml("<u>Row 2 with underline</u><br>")
+        # self.textEdit.insertHtml("Row 3 direct under row 2<br>")
+
+        # Menubar
+        self.menubar = QMenuBar(self)
+        self.setMenuBar(self.menubar)
+
+        # Menus
+        self.menuFile = QMenu("File", self.menubar)
+        self.menubar.addAction(self.menuFile.menuAction())
+
+        self.actionQuit = QAction("Quit", self)
+        self.actionQuit.setStatusTip("Quit application")
+        self.actionQuit.setShortcut("Ctrl+Q")
+        self.actionQuit.triggered.connect(lambda: self.close())
+        self.menuFile.addAction(self.actionQuit)
+
+    def insertHtml(self, text):
+        if type(self.textEdit) == QPlainTextEdit:
+            self.textEdit.appendHtml(text)
+        else:
+            self.textEdit.insertHtml(text)
+
+    def open(self):
+        files = QFileDialog.getOpenFileNames(self, "Open file", ".", "*.*")
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        self.close()
+        return super().closeEvent(event)
+
+
+def main() -> None:
+    logging_format = "[%(levelname)s] %(lineno)d %(funcName)s() : %(message)s"
+    logging.basicConfig(format=logging_format, level=logging.DEBUG)
+    app = QApplication(sys.argv)
+    main_window = MainWindow()
+    main_window.show()
+    sys.exit(app.exec_())
+
+
+if __name__ == "__main__":
+    try:
+        main()
+        sys.exit(0)
+    except KeyboardInterrupt as e:  # Ctrl-C
+        raise e
+    except SystemExit as e:  # sys.exit()
+        raise e
+    except Exception as e:
+        print("ERROR, UNEXPECTED EXCEPTION")
+        print(str(e))
+        traceback.print_exc()
+        os._exit(1)

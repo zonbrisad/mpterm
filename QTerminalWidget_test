@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# ----------------------------------------------------------------------------
+#
+# test of underline bug
+#
+# File:     underline
+# Author:   Peter Malmberg  <peter.malmberg@gmail.com>
+# Org:      __ORGANISTATION__
+# Date:     2023-01-13
+# License:  
+# Python:   >= 3.0
+#
+# ----------------------------------------------------------------------------
+
+# Imports --------------------------------------------------------------------
+
+
+import logging
+import traceback
+import os
+import sys
+from PyQt5.QtCore import Qt, QTimer, QSettings, QIODevice
+from PyQt5.QtGui import QIcon, QCloseEvent, QFont
+from PyQt5.QtWidgets import QApplication, QMainWindow, QMenu, QMenuBar,\
+                            QAction, QStatusBar, QDialog, QVBoxLayout,\
+                            QHBoxLayout, QTextEdit, QDialogButtonBox,\
+                            QPushButton, QMessageBox, QWidget, QLabel,\
+                            QFileDialog, QSpacerItem, QSizePolicy, QPlainTextEdit
+
+from qterminalwidget import QTerminalWidget
+from escape import escape_attribute_test, Escape
+
+# Variables ------------------------------------------------------------------
+
+
+class App:
+    NAME = "underline"
+    VERSION = "0.01"
+    DESCRIPTION = "test of underline bug"
+    LICENSE = ""
+    AUTHOR = "Peter Malmberg"
+    EMAIL = "<peter.malmberg@gmail.com>"
+    ORG = "__ORGANISATION__"
+    HOME = ""
+    ICON = ""
+
+
+# Qt main window settings
+win_title = App.NAME
+win_x_size = 640
+win_y_size = 700
+
+# Code -----------------------------------------------------------------------
+
+row=f"""
+Row 1
+{Escape.UNDERLINE}Row 2{Escape.RESET}
+Row 3
+"""
+
+class MainWindow(QMainWindow):
+    def __init__(self, parent=None):
+        super(MainWindow, self).__init__(parent)
+
+        self.resize(win_x_size, win_y_size)
+        self.setWindowTitle(win_title)
+        
+        # Create central widget
+        self.centralwidget = QWidget(self)
+        self.setCentralWidget(self.centralwidget)
+        self.verticalLayout = QVBoxLayout(self.centralwidget)
+        self.verticalLayout.setSpacing(2)
+        
+        self.terminal = QTerminalWidget(self.centralwidget, sp = None)
+        self.verticalLayout.addWidget(self.terminal)
+       
+          
+        self.terminal.insertHtml("<u>Row 1 with underline</u><br>")
+        self.terminal.insertHtml("<u>Row 2 with underline</u><br>")
+        self.terminal.insertHtml("Row 3 no underline<br>")
+        self.terminal.insertHtml("Row 4 no underline<br>")
+        self.terminal.insertHtml("Row 5 no underline<br>")
+
+        self.terminal.apps(row)
+        self.terminal.apps(escape_attribute_test)
+        
+        # Menubar
+        self.menubar = QMenuBar(self)
+        self.setMenuBar(self.menubar)
+
+        # Menus
+        self.menuFile = QMenu("File", self.menubar)
+        self.menubar.addAction(self.menuFile.menuAction())
+
+        self.actionQuit = QAction("Quit", self)
+        self.actionQuit.setStatusTip("Quit application")
+        self.actionQuit.setShortcut("Ctrl+Q")
+        self.actionQuit.triggered.connect(lambda: self.close())
+        self.menuFile.addAction(self.actionQuit)
+
+
+    def insertHtml(self, text):
+        if type(self.textEdit) == QPlainTextEdit:
+            self.textEdit.appendHtml(text)
+        else:
+            self.textEdit.insertHtml(text)
+        
+
+    def open(self):
+        files = QFileDialog.getOpenFileNames(self, "Open file", ".", "*.*")
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        self.close()
+        return super().closeEvent(event)
+
+
+def main() -> None:
+    logging_format = "[%(levelname)s] %(lineno)d %(funcName)s() : %(message)s"
+    logging.basicConfig(format=logging_format, level=logging.DEBUG)
+    app = QApplication(sys.argv)
+    main_window = MainWindow()
+    main_window.show()
+    sys.exit(app.exec_())
+
+
+if __name__ == "__main__":
+    try:
+        main()
+        sys.exit(0)
+    except KeyboardInterrupt as e: # Ctrl-C
+        raise e
+    except SystemExit as e:        # sys.exit()
+        raise e
+    except Exception as e:
+        print('ERROR, UNEXPECTED EXCEPTION')
+        print(str(e))
+        traceback.print_exc()
+        os._exit(1)

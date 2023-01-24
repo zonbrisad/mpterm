@@ -26,8 +26,14 @@
 - [Freqlenty asked Questions](#freqlenty-asked-questions)
 - [History](#history)
 - [ToDo](#todo)
-- [Future ideas](#future-ideas)
 - [Known Bugs](#known-bugs)
+- [Future ideas](#future-ideas)
+  - [Plugin system](#plugin-system)
+  - [Bluetooth](#bluetooth)
+  - [http server](#http-server)
+  - [Terminal state monitor (mabye as plugin)](#terminal-state-monitor-mabye-as-plugin)
+  - [Quick macro's](#quick-macros)
+  - [Logg tag](#logg-tag)
 - [Links](#links)
 - [Contribute](#contribute)
 - [License](#license)
@@ -82,12 +88,12 @@
 - [ ] Truecolor (RGB)
 - [x] Reverse text
 - [x] backspace
-- [ ] delete
-- [ ] tab 
-- [ ] FXX 
-- [ ] home
+- [x] tab 
+- [x] arrow button support 
 - [ ] end 
-- [ ] arrow button support 
+- [ ] home
+- [ ] delete
+- [ ] FXX 
 - [ ] Underline style
 - [ ] Cursor management
 - [ ] Dim text
@@ -103,11 +109,13 @@
 - [ ] Set pin status
 - [ ] Loopback port
 - [ ] Manage Bell character
+- [ ] copy/paste clipboard
 
 ## Known Bugs
 - ~~~Underline dissapears~~~
 - ~~~Real bright(bold) colors~~~
 - anoying Tab cycling 
+- programing mode does not show output from avrdude
 
 ## Future ideas
 

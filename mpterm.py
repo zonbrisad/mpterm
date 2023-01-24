@@ -34,7 +34,7 @@ import enum
 import json
 from datetime import datetime, date, time
 
-from PyQt5.QtCore import Qt, QTimer, QSettings, QIODevice, QProcess
+from PyQt5.QtCore import Qt, QTimer, QSettings, QIODevice, QProcess, QEvent, QObject
 from PyQt5.QtGui import QTextCursor, QIcon, QFont, QKeyEvent, QCloseEvent
 from PyQt5.QtWidgets import (
     QApplication,
@@ -69,7 +69,7 @@ from escape import (
     color_256_test,
     hex2str,
 )
-from terminalwin import TerminalWin
+from qterminalwidget import QTerminalWidget, get_key, get_description
 from serialport import SerialPort, State
 
 from aboutdialog import AboutDialog
@@ -302,7 +302,7 @@ class MainForm(QMainWindow):
         self.sp.readyRead.connect(self.read)
         self.updatePorts()
 
-        self.terminal = TerminalWin(
+        self.terminal = QTerminalWidget(
             self.ui.centralwidget,
             sp=self.sp
         )
@@ -524,14 +524,40 @@ class MainForm(QMainWindow):
         # self.terminal.addAction(testAction)
         # self.terminal.keyPressEvent.connect(self.key)
 
-    # def keyPressEvent(self, a0: QKeyEvent) -> None:
-    #     return super().keyPressEvent(a0)
-    #     #print("Key")
-    #     pass
-    def key(self, e: QKeyEvent) -> None:
-        # logging.debug(f"  {e.key():x}  {get_description(e)}")
-        # self.sp.send_string(get_key(e))
-        print("Keypressed")
+        #self.installEventFilter(self)
+        self.terminal.installEventFilter(self)
+           
+    def keyPressEvent(self, e: QKeyEvent) -> None:
+        logging.debug(f"  {e.key():x}  {get_description(e)}")   
+        super().keyPressEvent(e)
+        self.sp.send_string(get_key(e))
+         
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+        key2key = { 
+            Qt.Key_Tab: Ascii.TAB,
+            Qt.Key_Left: Escape.BACK,
+            Qt.Key_Right: Escape.FORWARD,
+            Qt.Key_Up: Escape.UP,
+            Qt.Key_Down: Escape.DOWN,
+            Qt.Key_Delete: Escape.KEY_DELETE,
+            Qt.Key_Space: " ",
+        }
+        if event.type() == QEvent.KeyPress:
+            keyEvent = QKeyEvent(event)
+            if keyEvent.key() in key2key:
+                logging.debug(f"Key:{keyEvent.key()}")
+                self.sp.send_string(key2key[keyEvent.key()])
+                return True
+            else:
+                return False
+        return False
+        
+        #return super().eventFilter(obj, event)
+         
+    # def key(self, e: QKeyEvent) -> None:
+    #     # logging.debug(f"  {e.key():x}  {get_description(e)}")
+    #     # self.sp.send_string(get_key(e))
+    #     print("Keypressed")
 
     def add_action(self, name, menu, function) -> QAction:
         action = QAction(name, self)

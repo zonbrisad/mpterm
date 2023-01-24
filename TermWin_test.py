@@ -36,7 +36,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-from terminalwin import TerminalWin
+from qterminalwidget import QTerminalWidget
 from escape import Escape, escape_attribute_test 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -128,7 +128,7 @@ class MainForm(QMainWindow):
         self.horizontalLayout.addLayout(self.vlText)
         self.label = QtWidgets.QLabel("TerminaWin", self.centralwidget)
         self.vlText.addWidget(self.label)
-        self.terminal = TerminalWin(self.centralwidget, sp = None)
+        self.terminal = QTerminalWidget(self.centralwidget, sp = None)
         self.vlText.addWidget(self.terminal)
 
         self.changeText()
