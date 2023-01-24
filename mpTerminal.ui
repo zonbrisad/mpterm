@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>608</width>
+    <width>1024</width>
     <height>614</height>
    </rect>
   </property>
@@ -248,7 +248,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>608</width>
+     <width>1024</width>
      <height>22</height>
     </rect>
    </property>
@@ -277,14 +277,6 @@
     <property name="title">
      <string>Send</string>
     </property>
-    <widget class="QMenu" name="menudddd">
-     <property name="title">
-      <string>dddd</string>
-     </property>
-     <addaction name="actionsss"/>
-     <addaction name="actionsss_2"/>
-    </widget>
-    <addaction name="menudddd"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuAction"/>

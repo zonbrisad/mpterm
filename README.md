@@ -26,6 +26,14 @@
 - [Freqlenty asked Questions](#freqlenty-asked-questions)
 - [History](#history)
 - [ToDo](#todo)
+- [Known Bugs](#known-bugs)
+- [Future ideas](#future-ideas)
+  - [Plugin system](#plugin-system)
+  - [Bluetooth](#bluetooth)
+  - [http server](#http-server)
+  - [Terminal state monitor (mabye as plugin)](#terminal-state-monitor-mabye-as-plugin)
+  - [Quick macro's](#quick-macros)
+  - [Logg tag](#logg-tag)
 - [Links](#links)
 - [Contribute](#contribute)
 - [License](#license)
@@ -78,21 +86,57 @@
 - [x] Color encoding (8 colors)
 - [x] 256 color encoding
 - [ ] Truecolor (RGB)
-- [ ] Reverse text
+- [x] Reverse text
+- [x] backspace
+- [x] tab 
+- [x] arrow button support 
+- [ ] end 
+- [ ] home
+- [ ] delete
+- [ ] FXX 
 - [ ] Underline style
-- [ ] Dim text
 - [ ] Cursor management
-- [ ] Addon function
+- [ ] Dim text
 - [ ] Logging
 - [x] Echo mode
 - [x] Suspend button
 - [ ] Sync feature
+- [x] Pause button 
+- [ ] Pause history
 - [ ] Programming button
 - [ ] Hex mode
 - [ ] Show pin status
 - [ ] Set pin status
-- [ ] Tab button
 - [ ] Loopback port
+- [ ] Manage Bell character
+- [ ] copy/paste clipboard
+
+## Known Bugs
+- ~~~Underline dissapears~~~
+- ~~~Real bright(bold) colors~~~
+- anoying Tab cycling 
+- programing mode does not show output from avrdude
+
+## Future ideas
+
+### Plugin system
+Enable user to add extra features like protocol analyzers
+
+### Bluetooth 
+Support for Bluetooth serialports
+
+### http server
+Enable access from network
+
+### Terminal state monitor (mabye as plugin)
+
+### Quick macro's
+Add send macros for often used sequences
+
+### Logg tag 
+  Define some sort of tag that indicates that data should be redirected to another stream
+  (escape or html) ex. <logg> </logg> or \e[XX for ansi terminal
+
 
 
 ## Links
