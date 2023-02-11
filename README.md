@@ -86,6 +86,7 @@
 - [x] Color encoding (8 colors)
 - [x] 256 color encoding
 - [ ] Truecolor (RGB)
+- [ ] Underline style
 - [x] Reverse text
 - [x] backspace
 - [x] tab 
@@ -94,16 +95,15 @@
 - [ ] home
 - [ ] delete
 - [ ] FXX 
-- [ ] Underline style
 - [ ] Cursor management
 - [ ] Dim text
 - [ ] Logging
 - [x] Echo mode
 - [x] Suspend button
-- [ ] Sync feature
 - [x] Pause button 
 - [ ] Pause history
 - [ ] Programming button
+- [ ] Sync feature
 - [ ] Hex mode
 - [ ] Show pin status
 - [ ] Set pin status

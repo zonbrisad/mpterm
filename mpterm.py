@@ -96,9 +96,11 @@ mp_settings = f"{self_dir}/mpterm.json"
 
 # Definitions ---------------------------------------------------------------
 
+
 class Mode(enum.Enum):
     Normal = 0
     Echo = 1
+
 
 class MpTerm(enum.Enum):
     # Display modes
@@ -111,7 +113,6 @@ class MpTerm(enum.Enum):
     Nl = 0
     Cr = 1
     NlCr = 2
-
 
 
 about_html = f"""
@@ -298,16 +299,14 @@ class MainForm(QMainWindow):
         self.setWindowIcon(QIcon(App.ICON))
         self.ui.statusbar.setStyleSheet(StyleS.normal)
 
-        self.sp = SerialPort()
-        self.sp.readyRead.connect(self.read)
+        self.serialPort = SerialPort()
+        self.serialPort.readyRead.connect(self.read)
         self.updatePorts()
 
         self.terminal = QTerminalWidget(
-            self.ui.centralwidget,
-            sp=self.sp
+            self.ui.centralwidget, serialPort=self.serialPort
         )
         self.ui.horizontalLayout.insertWidget(1, self.terminal)
-
 
         self.formater = FormatHex()
 
@@ -403,7 +402,9 @@ class MainForm(QMainWindow):
         self.colorMenu = self.ui.menuSend.addMenu("Colors")
         self.add_action("Red", self.colorMenu, lambda: self.send_string(Escape.RED))
         self.add_action("Green", self.colorMenu, lambda: self.send_string(Escape.GREEN))
-        self.add_action("Yellow", self.colorMenu, lambda: self.send_string(Escape.YELLOW))
+        self.add_action(
+            "Yellow", self.colorMenu, lambda: self.send_string(Escape.YELLOW)
+        )
         self.add_action("Blue", self.colorMenu, lambda: self.send_string(Escape.BLUE))
         self.add_action(
             "Magenta", self.colorMenu, lambda: self.send_string(Escape.MAGENTA)
@@ -411,7 +412,9 @@ class MainForm(QMainWindow):
         self.add_action("Cyan", self.colorMenu, lambda: self.send_string(Escape.CYAN))
         self.add_action("White", self.colorMenu, lambda: self.send_string(Escape.WHITE))
 
-        self.add_action("Bg Red", self.colorMenu, lambda: self.send_string(Escape.BG_RED))
+        self.add_action(
+            "Bg Red", self.colorMenu, lambda: self.send_string(Escape.BG_RED)
+        )
         self.add_action(
             "Bg Green", self.colorMenu, lambda: self.send_string(Escape.BG_GREEN)
         )
@@ -432,9 +435,7 @@ class MainForm(QMainWindow):
         )
 
         self.attrMenu = self.ui.menuSend.addMenu("Attributes")
-        self.add_action(
-            "Reset", self.attrMenu, lambda: self.send_string(Escape.RESET)
-        )
+        self.add_action("Reset", self.attrMenu, lambda: self.send_string(Escape.RESET))
         self.add_action("Bold", self.attrMenu, lambda: self.send_string(Escape.BOLD))
         self.add_action(
             "Italic", self.attrMenu, lambda: self.send_string(Escape.ITALIC)
@@ -461,7 +462,9 @@ class MainForm(QMainWindow):
         self.ui.actionNew.triggered.connect(self.new)
         self.ui.actionExit.triggered.connect(self.exitProgram)
         self.ui.actionClear.triggered.connect(self.actionClear)
-        self.ui.actionAbout.triggered.connect(lambda: AboutDialog.about(App.NAME, about_html))
+        self.ui.actionAbout.triggered.connect(
+            lambda: AboutDialog.about(App.NAME, about_html)
+        )
         self.ui.actionPortInfo.triggered.connect(self.portInfo)
 
         self.ui.pbOpen.pressed.connect(self.openPort)
@@ -526,14 +529,14 @@ class MainForm(QMainWindow):
 
         #self.installEventFilter(self)
         self.terminal.installEventFilter(self)
-           
+
     def keyPressEvent(self, e: QKeyEvent) -> None:
-        logging.debug(f"  {e.key():x}  {get_description(e)}")   
         super().keyPressEvent(e)
-        self.sp.send_string(get_key(e))
-         
+        logging.debug(f"  {e.key():x}  {get_description(e)}")
+        self.serialPort.send_string(get_key(e))
+
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
-        key2key = { 
+        key2key = {
             Qt.Key_Tab: Ascii.TAB,
             Qt.Key_Left: Escape.BACK,
             Qt.Key_Right: Escape.FORWARD,
@@ -542,18 +545,23 @@ class MainForm(QMainWindow):
             Qt.Key_Delete: Escape.KEY_DELETE,
             Qt.Key_Space: " ",
         }
+        #logging.debug(f"Event: {event}")
+                
+        # if event == Qt.Key_CTR
+        
         if event.type() == QEvent.KeyPress:
+            #logging.debug(f"Keypress Event: {event}")
             keyEvent = QKeyEvent(event)
             if keyEvent.key() in key2key:
                 logging.debug(f"Key:{keyEvent.key()}")
-                self.sp.send_string(key2key[keyEvent.key()])
+                self.serialPort.send_string(key2key[keyEvent.key()])
                 return True
             else:
                 return False
         return False
-        
-        #return super().eventFilter(obj, event)
-         
+
+        # return super().eventFilter(obj, event)
+
     # def key(self, e: QKeyEvent) -> None:
     #     # logging.debug(f"  {e.key():x}  {get_description(e)}")
     #     # self.sp.send_string(get_key(e))
@@ -574,7 +582,7 @@ class MainForm(QMainWindow):
             self.bpPause.setText("Paused")
 
     def suspend(self):
-        self.sp.set_state(State.SUSPENDED)
+        self.serialPort.set_state(State.SUSPENDED)
         self.update_ui()
 
     def program_data_available(self):
@@ -591,48 +599,48 @@ class MainForm(QMainWindow):
     def program_finished(self):
         logging.debug("External program finnished executing")
         self.terminal.append_html("<br>")
-        if self.sp.state == State.SUSPENDED:
-            self.sp.set_state(State.RECONNECTING)
+        if self.serialPort.state == State.SUSPENDED:
+            self.serialPort.set_state(State.RECONNECTING)
 
         self.update_ui()
 
     def program(self):
-        if self.sp.state == State.SUSPENDED:
+        if self.serialPort.state == State.SUSPENDED:
             return
 
-        if self.sp.state == State.CONNECTED:
-            self.sp.set_state(State.SUSPENDED, timeout=-1)
+        if self.serialPort.state == State.CONNECTED:
+            self.serialPort.set_state(State.SUSPENDED, timeout=-1)
         self.terminal.append_html("<br>")
-        #self.process.start("bpdev attr")
+        # self.process.start("ls -l")
+        # self.process.start("bpdev attr")
         # self.process.start("bpexample shade")
-        # self.process.start("avrdude 2>&1")
-        self.process.start("mpt ard 2>&1")
+        self.process.start("avrdude")
+        # self.process.start("mpt ard 2>&1")
+        # self.process.
+
         logging.debug("Runing external program")
         self.update_ui()
         self.terminal.scroll_down()
 
     def signal_usr1(self, signum, frame) -> None:
         logging.debug("USR1 signal received")
-        self.sp.set_state(State.SUSPENDED)
+        self.serialPort.set_state(State.SUSPENDED)
 
     def timer_5_timeout(self):
-        if self.sp.state == State.SUSPENDED:
-            rt = self.sp.suspend_timer.remainingTime()
+        if self.serialPort.state == State.SUSPENDED:
+            rt = self.serialPort.suspend_timer.remainingTime()
             self.message(f"Port suspended. Time left {rt / 1000:.0f}")
 
-        #        pins = self.sp.serial_port.PinoutSignal()
-
         self.update_ui()
-        
 
     def port_handler(self) -> None:
         portNames = [x.portName() for x in QSerialPortInfo.availablePorts()]
 
         # Check if current port is still connecter (USB to serial adapters), if not close port
-        if self.sp.isOpen():
-            if self.sp.portName() not in portNames:
-                self.sp.close()
-                self.messageError(f"Port {self.sp.name()} no longer available.")
+        if self.serialPort.isOpen():
+            if self.serialPort.portName() not in portNames:
+                self.serialPort.close()
+                self.messageError(f"Port {self.serialPort.name()} no longer available.")
 
         # Update list of serialports in combobox
         for x in range(self.ui.cbPort.count()):
@@ -649,7 +657,7 @@ class MainForm(QMainWindow):
 
     def update_ui(self):
 
-        if self.sp.state == State.DISCONNECTED:
+        if self.serialPort.state == State.DISCONNECTED:
             self.setWindowTitle("MpTerm")
             self.ui.pbOpen.setText("Open")
             self.ui.cbPort.setEnabled(True)
@@ -661,10 +669,10 @@ class MainForm(QMainWindow):
             self.ui.cbPort.setEnabled(False)
 
         self.rxLabel.setText(
-            f'<span style="color:Black">RX:</span> <span style="color:Purple">{self.sp.rxCnt:06d}</span> '
+            f'<span style="color:Black">RX:</span> <span style="color:Purple">{self.serialPort.rxCnt:06d}</span> '
         )
         self.txLabel.setText(
-            f'<span style="color:Black">TX:</span> <span style="color:Purple">{self.sp.txCnt:06d}</span> '
+            f'<span style="color:Black">TX:</span> <span style="color:Purple">{self.serialPort.txCnt:06d}</span> '
         )
 
         states = {
@@ -673,14 +681,14 @@ class MainForm(QMainWindow):
             State.SUSPENDED: f"""<span style="color:Red">Suspended </span>""",
             State.RECONNECTING: f"""<span style="color:Magenta">Reconnecting</span>""",
         }
-        self.stateLabel.setText(f"{states[self.sp.state]}")
+        self.stateLabel.setText(f"{states[self.serialPort.state]}")
 
-        if self.sp.isDataTerminalReady():
+        if self.serialPort.isDataTerminalReady():
             self.dtrLabel.setText("\u26AA  DTR")
         else:
             self.dtrLabel.setText("\u26AB  DTR")
 
-        if self.sp.isRequestToSend():
+        if self.serialPort.isRequestToSend():
             self.rtsLabel.setText("\u26AA  RTS")
         else:
             self.rtsLabel.setText("\u26AB  RTS")
@@ -697,19 +705,19 @@ class MainForm(QMainWindow):
         logging.debug("DTR")
         if self.ui.cbDTR.isChecked():
             self.ui.cbDTR.setChecked(True)
-            self.sp.setDataTerminalReady(True)
+            self.serialPort.setDataTerminalReady(True)
         else:
             self.ui.cbDTR.setChecked(False)
-            self.sp.setDataTerminalReady(False)
+            self.serialPort.setDataTerminalReady(False)
 
     def handle_rts(self):
         logging.debug("RTS")
         if self.ui.cbRTS.isChecked():
             self.ui.cbRTS.setChecked(True)
-            self.sp.setRequestToSend(True)
+            self.serialPort.setRequestToSend(True)
         else:
             self.ui.cbRTS.setChecked(False)
-            self.sp.setRequestToSend(False)
+            self.serialPort.setRequestToSend(False)
 
     def syncChanged(self):
         try:
@@ -734,7 +742,7 @@ class MainForm(QMainWindow):
     def actionClear(self):
         self.terminal.clear()
         self.formater.clear()
-        self.sp.clear_counters()
+        self.serialPort.clear_counters()
         self.update()
 
     def _message(self, msg):
@@ -764,7 +772,7 @@ class MainForm(QMainWindow):
 
     def read(self):
 
-        data = self.sp.read()
+        data = self.serialPort.read()
         data_str = str(data, "utf-8")
 
         db = Escape.to_str(data_str)
@@ -786,13 +794,13 @@ class MainForm(QMainWindow):
         self.update_ui()
 
         if self.cbMode.currentData() == Mode.Echo:
-            self.sp.send(data)
+            self.serialPort.send(data)
 
     def send(self, data: bytearray):
-        if self.sp.isOpen():
-            res = self.sp.serial_port.write(data)
+        if self.serialPort.isOpen():
+            res = self.serialPort.serial_port.write(data)
             if res > 0:
-                self.sp.txCnt += res
+                self.serialPort.txCnt += res
             else:
                 logging.error("Could not write data.")
             self.update_ui()
@@ -801,21 +809,21 @@ class MainForm(QMainWindow):
         self.send(bytearray(data, "utf-8"))
 
     def openPort(self):
-        if self.sp.isOpen():
-            self.sp.close()
+        if self.serialPort.isOpen():
+            self.serialPort.close()
             self.update_ui()
             return
 
-        self.sp.clear()
+        self.serialPort.clear()
         self.init_port()
-        res = self.sp.open()
+        res = self.serialPort.open()
         if res:
             self.message(
-                f"Opening port: /dev/{self.sp.portName()} {self.sp.baudRate()}"
+                f"Opening port: /dev/{self.serialPort.portName()} {self.serialPort.baudRate()}"
             )
         else:
             self.messageError(
-                f"Failed to open port /dev/{self.sp.portName()}. {self.sp.error()}"
+                f"Failed to open port /dev/{self.serialPort.portName()}. {self.serialPort.error()}"
             )
 
         self.update_ui()
@@ -825,15 +833,15 @@ class MainForm(QMainWindow):
         self.set_sp()
 
     def set_port(self):
-        self.sp.setPortName(f"/dev/{self.ui.cbPort.currentText()}")
+        self.serialPort.setPortName(f"/dev/{self.ui.cbPort.currentText()}")
 
     def set_sp(self):
         br = self.ui.cbBitrate.currentData()
-        self.sp.setBaudRate(self.ui.cbBitrate.currentData())
-        self.sp.setStopBits(self.ui.cbStopBits.currentData())
-        self.sp.setDataBits(self.ui.cbBits.currentData())
-        self.sp.setParity(self.ui.cbParity.currentData())
-        self.sp.setFlowControl(self.ui.cbFlowControl.currentData())
+        self.serialPort.setBaudRate(self.ui.cbBitrate.currentData())
+        self.serialPort.setStopBits(self.ui.cbStopBits.currentData())
+        self.serialPort.setDataBits(self.ui.cbBits.currentData())
+        self.serialPort.setParity(self.ui.cbParity.currentData())
+        self.serialPort.setFlowControl(self.ui.cbFlowControl.currentData())
         logging.debug(self.ui.cbBitrate.currentData())
 
     def setCbText(self, cb, txt):
@@ -877,7 +885,7 @@ class MainForm(QMainWindow):
         # if idx != -1:
         #     self.ui.cbBitrate.setCurrentIndex(idx)
         self.loadSetting(self.ui.cbBitrate, self.prof.bitrate)
-                
+
         # self.ui.cbBitrate.setCurrentText(self.prof.bitrate)
         # self.ui.cbPort.setCurrentText(self.prof.port)
         # self.ui.cbStopBits.setCurrentText(self.prof.stopbits)
@@ -894,9 +902,8 @@ class MainForm(QMainWindow):
         idx = self.ui.cbDisplay.findData(MpTerm(self.prof.mode))
         self.ui.cbDisplay.setCurrentIndex(idx)
 
-
     def exitProgram(self, e):
-        self.sp.close()
+        self.serialPort.close()
         self.saveSettings()
         self.close()
 
@@ -935,6 +942,7 @@ def list_ports():
 
 def main():
     logging_format = "[%(levelname)s] %(lineno)d %(funcName)s() : %(message)s"
+    logging.basicConfig(format=logging_format, level=logging.DEBUG)
 
     # options parsing
     parser = argparse.ArgumentParser(
@@ -950,12 +958,15 @@ def main():
     parser.add_argument("--list", action="store_true", help="List serialports")
     # parser.add_argument("--build", action="store_true", help="Build ui code")
     parser.add_argument("--debug", action="store_true", help="Activate debug printout")
-    parser.add_argument("--program", action="store", type=str, help="Program to run", default="")
+    parser.add_argument(
+        "--program", action="store", type=str, help="Program to run", default=""
+    )
 
     args = parser.parse_args()
 
-    if args.debug:
-        logging.basicConfig(format=logging_format, level=logging.DEBUG)
+    #if args.debug:
+        #logging.setLevel(logging.DEBUG)
+        
 
     if args.list:
         list_ports()

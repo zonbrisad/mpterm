@@ -128,7 +128,7 @@ class MainForm(QMainWindow):
         self.horizontalLayout.addLayout(self.vlText)
         self.label = QtWidgets.QLabel("TerminaWin", self.centralwidget)
         self.vlText.addWidget(self.label)
-        self.terminal = QTerminalWidget(self.centralwidget, sp = None)
+        self.terminal = QTerminalWidget(self.centralwidget, serialPort = None)
         self.vlText.addWidget(self.terminal)
 
         self.changeText()
