@@ -94,6 +94,8 @@ class App:
 
 mp_settings = f"{self_dir}/mpterm.json"
 
+SUSPEND_TIMEOUT = 8000
+
 # Definitions ---------------------------------------------------------------
 
 
@@ -582,7 +584,7 @@ class MainForm(QMainWindow):
             self.bpPause.setText("Paused")
 
     def suspend(self):
-        self.serialPort.set_state(State.SUSPENDED)
+        self.serialPort.set_state(State.SUSPENDED, timeout = SUSPEND_TIMEOUT)
         self.update_ui()
 
     def program_data_available(self):
@@ -624,7 +626,8 @@ class MainForm(QMainWindow):
 
     def signal_usr1(self, signum, frame) -> None:
         logging.debug("USR1 signal received")
-        self.serialPort.set_state(State.SUSPENDED)
+        self.suspend()
+        #self.serialPort.set_state(State.SUSPENDED)
 
     def timer_5_timeout(self):
         if self.serialPort.state == State.SUSPENDED:
@@ -942,7 +945,7 @@ def list_ports():
 
 def main():
     logging_format = "[%(levelname)s] %(lineno)d %(funcName)s() : %(message)s"
-    logging.basicConfig(format=logging_format, level=logging.DEBUG)
+    #logging.basicConfig(format=logging_format, level=logging.DEBUG)
 
     # options parsing
     parser = argparse.ArgumentParser(
