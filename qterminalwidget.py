@@ -154,11 +154,11 @@ class QTerminalWidget(QPlainTextEdit):
 
     def limit(self):
         lines = self.document().lineCount()
-
+        logging.debug(f"Lines: {lines}")
         if lines > self.maxLines:
             cursor = QTextCursor(self.document())  
             cursor.movePosition(QTextCursor.Start, QTextCursor.MoveAnchor)
-            cursor.movePosition(QTextCursor.Down, 2)
+            cursor.movePosition(QTextCursor.Down, 50)
             cursor.removeSelectedText()  
 
 

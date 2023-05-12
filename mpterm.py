@@ -529,7 +529,7 @@ class MainForm(QMainWindow):
         # self.terminal.addAction(testAction)
         # self.terminal.keyPressEvent.connect(self.key)
 
-        #self.installEventFilter(self)
+        # self.installEventFilter(self)
         self.terminal.installEventFilter(self)
 
     def keyPressEvent(self, e: QKeyEvent) -> None:
@@ -547,12 +547,12 @@ class MainForm(QMainWindow):
             Qt.Key_Delete: Escape.KEY_DELETE,
             Qt.Key_Space: " ",
         }
-        #logging.debug(f"Event: {event}")
-                
+        # logging.debug(f"Event: {event}")
+
         # if event == Qt.Key_CTR
-        
+
         if event.type() == QEvent.KeyPress:
-            #logging.debug(f"Keypress Event: {event}")
+            # logging.debug(f"Keypress Event: {event}")
             keyEvent = QKeyEvent(event)
             if keyEvent.key() in key2key:
                 logging.debug(f"Key:{keyEvent.key()}")
@@ -584,7 +584,7 @@ class MainForm(QMainWindow):
             self.bpPause.setText("Paused")
 
     def suspend(self):
-        self.serialPort.set_state(State.SUSPENDED, timeout = SUSPEND_TIMEOUT)
+        self.serialPort.set_state(State.SUSPENDED, timeout=SUSPEND_TIMEOUT)
         self.update_ui()
 
     def program_data_available(self):
@@ -627,7 +627,7 @@ class MainForm(QMainWindow):
     def signal_usr1(self, signum, frame) -> None:
         logging.debug("USR1 signal received")
         self.suspend()
-        #self.serialPort.set_state(State.SUSPENDED)
+        # self.serialPort.set_state(State.SUSPENDED)
 
     def timer_5_timeout(self):
         if self.serialPort.state == State.SUSPENDED:
@@ -945,7 +945,7 @@ def list_ports():
 
 def main():
     logging_format = "[%(levelname)s] %(lineno)d %(funcName)s() : %(message)s"
-    #logging.basicConfig(format=logging_format, level=logging.DEBUG)
+    # logging.basicConfig(format=logging_format, level=logging.DEBUG)
 
     # options parsing
     parser = argparse.ArgumentParser(
@@ -967,9 +967,9 @@ def main():
 
     args = parser.parse_args()
 
-    #if args.debug:
+    if args.debug:
+        logging.basicConfig(format=logging_format, level=logging.DEBUG)
         #logging.setLevel(logging.DEBUG)
-        
 
     if args.list:
         list_ports()
