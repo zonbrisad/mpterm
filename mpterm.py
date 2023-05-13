@@ -314,116 +314,47 @@ class MainForm(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        self.serialPort = SerialPort()
-        self.formater = FormatHex()
-
         self.setWindowIcon(QIcon(App.ICON))
         self.ui.statusbar.setStyleSheet(StyleS.normal)
 
-        self.rightVLayout = QVBoxLayout()
-        self.portLayout = QHBoxLayout()
-        self.mainLayout = QHBoxLayout()
-        self.buttonLayout = QVBoxLayout()
+        self.serialPort = SerialPort()
+        self.serialPort.readyRead.connect(self.read)
 
-        self.portLayout.addSpacing(100)
-        
+        # Serial port settings above terminal widget
+        self.portLayout = QHBoxLayout()
+        self.portLayout.addSpacing(100)        
         self.cbPort = self.addLabelCombo("Port")
         self.cbBitrate = self.addLabelCombo("Bitrate")
         self.cbBits = self.addLabelCombo("Bits")
         self.cbStopBits = self.addLabelCombo("StopBit")
         self.cbParity = self.addLabelCombo("Parity")
         self.cbFlowControl = self.addLabelCombo("HwFlow")
-
         self.portLayout.addSpacing(20)
-        # spacerItem = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-        # self.portLayout.addItem(spacerItem)
-
-        self.ui.verticalLayout.insertLayout(0,self.portLayout)
-        self.ui.verticalLayout.insertLayout(1,self.mainLayout)
-
-        self.mainLayout.addLayout(self.buttonLayout)
-        self.mainLayout.addLayout(self.rightVLayout)
-
-        self.terminal = QTerminalWidget(
-            self.ui.centralwidget, serialPort=self.serialPort
-        )
-        self.rightVLayout.addWidget(self.terminal)
-
-        self.pbOpen = QPushButton(self.ui.centralwidget)
-        self.pbOpen.setObjectName("pbOpen")
-        self.pbOpen.setText("Open")
-        self.buttonLayout.addWidget(self.pbOpen)
-
-
-        self.rxLabel = QLabel("")
-        self.txLabel = QLabel("")
-        self.stateLabel = QLabel("")
-        self.ui.statusbar.addPermanentWidget(self.stateLabel, stretch=0)
-        self.ui.statusbar.addPermanentWidget(self.rxLabel, stretch=0)
-        self.ui.statusbar.addPermanentWidget(self.txLabel, stretch=0)
-
-        # Scan for serialports
-        self.serialPort.readyRead.connect(self.read)
-        self.updatePorts()
-
-        self.cbNewline = QComboBox(self.ui.centralwidget)
-        self.cbNewline.addItem("nl", 0)
-        self.cbNewline.addItem("cr", 1)
-        self.cbNewline.addItem("cr+nl", 2)
-        self.buttonLayout.addWidget(self.cbNewline)
-
-        self.cbDisplay = QComboBox(self.ui.centralwidget)
-        self.cbDisplay.addItem("Ascii", MpTerm.Ascii)
-        self.cbDisplay.addItem("Hex", MpTerm.Hex)
-        self.cbDisplay.addItem("Hex + Ascii", MpTerm.AsciiHex)
-        self.cbDisplay.currentIndexChanged.connect(self.mode_change)
-        self.buttonLayout.addWidget(self.cbDisplay)
-
-        # self.leSyncString = QLineEdit(self.ui.centralwidget)        
-        # self.buttonLayout.addWidget(self.leSyncString)
-
-        self.cbRTS = QCheckBox(self.ui.centralwidget)
-        self.cbRTS.setObjectName("cbRTS")
-
-        self.cbDTR = QCheckBox(self.ui.centralwidget)
-        self.cbDTR.setCheckable(True)
-        self.cbDTR.setChecked(False)
-        self.cbDTR.setTristate(False)
-        self.cbDTR.setObjectName("cbDTR")
-
-        self.cbRTS.setText("RTS")
-        self.cbDTR.setText("DTR")
-        
-        self.buttonLayout.addWidget(self.cbRTS)
-        self.buttonLayout.addWidget(self.cbDTR)
-
-        # self.cbProfiles = QComboBox(self.centralwidget)
-        # self.cbProfiles.setObjectName("cbProfiles")
-        # self.cbProfiles.addItem("Default", 0)
-        # self.cbProfiles.addItem("115200", 2)
-        # self.cbProfiles.addItem("New...", 3)
-        # self.cbProfiles.hide()
 
         self.cbStopBits.addItem("1", QSerialPort.OneStop)
         self.cbStopBits.addItem("1.5", QSerialPort.OneAndHalfStop)
         self.cbStopBits.addItem("2", QSerialPort.TwoStop)
         self.cbStopBits.setCurrentIndex(0)
+        self.cbStopBits.activated.connect(self.set_sp)
 
         self.cbBits.addItem("5", QSerialPort.Data5)
         self.cbBits.addItem("6", QSerialPort.Data6)
         self.cbBits.addItem("7", QSerialPort.Data7)
         self.cbBits.addItem("8", QSerialPort.Data8)
         self.cbBits.setCurrentIndex(3)
+        self.cbBits.activated.connect(self.set_sp)
 
         self.cbParity.addItem("None", QSerialPort.NoParity)
         self.cbParity.addItem("Odd", QSerialPort.OddParity)
         self.cbParity.addItem("Even", QSerialPort.EvenParity)
         self.cbParity.setCurrentIndex(0)
+        self.cbParity.activated.connect(self.set_sp)
 
         self.cbFlowControl.addItem("None", QSerialPort.NoFlowControl)
         self.cbFlowControl.addItem("Hardware", QSerialPort.HardwareControl)
         self.cbFlowControl.addItem("Software", QSerialPort.SoftwareControl)
         self.cbFlowControl.setCurrentIndex(0)
+        self.cbFlowControl.activated.connect(self.set_sp)
 
         self.cbBitrate.addItem("300", 300)
         self.cbBitrate.addItem("600", 600)
@@ -436,9 +367,105 @@ class MainForm(QMainWindow):
         self.cbBitrate.addItem("57600", 57600)
         self.cbBitrate.addItem("115200", 115200)
         self.cbBitrate.setCurrentIndex(5)
+        self.cbBitrate.activated.connect(self.set_sp)
+        
+    
+        # "Buttons" layout, to the left
+        self.pbOpen = QPushButton(self.ui.centralwidget)
+        self.pbOpen.setObjectName("pbOpen")
+        self.pbOpen.setText("Open")
+        self.pbOpen.pressed.connect(self.openPort)
 
-        self.cbRTS.clicked.connect(self.handle_rts)
-        self.cbDTR.clicked.connect(self.handle_dtr)
+        self.cbMode = QComboBox(self.ui.centralwidget)
+        self.cbMode.addItem(Mode.Normal.name, Mode.Normal)
+        self.cbMode.addItem(Mode.Echo.name, Mode.Echo)
+        
+        self.cbDisplay = QComboBox(self.ui.centralwidget)
+        self.cbDisplay.addItem("Ascii", MpTerm.Ascii)
+        self.cbDisplay.addItem("Hex", MpTerm.Hex)
+        self.cbDisplay.addItem("Hex + Ascii", MpTerm.AsciiHex)
+        self.cbDisplay.currentIndexChanged.connect(self.mode_change)
+        self.cbDisplay.activated.connect(self.set_sp)
+
+        # self.cbNewline = QComboBox(self.ui.centralwidget)
+        # self.cbNewline.addItem("nl", 0)
+        # self.cbNewline.addItem("cr", 1)
+        # self.cbNewline.addItem("cr+nl", 2)        
+
+        # self.dtrLabel = QLabel("\u26D4 DTR")
+        # self.rtsLabel = QLabel("\u26D4 RTS")
+
+        # self.cbRTS = QCheckBox(self.ui.centralwidget)
+        # self.cbRTS.setText("RTS")
+        # self.cbRTS.clicked.connect(self.handle_rts)
+
+        # self.cbDTR = QCheckBox(self.ui.centralwidget)
+        # self.cbDTR.setText("DTR")
+        # self.cbDTR.setCheckable(True)
+        # self.cbDTR.setChecked(False)
+        # self.cbDTR.setTristate(False)
+        # self.cbDTR.clicked.connect(self.handle_dtr)
+
+        self.bpProgram = QPushButton("Program", self.ui.centralwidget)
+        self.bpProgram.pressed.connect(self.program)
+
+        self.bpPause = QPushButton("Pause", self.ui.centralwidget)
+        self.bpPause.pressed.connect(self.pause)
+
+        self.pbSuspend = QPushButton("Suspend", self.ui.centralwidget)
+        self.pbSuspend.pressed.connect(self.suspend)
+
+        # self.leSyncString = QLineEdit(self.ui.centralwidget)        
+        # self.buttonLayout.addWidget(self.leSyncString)
+
+        # self.cbProfiles = QComboBox(self.centralwidget)
+        # self.cbProfiles.setObjectName("cbProfiles")
+        # self.cbProfiles.addItem("Default", 0)
+        # self.cbProfiles.addItem("115200", 2)
+        # self.cbProfiles.addItem("New...", 3)
+        # self.cbProfiles.hide()
+
+        spacerItem = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.buttonLayout = QVBoxLayout()
+        self.buttonLayout.addWidget(self.pbOpen)
+        self.buttonLayout.addWidget(self.cbMode)
+        self.buttonLayout.addWidget(self.cbDisplay)
+        # self.buttonLayout.addWidget(self.cbNewline)
+        # self.buttonLayout.addWidget(self.cbRTS)
+        # self.buttonLayout.addWidget(self.cbDTR)
+        # self.buttonLayout.addWidget(self.dtrLabel)
+        # self.buttonLayout.addWidget(self.rtsLabel)
+        self.buttonLayout.addItem(spacerItem)
+        self.buttonLayout.addWidget(self.bpProgram)
+        self.buttonLayout.addWidget(self.bpPause)
+        self.buttonLayout.addWidget(self.pbSuspend)
+
+        self.terminal = QTerminalWidget(
+            self.ui.centralwidget, 
+            serialPort=self.serialPort
+        )
+
+        # Layouts
+        self.rightVLayout = QVBoxLayout()
+        self.rightVLayout.addWidget(self.terminal)
+        
+        self.mainLayout = QHBoxLayout()
+        self.mainLayout.addLayout(self.buttonLayout)
+        self.mainLayout.addLayout(self.rightVLayout)
+        
+        self.ui.verticalLayout.addLayout(self.portLayout)
+        self.ui.verticalLayout.addLayout(self.mainLayout)
+
+
+        # Status bar
+        self.rxLabel = QLabel("")
+        self.txLabel = QLabel("")
+        self.stateLabel = QLabel("")
+        self.ui.statusbar.addPermanentWidget(self.stateLabel, stretch=0)
+        self.ui.statusbar.addPermanentWidget(self.rxLabel, stretch=0)
+        self.ui.statusbar.addPermanentWidget(self.txLabel, stretch=0)
+ 
 
         # Send menu
         ctrlcAction = QAction("Ctrl-C (ETX)", self)
@@ -520,13 +547,6 @@ class MainForm(QMainWindow):
         )
 
         # event slots
-        self.cbBitrate.activated.connect(self.set_sp)
-        self.cbStopBits.activated.connect(self.set_sp)
-        self.cbBits.activated.connect(self.set_sp)
-        self.cbParity.activated.connect(self.set_sp)
-        self.cbFlowControl.activated.connect(self.set_sp)
-        
-        self.cbDisplay.activated.connect(self.set_sp)
         self.ui.actionNew.triggered.connect(self.new)
         self.ui.actionExit.triggered.connect(self.exitProgram)
         self.ui.actionClear.triggered.connect(self.actionClear)
@@ -535,38 +555,14 @@ class MainForm(QMainWindow):
         )
         self.ui.actionPortInfo.triggered.connect(self.portInfo)
 
-        self.pbOpen.pressed.connect(self.openPort)
-
-        self.cbMode = QComboBox(self.ui.centralwidget)
-        self.cbMode.addItem(Mode.Normal.name, Mode.Normal)
-        self.cbMode.addItem(Mode.Echo.name, Mode.Echo)
-        self.buttonLayout.addWidget(self.cbMode)
-
-        self.dtrLabel = QLabel("\u26D4 DTR")
-        self.rtsLabel = QLabel("\u26D4 RTS")
-        self.buttonLayout.addWidget(self.dtrLabel)
-        self.buttonLayout.addWidget(self.rtsLabel)
-
-        spacerItem = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-        self.buttonLayout.addItem(spacerItem)
-
-        self.bpProgram = QPushButton("Program", self.ui.centralwidget)
-        self.buttonLayout.addWidget(self.bpProgram)
-        self.bpProgram.pressed.connect(self.program)
-
-        self.bpPause = QPushButton("Pause", self.ui.centralwidget)
-        self.buttonLayout.addWidget(self.bpPause)
-        self.bpPause.pressed.connect(self.pause)
-
-        self.pbSuspend = QPushButton("Suspend", self.ui.centralwidget)
-        self.buttonLayout.addWidget(self.pbSuspend)
-        self.pbSuspend.pressed.connect(self.suspend)
-
+        self.formater = FormatHex()
+         
         self.loadSettings()
         self.mode_change()
 
         # Configure signal handler
         signal.signal(signal.SIGUSR1, self.signal_usr1)
+        # signal.signal(signal.SIGUSR2, self.signal_usr2)
 
         # Timers
         self.timer = QTimer()
@@ -589,6 +585,9 @@ class MainForm(QMainWindow):
 
         # self.terminal.insert(f"""MpTerm Ver: <b>{App.VERSION}</b><br><br>""")
         self.terminal.apps(f"""MpTerm Ver: <b>{App.VERSION}</b><br><br>""")
+
+        # Scan for serialports
+        self.update_ports()
 
         self.update_ui()
         self.init_port()
@@ -754,19 +753,19 @@ class MainForm(QMainWindow):
         }
         self.stateLabel.setText(f"{states[self.serialPort.state]}")
 
-        if self.serialPort.isDataTerminalReady():
-            self.dtrLabel.setText("\u26AA  DTR")
-        else:
-            self.dtrLabel.setText("\u26AB  DTR")
+        # if self.serialPort.isDataTerminalReady():
+        #     self.dtrLabel.setText("\u26AA  DTR")
+        # else:
+        #     self.dtrLabel.setText("\u26AB  DTR")
 
-        if self.serialPort.isRequestToSend():
-            self.rtsLabel.setText("\u26AA  RTS")
-        else:
-            self.rtsLabel.setText("\u26AB  RTS")
+        # if self.serialPort.isRequestToSend():
+        #     self.rtsLabel.setText("\u26AA  RTS")
+        # else:
+        #     self.rtsLabel.setText("\u26AB  RTS")
 
         # logging.debug(f"DTR: {self.sp.serial_port.isDataTerminalReady()}  RTS: {self.sp.serial_port.isRequestToSend()}")
 
-    def updatePorts(self):
+    def update_ports(self):
         ports = QSerialPortInfo.availablePorts()
         for port in ports:
             self.cbPort.addItem(port.portName())
