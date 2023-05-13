@@ -749,7 +749,7 @@ class MainForm(QMainWindow):
             State.DISCONNECTED: f"""<span style="color:Black">Disconected</span>""",
             State.CONNECTED: f"""<span style="color:Green">Connected  </span>""",
             State.SUSPENDED: f"""<span style="color:Red">Suspended </span>""",
-            State.RECONNECTING: f"""<span style="color:Magenta">Reconnecting</span>""",
+            State.RECONNECTING: f"""<span style="color:Magenta">Reconnecting {self.serialPort.cntReconnect}</span>""",
         }
         self.stateLabel.setText(f"{states[self.serialPort.state]}")
 

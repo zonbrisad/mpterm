@@ -51,9 +51,11 @@ class SerialPort(QSerialPort):
         self.suspend_timer.timeout.connect(self.suspend_timeout)
 
         self.reconnect_timer = QTimer()
-        self.reconnect_timer.setInterval(200)
+        self.reconnect_timer.setInterval(400)
         self.reconnect_timer.timeout.connect(self.reconnect_timeout)
         self.reconnect_timer.start()
+
+        self.cntReconnect = 0
 
     def read_str(self) -> str:
         data = self.read()
@@ -79,10 +81,10 @@ class SerialPort(QSerialPort):
     def open(self):
         if self.isOpen():
             return
-        self.print()
         res = super().open(QIODevice.ReadWrite)
         if res:
             self.set_state(State.CONNECTED)
+            self.print()
 
         return res
 
@@ -140,9 +142,10 @@ class SerialPort(QSerialPort):
 
     def reconnect_timeout(self):
         if self.state != State.RECONNECTING:
+            self.cntReconnect = 0
             return
-
-        logging.debug("Reconnecting...")
+        self.cntReconnect += 1
+        logging.debug(f"Reconnecting... {self.cntReconnect}")
 
         self.clear()
 
