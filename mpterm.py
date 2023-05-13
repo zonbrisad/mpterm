@@ -298,13 +298,12 @@ class MainForm(QMainWindow):
 
     def addLabelCombo(self, labelText):
         label = QLabel(self.ui.centralwidget)
-        label.setText(f" <b>{labelText}:</b>")
+        label.setText(f"<b>{labelText}:</b>")
         label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         self.portLayout.addWidget(label)
         comboBox = QComboBox(self.ui.centralwidget)
         comboBox.setEditable(False)
         comboBox.setCurrentText("")
-        # comboBox.setObjectName(labelText)
         self.portLayout.addWidget(comboBox)
         return comboBox
 
