@@ -39,6 +39,7 @@ from PyQt5.QtGui import QTextCursor, QIcon, QFont, QKeyEvent, QCloseEvent
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
+    QInputDialog,
     QDialog,
     QVBoxLayout,
     QMenu,
@@ -666,6 +667,9 @@ class MainForm(QMainWindow):
         return action
 
     def pause(self):
+        dlg = QInputDialog()
+        dlg.getText(self, "External program", "Commandline", text=self.args.program)
+        return
         if self.isPaused:
             self.isPaused = False
             self.bpPause.setText("Pause")
