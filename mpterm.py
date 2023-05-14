@@ -103,6 +103,33 @@ SUSPEND_TIMEOUT = 8000
 # Definitions ---------------------------------------------------------------
 
 
+class Signal:
+    HUP = 1       
+    INT = 2       
+    QUIT = 3      
+    ILL = 4
+    TRAP = 5      
+    ABRT = 6      
+    BUS =  7      
+    FPE = 8
+    KILL = 9     
+    USR1 = 10     
+    SEGV = 11     
+    USR2 = 12
+    PIPE = 13     
+    ALRM = 14     
+    TERM = 15     
+    STKFLT = 16 
+    CHLD = 17
+    CONT = 18
+    STOP = 19
+    TSTP = 20
+    TTIN = 21
+    TTOU = 22
+    URG = 23
+    
+
+    
 class Mode(enum.Enum):
     Normal = 0
     Echo = 1
@@ -321,7 +348,7 @@ class MainForm(QMainWindow):
 
         # Serial port settings above terminal widget
         self.portLayout = QHBoxLayout()
-        self.portLayout.addSpacing(100)        
+        self.portLayout.addSpacing(100)
         self.cbPort = self.addLabelCombo("Port")
         self.cbBitrate = self.addLabelCombo("Bitrate")
         self.cbBits = self.addLabelCombo("Bits")
@@ -367,8 +394,7 @@ class MainForm(QMainWindow):
         self.cbBitrate.addItem("115200", 115200)
         self.cbBitrate.setCurrentIndex(5)
         self.cbBitrate.activated.connect(self.set_sp)
-        
-    
+
         # "Buttons" layout, to the left
         self.pbOpen = QPushButton(self.ui.centralwidget)
         self.pbOpen.setObjectName("pbOpen")
@@ -378,7 +404,7 @@ class MainForm(QMainWindow):
         self.cbMode = QComboBox(self.ui.centralwidget)
         self.cbMode.addItem(Mode.Normal.name, Mode.Normal)
         self.cbMode.addItem(Mode.Echo.name, Mode.Echo)
-        
+
         self.cbDisplay = QComboBox(self.ui.centralwidget)
         self.cbDisplay.addItem("Ascii", MpTerm.Ascii)
         self.cbDisplay.addItem("Hex", MpTerm.Hex)
@@ -389,7 +415,7 @@ class MainForm(QMainWindow):
         # self.cbNewline = QComboBox(self.ui.centralwidget)
         # self.cbNewline.addItem("nl", 0)
         # self.cbNewline.addItem("cr", 1)
-        # self.cbNewline.addItem("cr+nl", 2)        
+        # self.cbNewline.addItem("cr+nl", 2)
 
         # self.dtrLabel = QLabel("\u26D4 DTR")
         # self.rtsLabel = QLabel("\u26D4 RTS")
@@ -414,7 +440,7 @@ class MainForm(QMainWindow):
         self.pbSuspend = QPushButton("Suspend", self.ui.centralwidget)
         self.pbSuspend.pressed.connect(self.suspend)
 
-        # self.leSyncString = QLineEdit(self.ui.centralwidget)        
+        # self.leSyncString = QLineEdit(self.ui.centralwidget)
         # self.buttonLayout.addWidget(self.leSyncString)
 
         # self.cbProfiles = QComboBox(self.centralwidget)
@@ -441,21 +467,19 @@ class MainForm(QMainWindow):
         self.buttonLayout.addWidget(self.pbSuspend)
 
         self.terminal = QTerminalWidget(
-            self.ui.centralwidget, 
-            serialPort=self.serialPort
+            self.ui.centralwidget, serialPort=self.serialPort
         )
 
         # Layouts
         self.rightVLayout = QVBoxLayout()
         self.rightVLayout.addWidget(self.terminal)
-        
+
         self.mainLayout = QHBoxLayout()
         self.mainLayout.addLayout(self.buttonLayout)
         self.mainLayout.addLayout(self.rightVLayout)
-        
+
         self.ui.verticalLayout.addLayout(self.portLayout)
         self.ui.verticalLayout.addLayout(self.mainLayout)
-
 
         # Status bar
         self.rxLabel = QLabel("")
@@ -464,7 +488,6 @@ class MainForm(QMainWindow):
         self.ui.statusbar.addPermanentWidget(self.stateLabel, stretch=0)
         self.ui.statusbar.addPermanentWidget(self.rxLabel, stretch=0)
         self.ui.statusbar.addPermanentWidget(self.txLabel, stretch=0)
- 
 
         # Send menu
         ctrlcAction = QAction("Ctrl-C (ETX)", self)
@@ -555,13 +578,13 @@ class MainForm(QMainWindow):
         self.ui.actionPortInfo.triggered.connect(self.portInfo)
 
         self.formater = FormatHex()
-         
+
         self.loadSettings()
         self.mode_change()
 
         # Configure signal handler
         signal.signal(signal.SIGUSR1, self.signal_usr1)
-        # signal.signal(signal.SIGUSR2, self.signal_usr2)
+        signal.signal(signal.SIGUSR2, self.signal_usr2)
 
         # Timers
         self.timer = QTimer()
@@ -577,7 +600,8 @@ class MainForm(QMainWindow):
         self.ts = TerminalState()
 
         self.process = QProcess()
-        self.process.readyReadStandardOutput.connect(self.program_data_available)
+        self.process.readyReadStandardOutput.connect(self.program_stdout_available)
+        self.process.readyReadStandardError.connect(self.program_stderr_available)
         self.process.finished.connect(self.program_finished)
 
         self.isPaused = False
@@ -653,13 +677,18 @@ class MainForm(QMainWindow):
         self.serialPort.set_state(State.SUSPENDED, timeout=SUSPEND_TIMEOUT)
         self.update_ui()
 
-    def program_data_available(self):
-        data = self.process.readAllStandardOutput()
+    def program_stdout_available(self):
         logging.debug("Program received data")
-        # data = self.process.readAllStandardError()
-        # self.process.re
+        data = self.process.readAllStandardOutput()
         data_str = str(data, "utf-8")
-        print(data_str)
+        self.terminal.apps(data_str)
+        self.terminal.scroll_down()
+        self.update_ui()
+
+    def program_stderr_available(self):
+        logging.debug("Program received data")
+        data = self.process.readAllStandardError()
+        data_str = str(data, "utf-8")
         self.terminal.apps(data_str)
         self.terminal.scroll_down()
         self.update_ui()
@@ -669,7 +698,6 @@ class MainForm(QMainWindow):
         self.terminal.append_html("<br>")
         if self.serialPort.state == State.SUSPENDED:
             self.serialPort.set_state(State.RECONNECTING)
-
         self.update_ui()
 
     def program(self):
@@ -678,22 +706,23 @@ class MainForm(QMainWindow):
 
         if self.serialPort.state == State.CONNECTED:
             self.serialPort.set_state(State.SUSPENDED, timeout=-1)
-        self.terminal.append_html("<br>")
-        # self.process.start("ls -l")
-        # self.process.start("bpdev attr")
-        # self.process.start("bpexample shade")
-        self.process.start("avrdude")
-        # self.process.start("mpt ard 2>&1")
-        # self.process.
 
-        logging.debug("Runing external program")
+        #prog = "avrdude -c x"
+        self.terminal.append_html("<br>")
+        self.process.start(self.args.program)
+        #self.process.startDetached(prog)
+        logging.debug(f"Runing external program: {self.args.program}  {self.process.processId()}")
         self.update_ui()
         self.terminal.scroll_down()
 
     def signal_usr1(self, signum, frame) -> None:
         logging.debug("USR1 signal received")
         self.suspend()
-        # self.serialPort.set_state(State.SUSPENDED)
+
+    def signal_usr2(self, signum, frame) -> None:
+        logging.debug("USR2 signal received")
+        self.program()
+
 
     def timer_5_timeout(self):
         if self.serialPort.state == State.SUSPENDED:
@@ -701,6 +730,9 @@ class MainForm(QMainWindow):
             self.message(f"Port suspended. Time left {rt / 1000:.0f}")
 
         self.update_ui()
+
+        # data = self.process.readAllStandardOutput()
+        # print(data)
 
     def port_handler(self) -> None:
         portNames = [x.portName() for x in QSerialPortInfo.availablePorts()]
@@ -1012,31 +1044,29 @@ def list_ports():
 
 def main():
     logging_format = "[%(levelname)s] %(lineno)d %(funcName)s() : %(message)s"
-    # logging.basicConfig(format=logging_format, level=logging.DEBUG)
 
     # options parsing
     parser = argparse.ArgumentParser(
-        prog=App.NAME, add_help=True, description=App.DESCRIPTION
-    )
+        prog=App.NAME, add_help=True, description=App.DESCRIPTION)
     parser.add_argument(
-        "--version", action="version", version=f"%(prog)s {App.VERSION}"
-    )
-    parser.add_argument("--info", action="store_true", help="Information about script")
+        "--version", action="version", version=f"%(prog)s {App.VERSION}")
     parser.add_argument(
-        "--suspend", action="store_true", help="Send signal to suspend port temporary"
-    )
-    parser.add_argument("--list", action="store_true", help="List serialports")
-    # parser.add_argument("--build", action="store_true", help="Build ui code")
-    parser.add_argument("--debug", action="store_true", help="Activate debug printout")
+        "--info", action="store_true", help="Information about script")
     parser.add_argument(
-        "--program", action="store", type=str, help="Program to run", default=""
-    )
+        "--suspend", action="store_true", help="Send signal to suspend port temporary")
+    parser.add_argument(
+        "--list", action="store_true", help="List serialports")
+    parser.add_argument(
+        "--debug", action="store_true", help="Activate debug printout")
+    parser.add_argument(
+        "--program", action="store", type=str, help="Program to run", default="")
+    parser.add_argument(
+        "--program_start", action="store_true", help="Send signal to initiate programming ")
 
     args = parser.parse_args()
 
     if args.debug:
         logging.basicConfig(format=logging_format, level=logging.DEBUG)
-        # logging.setLevel(logging.DEBUG)
 
     if args.list:
         list_ports()
@@ -1051,7 +1081,20 @@ def main():
         for r in res:
             pid = int(r.split()[1])
             logging.debug(f"Sending suspend signal to process pid={pid}")
-            os.kill(pid, 10)
+            os.kill(pid, signal.SIGUSR1)
+
+        sys.exit()
+        
+    if args.program_start:
+        with os.popen(
+            "ps aux | grep mpterm.py | grep -v -e 'grep' -e '--program_start'"
+        ) as f:
+            res = f.readlines()
+
+        for r in res:
+            pid = int(r.split()[1])
+            logging.debug(f"Sending suspend signal to process pid={pid}")
+            os.kill(pid, signal.SIGUSR2)
 
         sys.exit()
 

@@ -1190,15 +1190,6 @@ escape_attribute_test = f"""
 {Escape.BG_BLUE} Blue {Escape.END}
 {Escape.BG_MAGENTA} Magenta {Escape.END}
 {Escape.BG_CYAN} Cyan {Escape.END}
-
-{Escape.UNDERLINE}256 Color attributes{Escape.END}
-
-{Escape.fg_8bit_color(12)}Color 12{Escape.END}
-{Escape.fg_8bit_color(45)}Color 45{Escape.END}
-{Escape.fg_8bit_color(240)}Color 240{Escape.END}
-{Escape.bg_8bit_color(32)}Color 32{Escape.END}
-{Escape.bg_8bit_color(78)}Color 78{Escape.END}
-{Escape.bg_8bit_color(249)}Color 249{Escape.END}
 """
 
 cursor_test = f"""
