@@ -44,35 +44,30 @@
 ## About
 MpTerm is a lightweight serial port terminal aimed at embedded development.
 
+
+MpTerm does not have full ANSII terminal support and will likely never have. At present it supports setting font attributes like foreground and background colors, bold, underline and a few others. Some basic cursormovement it also supported.
+
 ![mainwin][mainwin]
 
 ## Features
-
+- Externaly triggered suspend function
+- Externaly triggered programing function
+- Echo mode
+ 
 
 ## Requirements
-
-### Runtime
-
 - Python 3
 - Qt5
-- pyserial
-
-### Development
-
 
 ## Install
 
-
 ### Download
+``` bash
+git clone https://github.com/zonbrisad/mpterm.git
+```
 
 
 ### Installation
-
-
-### Configuration
-
-
-## Freqlenty asked Questions
 
 
 ## History
@@ -99,7 +94,6 @@ MpTerm is a lightweight serial port terminal aimed at embedded development.
 - [ ] FXX 
 - [ ] Cursor management
 - [ ] Dim text
-- [ ] Logging
 - [x] Echo mode
 - [x] Suspend button
 - [x] Pause button 
@@ -133,24 +127,18 @@ Enable access from network
 ### Terminal state monitor (mabye as plugin)
 
 ### Quick macro's
-Add send macros for often used sequences
+Add user defined macros for often used sequences
 
 ### Logg tag 
-  Define some sort of tag that indicates that data should be redirected to another stream
-  (escape or html) ex. <logg> </logg> or \e[XX for ansi terminal
+Define some sort of tag that indicates that data should be redirected to another stream (escape or html) ex. <logg> </logg> or \e[XX for ansi terminal
 
+### Multiple ports open
 
-
-## Links
-
-[Serial port monitor](https://www.hhdsoftware.com/serial-port-monitor)
-
-## Contribute
-
+### Logging function
 
 ## License 
 
-
 ## Links
+[Serial port monitor](https://www.hhdsoftware.com/serial-port-monitor)
 
 [mainwin]:doc/mainwin.png "mainwin"
