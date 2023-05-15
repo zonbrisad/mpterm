@@ -42,7 +42,9 @@
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## About
+MpTerm is a lightweight serial port terminal aimed at embedded development.
 
+![mainwin][mainwin]
 
 ## Features
 
@@ -102,7 +104,7 @@
 - [x] Suspend button
 - [x] Pause button 
 - [ ] Pause history
-- [ ] Programming button
+- [x] Programming button
 - [ ] Sync feature
 - [ ] Hex mode
 - [ ] Show pin status
@@ -112,10 +114,10 @@
 - [ ] copy/paste clipboard
 
 ## Known Bugs
-- ~~~Underline dissapears~~~
-- ~~~Real bright(bold) colors~~~
-- anoying Tab cycling 
-- programing mode does not show output from avrdude
+- [ ] Underline dissapears
+- [ ] Real bright(bold) colors
+- [ ] anoying Tab cycling 
+- [x] programing mode does not show output from avrdude
 
 ## Future ideas
 
@@ -149,9 +151,6 @@ Add send macros for often used sequences
 ## License 
 
 
-
-
-
 ## Links
 
-[Markup basics](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/autolinked-references-and-urls)
+[mainwin]:doc/mainwin.png "mainwin"
