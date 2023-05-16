@@ -4,7 +4,7 @@
 #
 # Serial terminal
 #
-# File:    mpterm.py
+# File:    mpterm
 # Author:
 # Date:    2017-05-29
 # License:
@@ -489,6 +489,10 @@ class MainForm(QMainWindow):
         self.ui.statusbar.addPermanentWidget(self.stateLabel, stretch=0)
         self.ui.statusbar.addPermanentWidget(self.rxLabel, stretch=0)
         self.ui.statusbar.addPermanentWidget(self.txLabel, stretch=0)
+
+        #self.menuSettings = QMenu(self.ui.menubar)
+        #self.ui.menubar.addMenu(self.menuSettings)
+        # self.ui.menubar.addMenu(self.menuSettings.menuAction())
 
         # Send menu
         ctrlcAction = QAction("Ctrl-C (ETX)", self)
@@ -1037,7 +1041,7 @@ class MainForm(QMainWindow):
             self.appendHtml("<br>")
 
     def new(self):
-        subprocess.Popen([f"{self_dir}/mpterm.py"], shell=False)
+        subprocess.Popen([f"{self_dir}/mpterm"], shell=False)
 
 
 def list_ports():
@@ -1078,7 +1082,7 @@ def main():
 
     if args.suspend:
         with os.popen(
-            "ps aux | grep mpterm.py | grep -v -e 'grep' -e '--suspend'"
+            "ps aux | grep mpterm | grep -v -e 'grep' -e '--suspend'"
         ) as f:
             res = f.readlines()
 
@@ -1091,7 +1095,7 @@ def main():
         
     if args.program_start:
         with os.popen(
-            "ps aux | grep mpterm.py | grep -v -e 'grep' -e '--program_start'"
+            "ps aux | grep mpterm | grep -v -e 'grep' -e '--program_start'"
         ) as f:
             res = f.readlines()
 

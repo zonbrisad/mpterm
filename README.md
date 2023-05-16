@@ -50,6 +50,7 @@ MpTerm does not have full ANSII terminal support and will likely never have. At 
 ![mainwin][mainwin]
 
 ## Features
+- Basic ANSII Terminal functionality
 - Externaly triggered suspend function
 - Externaly triggered programing function
 - Echo mode
@@ -68,6 +69,19 @@ git clone https://github.com/zonbrisad/mpterm.git
 
 
 ### Installation
+
+## Functions
+
+### Temporary suspend
+
+MpTerm has a function that causes it to temporary release the port for a short time and thereafter automaticly reconnect. This feature can be usefull if the connected devices can be programmed via the serial port, like for example an Arduino. Suspending can be done in several different ways. The simplest is by pressing the suspend button. However, the port can also be suspended from the commandline which simplifies automation. To suspend MpTerm, simply send the USR1 signal to the process.
+``` bash
+>kill -s SIGUSR1 pid
+```
+An alternative to "kill" is to use the builtin function for suspending mpterm. It will automaticly send SIGUSR1 to all instances of mpterm running. 
+``` bash
+>mpterm --suspend
+```
 
 
 ## History
@@ -112,6 +126,8 @@ git clone https://github.com/zonbrisad/mpterm.git
 - [ ] Real bright(bold) colors
 - [ ] anoying Tab cycling 
 - [x] programing mode does not show output from avrdude
+- [ ] Terminal performance is slow under certain conditions
+- [ ] Row removal fail sometimes
 
 ## Future ideas
 
