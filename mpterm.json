@@ -1,10 +1,12 @@
 {
     "alias": "default",
-    "port": "ttyUSB1",
+    "port": "ttyUSB2",
     "bitrate": "115200",
     "databits": "8",
     "parity": "None",
     "stopbits": "1",
     "flowcontrol": "None",
-    "mode": "Ascii"
+    "mode": "Ascii",
+    "suspend_timeout": 8,
+    "ext_program": "avrdude -c x"
 }

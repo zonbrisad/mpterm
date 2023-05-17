@@ -32,6 +32,8 @@ import logging
 import argparse
 from datetime import datetime, date, time
 
+sys.path.append("../")
+
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
