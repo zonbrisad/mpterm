@@ -74,7 +74,7 @@ git clone https://github.com/zonbrisad/mpterm.git
 
 ### Temporary suspend
 
-MpTerm has a function that causes it to temporary release the port for a short time and thereafter automaticly reconnect. This feature can be usefull if the connected devices can be programmed via the serial port, like for example an Arduino. Suspending can be done in several different ways. The simplest is by pressing the suspend button. However, the port can also be suspended from the commandline which simplifies automation. To suspend MpTerm, simply send the USR1 signal to the process.
+MpTerm has a function that enables it to temporary release the port for a short time and thereafter automaticly reconnect. This feature can be usefull if some other program needs to connect to the device via the serialport. For example a program for updating firmware like avrdude needs the serialport to write to the Arduino flash. Suspending can be done in several different ways. The simplest is by pressing the suspend button. However, the port can also be suspended from the commandline which simplifies automation. To suspend MpTerm, simply send the USR1 signal to the process.
 ``` bash
 >kill -s SIGUSR1 pid
 ```
@@ -91,11 +91,11 @@ An alternative to "kill" is to use the builtin function for suspending mpterm. I
 
 ## ToDo
 
-- [x] Settings file
-- [ ] Multiple settings profiles
-- [ ] Terminal functions
+- Terminal functions
+- [ ] Cursor management
 - [x] Color encoding (8 colors)
 - [x] 256 color encoding
+- [ ] Dim text
 - [ ] Truecolor (RGB)
 - [ ] Underline style
 - [x] Reverse text
@@ -106,8 +106,9 @@ An alternative to "kill" is to use the builtin function for suspending mpterm. I
 - [ ] home
 - [ ] delete
 - [ ] FXX 
-- [ ] Cursor management
-- [ ] Dim text
+- Feature
+- [x] Settings file
+- [ ] Multiple settings profiles
 - [x] Echo mode
 - [x] Suspend button
 - [x] Pause button 

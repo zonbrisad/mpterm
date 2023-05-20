@@ -1,12 +1,12 @@
 {
     "alias": "default",
-    "port": "ttyUSB2",
-    "bitrate": "115200",
+    "port": "ttyUSB0",
+    "bitrate": "57600",
     "databits": "8",
     "parity": "None",
     "stopbits": "1",
     "flowcontrol": "None",
     "mode": "Ascii",
-    "suspend_timeout": 8,
-    "ext_program": "avrdude -c x"
+    "suspend_timeout": 7,
+    "ext_program": "avrdude -v -v -p atmega328p -b 57600 -c arduino -P __PORT__ -U flash:w:output/simple.hex:i"
 }

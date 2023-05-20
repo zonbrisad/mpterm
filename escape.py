@@ -291,7 +291,7 @@ class EscapeObj:
         if self.csi == CSI.CURSOR_POSITION:
             paramstring = seq[2:-1]
             params = paramstring.replace(":", ";").split(";")
-            #logging.debug(f"Paramstring len: {len(paramstring)}  len: {len(params)}")
+            # logging.debug(f"Paramstring len: {len(paramstring)}  len: {len(params)}")
 
             if len(paramstring) == 0:
                 return
@@ -300,7 +300,7 @@ class EscapeObj:
             if len(params) == 2:
                 self.n = int(params[0])
                 self.m = int(params[1])
-                
+
     @staticmethod
     def find_sgr(sgr_code: str) -> SGR:
         for e in SGR:
@@ -521,16 +521,16 @@ class EscapeTokenizer:
 
     def isTerminator(self, ch):
         o = ord(ch)
-        #print(f"Ord({ch}) = {o}")
+        # print(f"Ord({ch}) = {o}")
 
-        if o == 0x5B:     # "[" is excluded as terminator, possibly wrong
+        if o == 0x5B:  # "[" is excluded as terminator, possibly wrong
             return False
-        
+
         if o >= 0x40 and o <= 0x7E:
             return True
 
         return False
-    
+
     def __next__(self) -> str:
         l = len(self.buf)
         if l == 0:  # Buffer is empty, abort iteration
@@ -539,7 +539,7 @@ class EscapeTokenizer:
         j = 0
 
         if self.buf[j] == Escape.ESCAPE:  # Escape sequence start character found
-            while j < l and not self.isTerminator(self.buf[j]): 
+            while j < l and not self.isTerminator(self.buf[j]):
                 j += 1
             if j == l:
                 raise StopIteration
@@ -931,6 +931,7 @@ class TerminalLine:
             self.line.append(ch)
         pass
 
+
 class TerminalState:
     BOLD: bool = False
     DIM: bool = False
@@ -976,7 +977,7 @@ class TerminalState:
             b += "text-decoration:line-through;"
         if self.OVERLINE:
             b += "text-decoration:overline;"
-        
+
         b += '">'
         b += data
         b += "</span>"
@@ -985,7 +986,7 @@ class TerminalState:
     def reset(self):
         self.reset_attr()
         self.et.clear()
-        
+
     def reset_attr(self):
         self.BOLD = False
         self.DIM = False
@@ -1038,7 +1039,7 @@ class TerminalState:
                             self.UNDERLINE = False
                             self.CROSSED = False
 
-                        if a == SGR.NOT_OVERLINE: 
+                        if a == SGR.NOT_OVERLINE:
                             self.OVERLINE = False
 
                         # if a in [
@@ -1051,15 +1052,15 @@ class TerminalState:
                         #     SGR.NOT_CROSSED,
                         # ]:
                         #     setattr(self, a.name, False)
-                            # setattr(self, sgr_to_escape_color[a][1].name, False)
+                        # setattr(self, sgr_to_escape_color[a][1].name, False)
 
                         if a == SGR.NORMAL_INTENSITY:
                             self.BOLD = False
                             self.DIM = False
-                            
+
                         if a == SGR.NOT_ITALIC:
                             self.ITALIC = False
-                            
+
                         if a == SGR.NOT_UNDERLINED:
                             self.UNDERLINE = False
                         # if a == SGR.NOT_BLINKING:
@@ -1067,8 +1068,8 @@ class TerminalState:
                         if a == SGR.NOT_REVERSED:
                             self.REVERSE = False
                         # if a == SGR.REVEAL:
-                        #     self.Reveal = 
-                            
+                        #     self.Reveal =
+
                         if a == SGR.NOT_CROSSED:
                             self.CROSSED = False
 
@@ -1080,7 +1081,7 @@ class TerminalState:
                             SGR.FG_COLOR_BLUE,
                             SGR.FG_COLOR_MAGENTA,
                             SGR.FG_COLOR_CYAN,
-                            SGR.FG_COLOR_WHITE
+                            SGR.FG_COLOR_WHITE,
                         ]:
                             if self.BOLD:
                                 self.fg_color = sgr_to_escape_color_bold[a]

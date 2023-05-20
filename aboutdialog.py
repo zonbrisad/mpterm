@@ -8,7 +8,7 @@
 # Author:   Peter Malmberg  <peter.malmberg@gmail.com>
 # Org:      __ORGANISTATION__
 # Date:     2022-11-23
-# License:  
+# License:
 # Python:   >= 3.0
 #
 # ----------------------------------------------------------------------------
@@ -20,6 +20,7 @@ from PyQt5.QtWidgets import (
     QTextEdit,
     QDialogButtonBox,
 )
+
 
 class AboutDialog(QDialog):
     def __init__(self, title, about, parent=None):
@@ -55,6 +56,7 @@ class AboutDialog(QDialog):
 
 def main() -> None:
     pass
+
 
 if __name__ == "__main__":
     main()

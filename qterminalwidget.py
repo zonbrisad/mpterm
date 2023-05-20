@@ -8,7 +8,7 @@
 # Author:   Peter Malmberg  <peter.malmberg@gmail.com>
 # Org:      __ORGANISTATION__
 # Date:     2022-12-02
-# License:  
+# License:
 # Python:   >= 3.0
 #
 # ----------------------------------------------------------------------------
@@ -19,10 +19,7 @@ import logging
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QTextCursor, QFont, QKeyEvent
-from PyQt5.QtWidgets import (
-    QTextEdit,
-    QPlainTextEdit
-)
+from PyQt5.QtWidgets import QTextEdit, QPlainTextEdit
 
 # from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
 from escape import Escape, Ascii, TerminalState, CSI, SGR, EscapeObj
@@ -31,47 +28,48 @@ from escape import Escape, Ascii, TerminalState, CSI, SGR, EscapeObj
 
 # Code -----------------------------------------------------------------------
 
-keys = { Qt.Key_Enter:("\n", "Enter"), 
-         Qt.Key_Return:("\n", "Return"), 
-         Qt.Key_Escape:("", "Escape"), 
-         Qt.Key_Delete:("", "Delete"), 
-         Qt.Key_Left:(Escape.BACK, "Left"),
-         Qt.Key_Right:(Escape.FORWARD, "Right"),
-         Qt.Key_Up:(Escape.UP, "Up"),
-         Qt.Key_Down:(Escape.DOWN, "Down"),
-         Qt.Key_Insert:("", "Insert"),
-         Qt.Key_Backspace:("\b", "Backspace"),
-         Qt.Key_Home:("", "Home"),
-         Qt.Key_End:("", "End"),
-         Qt.Key_PageDown:("", "Page down"),
-         Qt.Key_PageUp:("", "Page up"),
-         Qt.Key_F1:("\x09", "F1"),
-         Qt.Key_F2:("", "F2"),
-         Qt.Key_F3:("", "F3"),
-         Qt.Key_F4:("", "F4"),
-         Qt.Key_F5:("", "F5"),
-         Qt.Key_F6:("", "F6"),
-         Qt.Key_F7:("", "F7"),
-         Qt.Key_F8:("", "F8"),
-         Qt.Key_F9:("", "F9"),
-         Qt.Key_F10:("", "F10"),
-         Qt.Key_F11:("", "F11"),
-         Qt.Key_F12:("", "F12"),
-         Qt.Key_Control:("", "Control"),
-         Qt.Key_Shift:("", "Shift"),
-         Qt.Key_Alt:("", "Alt"),
-         Qt.Key_AltGr:("", "Alt Gr"),
-         Qt.Key_Space:(" ", "Space"),
-         Qt.Key_Print:("", "Print"),
-         Qt.Key_ScrollLock:("", "Scroll lock"),
-         Qt.Key_CapsLock:("", "Caps lock"),
-         Qt.Key_Pause:("", "Pause"),
-         Qt.Key_Tab:(Ascii.TAB, "Tab")
-} 
+keys = {
+    Qt.Key_Enter: ("\n", "Enter"),
+    Qt.Key_Return: ("\n", "Return"),
+    Qt.Key_Escape: ("", "Escape"),
+    Qt.Key_Delete: ("", "Delete"),
+    Qt.Key_Left: (Escape.BACK, "Left"),
+    Qt.Key_Right: (Escape.FORWARD, "Right"),
+    Qt.Key_Up: (Escape.UP, "Up"),
+    Qt.Key_Down: (Escape.DOWN, "Down"),
+    Qt.Key_Insert: ("", "Insert"),
+    Qt.Key_Backspace: ("\b", "Backspace"),
+    Qt.Key_Home: ("", "Home"),
+    Qt.Key_End: ("", "End"),
+    Qt.Key_PageDown: ("", "Page down"),
+    Qt.Key_PageUp: ("", "Page up"),
+    Qt.Key_F1: ("\x09", "F1"),
+    Qt.Key_F2: ("", "F2"),
+    Qt.Key_F3: ("", "F3"),
+    Qt.Key_F4: ("", "F4"),
+    Qt.Key_F5: ("", "F5"),
+    Qt.Key_F6: ("", "F6"),
+    Qt.Key_F7: ("", "F7"),
+    Qt.Key_F8: ("", "F8"),
+    Qt.Key_F9: ("", "F9"),
+    Qt.Key_F10: ("", "F10"),
+    Qt.Key_F11: ("", "F11"),
+    Qt.Key_F12: ("", "F12"),
+    Qt.Key_Control: ("", "Control"),
+    Qt.Key_Shift: ("", "Shift"),
+    Qt.Key_Alt: ("", "Alt"),
+    Qt.Key_AltGr: ("", "Alt Gr"),
+    Qt.Key_Space: (" ", "Space"),
+    Qt.Key_Print: ("", "Print"),
+    Qt.Key_ScrollLock: ("", "Scroll lock"),
+    Qt.Key_CapsLock: ("", "Caps lock"),
+    Qt.Key_Pause: ("", "Pause"),
+    Qt.Key_Tab: (Ascii.TAB, "Tab"),
+}
 
 
 def get_description(key: QKeyEvent) -> str:
-    for a,b in keys.items():
+    for a, b in keys.items():
         if key.key() == a:
             return b[1]
 
@@ -79,7 +77,7 @@ def get_description(key: QKeyEvent) -> str:
 
 
 def get_key(key: QKeyEvent) -> str:
-    for a,b in keys.items():
+    for a, b in keys.items():
         if key.key() == a:
             return b[0]
 
@@ -87,21 +85,22 @@ def get_key(key: QKeyEvent) -> str:
 
 
 class QTerminalWidget(QPlainTextEdit):
-
     def __init__(self, parent=None, serialPort=None, init=""):
         super().__init__(parent)
-        self.serialPort=serialPort
+        self.serialPort = serialPort
         self.setObjectName("textEdit")
 
         font = QFont()
         font.setFamily("Monospace")
         font.setPointSize(11)
         self.setFont(font)
-        
-        #self.setFocusPolicy(Qt.NoFocus)
-        self.setStyleSheet("background-color: rgb(0, 0, 0); color : White; font-family:Monospace; font-size:large; line-height:1.5;")
+
+        # self.setFocusPolicy(Qt.NoFocus)
+        self.setStyleSheet(
+            "background-color: rgb(0, 0, 0); color : White; font-family:Monospace; font-size:large; line-height:1.5;"
+        )
         # self.setStyleSheet("background-color: rgb(0, 0, 0); color : White; line-height:20pt; font-family:Monospace")
-        
+
         self.cur = QTextCursor(self.document())
 
         self.insert(init)
@@ -112,12 +111,12 @@ class QTerminalWidget(QPlainTextEdit):
         # p = self.viewport().palette()
         # p.setColor(self.viewport().backgroundRole(), QColor(0,0,0))
         # self.viewport().setPalette(p)
-        
+
         self.ts = TerminalState()
 
         self.setReadOnly(True)
         self.clear()
-        
+
         self.ensureCursorVisible()
         self.setCursorWidth(2)
         self.overwrite = False
@@ -132,52 +131,66 @@ class QTerminalWidget(QPlainTextEdit):
         super().clear()
         self.ts.reset()
         self.moveCursor(QTextCursor.End)
-        
-    def update(self, s : str) -> str:
+
+    def update(self, s: str) -> str:
         self.ts.update(s)
-        #b = template + self.ts.get_buf()
+        # b = template + self.ts.get_buf()
         self.buf += b
         logging.debug(b)
 
-    def printpos(self, newPos : QTextCursor.MoveOperation ) -> None:
-        pos = self.cur.position() 
+    def printpos(self, newPos: QTextCursor.MoveOperation) -> None:
+        pos = self.cur.position()
         bpos = self.cur.positionInBlock()
-        logging.debug(f"Cursor moved: abs:{pos}  block:{bpos}  newpos: {newPos}") 
-        
+        logging.debug(f"Cursor moved: abs:{pos}  block:{bpos}  newpos: {newPos}")
+
     def insert(self, html):
         self.cur.insertHtml(html)
-        #self.printpos(None)
+        # self.printpos(None)
 
-    def move(self, newPos : QTextCursor) -> None:
+    def move(self, newPos: QTextCursor) -> None:
         self.cur.movePosition(newPos)
-        #self.printpos(newPos)
+        # self.printpos(newPos)
+
+    def remove_rows(self, rows):
+        cursor = QTextCursor(self.document())
+        logging.debug(f"Removing {rows} lines")
+        for x in range(rows):
+            # print("Removing row")
+            cursor.movePosition(QTextCursor.Start, QTextCursor.MoveAnchor)
+            # cursor.movePosition(QTextCursor.Start)
+            cursor.select(QTextCursor.LineUnderCursor)
+            cursor.removeSelectedText()
 
     def limit(self):
         lines = self.document().lineCount()
-        logging.debug(f"Lines: {lines}")
-        if lines > self.maxLines:
-            cursor = QTextCursor(self.document())  
-            cursor.movePosition(QTextCursor.Start, QTextCursor.MoveAnchor)
-            cursor.movePosition(QTextCursor.Down, 50)
-            cursor.removeSelectedText()  
-
+        logging.debug(f"Lines: {lines}  Maxlines: {self.maxLines}")
+        if lines > (self.maxLines + 20):
+            self.remove_rows(lines - (self.maxLines + 20))
+            # cursor = QTextCursor(self.document())
+            # # cursor.movePosition(QTextCursor.Start, QTextCursor.MoveAnchor)
+            # cursor.movePosition(QTextCursor.Start)
+            # cursor.movePosition(
+            #     QTextCursor.Down, QTextCursor.MoveAnchor, (lines - self.maxLines)
+            # )
+            # cursor.select(QTextCursor.LineUnderCursor)
+            # # cursor.select(QTextCursor.BlockUnderCursor)
+            # cursor.removeSelectedText()
 
     def append_html(self, html):
         self.move(QTextCursor.End)
         self.insert(html)
 
-    def insertHtml(self, html):    
+    def insertHtml(self, html):
         l = len(html)
         self.cur.insertHtml(html)
         self.cur.movePosition(QTextCursor.Right, l)
 
-    def apps(self, s : str) -> None:
+    def apps(self, s: str) -> None:
         lines = self.ts.update(s)
 
         rows = self.document().lineCount()
-        
+
         for line in lines:
-            
             if type(line) == EscapeObj:
                 if line.csi == CSI.CURSOR_UP:
                     self.move(QTextCursor.Up)
@@ -196,25 +209,24 @@ class QTerminalWidget(QPlainTextEdit):
 
                 if line.csi == CSI.ERASE_IN_LINE:
                     continue
-                
+
                 if line.csi == CSI.CURSOR_POSITION:
                     self.move(QTextCursor.End)
                     self.move(QTextCursor.StartOfLine)
                     # self.move(QTextCursor.StartOfLine)
-                    for a in range(0, 25-line.n):
+                    for a in range(0, 25 - line.n):
                         self.move(QTextCursor.Up)
-                        
+
                     logging.debug(f"Cursor position: n: {line.n}  m: {line.m}")
                     # self.cur.ro
                     continue
-                
+
                 if line.csi == CSI.CURSOR_PREVIOUS_LINE:
-                    logging.debug("Cursor previous line") 
+                    logging.debug("Cursor previous line")
                     self.move(QTextCursor.StartOfLine)
                     self.move(QTextCursor.Up)
                     continue
 
-                
             if line == Ascii.BS:
                 logging.debug("Backspace")
                 # self.cur.deletePreviousChar()
@@ -234,38 +246,38 @@ class QTerminalWidget(QPlainTextEdit):
                     self.cr = False
                 self.cur.insertHtml("<br>")
                 continue
-                
-            #logging.debug(line) 
-            #self.append_html(line)
+
+            # logging.debug(line)
+            # self.append_html(line)
             l = len(line)
             if not self.cur.atEnd():
                 self.cur.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, l)
-                #print(f"Distance to end: {l}")
-                #self.cur.setPosition()
-                #self.cur.removeSelectedText()
+                # print(f"Distance to end: {l}")
+                # self.cur.setPosition()
+                # self.cur.removeSelectedText()
                 self.cur.insertHtml(line)
                 self.cur.movePosition(QTextCursor.Right, l)
                 continue
-                
+
             self.cur.insertHtml(line)
             self.cur.movePosition(QTextCursor.Right, l)
             self.cr = False
 
         self.limit()
-        
+
     # def keyPressEvent(self, e: QKeyEvent) -> None:
-    #     logging.debug(f"  {e.key():x}  {get_description(e)}")   
+    #     logging.debug(f"  {e.key():x}  {get_description(e)}")
     #     self.sp.send_string(get_key(e))
     #     #super().keyPressEvent(e)
 
     def scroll_down(self):
-        vsb=self.verticalScrollBar()
+        vsb = self.verticalScrollBar()
         vsb.setValue(vsb.maximum())
 
 
 def main() -> None:
     pass
 
+
 if __name__ == "__main__":
     main()
-    

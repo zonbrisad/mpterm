@@ -8,7 +8,7 @@
 # Author:   Peter Malmberg  <peter.malmberg@gmail.com>
 # Org:      __ORGANISTATION__
 # Date:     2023-01-12
-# License:  
+# License:
 # Python:   >= 3.0
 #
 # ----------------------------------------------------------------------------
@@ -16,6 +16,7 @@ import enum
 import logging
 from PyQt5.QtCore import QTimer, QIODevice
 from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
+
 
 class State(enum.Enum):
     DISCONNECTED = 0
@@ -38,8 +39,8 @@ errors = {
     QSerialPort.UnknownError: "Unknown",
 }
 
-class SerialPort(QSerialPort):
 
+class SerialPort(QSerialPort):
     def __init__(self) -> None:
         super().__init__()
 
@@ -155,6 +156,7 @@ class SerialPort(QSerialPort):
 
 def main() -> None:
     pass
+
 
 if __name__ == "__main__":
     main()
