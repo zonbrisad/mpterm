@@ -128,7 +128,8 @@ An alternative to "kill" is to use the builtin function for suspending mpterm. I
 - [ ] anoying Tab cycling 
 - [x] programing mode does not show output from avrdude
 - [ ] Terminal performance is slow under certain conditions
-- [ ] Row removal fail sometimes
+- [ ] Row removal fail
+- [ ] Reconnecting to port despite avrdude using the port
 
 ## Future ideas
 

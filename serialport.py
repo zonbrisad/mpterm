@@ -81,7 +81,7 @@ class SerialPort(QSerialPort):
 
     def open(self):
         if self.isOpen():
-            return
+            return True
         res = super().open(QIODevice.ReadWrite)
         if res:
             self.set_state(State.CONNECTED)
@@ -113,7 +113,6 @@ class SerialPort(QSerialPort):
                 logging.error("Could not write data.")
 
     def set_state(self, newState: State, timeout=4000) -> None:
-
         if newState == State.SUSPENDED and self.state == State.CONNECTED:
             self.close()
             self.state = State.SUSPENDED
@@ -145,13 +144,15 @@ class SerialPort(QSerialPort):
         if self.state != State.RECONNECTING:
             self.cntReconnect = 0
             return
+
         self.cntReconnect += 1
         logging.debug(f"Reconnecting... {self.cntReconnect}")
 
         self.clear()
 
-        if self.open():
-            self.set_state(State.CONNECTED)
+        self.open()
+        # if self.open():
+        # self.set_state(State.CONNECTED)
 
 
 def main() -> None:

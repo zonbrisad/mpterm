@@ -94,7 +94,7 @@ self_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
 
 class App:
     NAME = "mpterm"
-    VERSION = "0.32"
+    VERSION = "0.33"
     DESCRIPTION = "MpTerm is a simple serial terminal program"
     LICENSE = ""
     AUTHOR = "Peter Malmberg"
@@ -102,6 +102,8 @@ class App:
     ORG = ""
     HOME = "github.com/zonbrisad/mpterm"
     ICON = f"{self_dir}/icons/mp_icon2.png"
+    MAX_LINES = 100
+    RECEIVE_BUFFER = 256
 
 
 mp_settings = f"{self_dir}/mpterm.json"
@@ -448,6 +450,7 @@ class MainForm(QMainWindow):
         self.buttonLayout.addWidget(self.pbSuspend)
 
         self.serialPort = SerialPort()
+        self.serialPort.setReadBufferSize(256)
         self.serialPort.readyRead.connect(self.read)
         self.terminal = QTerminalWidget(self.centralwidget, serialPort=self.serialPort)
 
@@ -644,7 +647,9 @@ class MainForm(QMainWindow):
         self.isPaused = False
 
         self.terminal.installEventFilter(self)
-        self.terminal.apps(f"""MpTerm Ver: <b>{App.VERSION}</b><br><br>""")
+        self.terminal.append_terminal_text(
+            f"""MpTerm Ver: <b>{App.VERSION}</b><br><br>"""
+        )
 
         self.update_ui()
         self.init_port()
@@ -738,7 +743,7 @@ class MainForm(QMainWindow):
         logging.debug("Program received data")
         data = self.process.readAllStandardOutput()
         data_str = str(data, "utf-8")
-        self.terminal.apps(data_str)
+        self.terminal.append_terminal_text(data_str)
         self.terminal.scroll_down()
         self.update_ui()
 
@@ -746,7 +751,7 @@ class MainForm(QMainWindow):
         logging.debug("Program received data")
         data = self.process.readAllStandardError()
         data_str = str(data, "utf-8")
-        self.terminal.apps(data_str)
+        self.terminal.append_terminal_text(data_str)
         self.terminal.scroll_down()
         self.update_ui()
 
@@ -938,10 +943,10 @@ class MainForm(QMainWindow):
         DisplayMode = self.cbDisplay.currentData()
 
         if DisplayMode == MpTerm.Ascii:  # Standard ascii display mode
-            self.terminal.apps(data_str)
+            self.terminal.append_terminal_text(data_str)
 
         if DisplayMode != MpTerm.Ascii:  # Hexadecimal display mode
-            self.terminal.apps(self.formater.update(data))
+            self.terminal.append_terminal_text(self.formater.update(data))
 
         self.terminal.scroll_down()
         self.update_ui()

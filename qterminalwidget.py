@@ -88,12 +88,14 @@ class QTerminalWidget(QPlainTextEdit):
     def __init__(self, parent=None, serialPort=None, init=""):
         super().__init__(parent)
         self.serialPort = serialPort
-        self.setObjectName("textEdit")
+        # self.setObjectName("textEdit")
 
         font = QFont()
         font.setFamily("Monospace")
         font.setPointSize(11)
         self.setFont(font)
+        # self.maximumBlockCount = 100
+        # self.setMaximumBlockCount(10)
 
         # self.setFocusPolicy(Qt.NoFocus)
         self.setStyleSheet(
@@ -103,7 +105,8 @@ class QTerminalWidget(QPlainTextEdit):
 
         self.cur = QTextCursor(self.document())
 
-        self.insert(init)
+        # self.insert(init)
+        # self.setPlaceholderText("asdfasdfasdf")
         # doc = self.document()
         # settings = QTextOption()
         # settings.setFlags(QTextOption.IncludeTrailingSpaces | QTextOption.ShowTabsAndSpaces )
@@ -151,30 +154,23 @@ class QTerminalWidget(QPlainTextEdit):
         self.cur.movePosition(newPos)
         # self.printpos(newPos)
 
-    def remove_rows(self, rows):
-        cursor = QTextCursor(self.document())
-        logging.debug(f"Removing {rows} lines")
-        for x in range(rows):
-            # print("Removing row")
+    def remove_rows_alt(self, lines):
+        logging.debug(f"Removing {lines} lines")
+        cursor = self.textCursor()  # QTextCursor(self.document())
+
+        for x in range(lines):
             cursor.movePosition(QTextCursor.Start, QTextCursor.MoveAnchor)
-            # cursor.movePosition(QTextCursor.Start)
             cursor.select(QTextCursor.LineUnderCursor)
             cursor.removeSelectedText()
+            cursor.deleteChar()
 
-    def limit(self):
+        self.setTextCursor(cursor)
+
+    def limit_lines(self):
         lines = self.document().lineCount()
         logging.debug(f"Lines: {lines}  Maxlines: {self.maxLines}")
-        if lines > (self.maxLines + 20):
-            self.remove_rows(lines - (self.maxLines + 20))
-            # cursor = QTextCursor(self.document())
-            # # cursor.movePosition(QTextCursor.Start, QTextCursor.MoveAnchor)
-            # cursor.movePosition(QTextCursor.Start)
-            # cursor.movePosition(
-            #     QTextCursor.Down, QTextCursor.MoveAnchor, (lines - self.maxLines)
-            # )
-            # cursor.select(QTextCursor.LineUnderCursor)
-            # # cursor.select(QTextCursor.BlockUnderCursor)
-            # cursor.removeSelectedText()
+        if lines > self.maxLines:
+            self.remove_rows_alt(lines - self.maxLines)
 
     def append_html(self, html):
         self.move(QTextCursor.End)
@@ -185,10 +181,10 @@ class QTerminalWidget(QPlainTextEdit):
         self.cur.insertHtml(html)
         self.cur.movePosition(QTextCursor.Right, l)
 
-    def apps(self, s: str) -> None:
+    def append_terminal_text(self, s: str) -> None:
         lines = self.ts.update(s)
 
-        rows = self.document().lineCount()
+        # lines = self.document().lineCount()
 
         for line in lines:
             if type(line) == EscapeObj:
@@ -213,7 +209,6 @@ class QTerminalWidget(QPlainTextEdit):
                 if line.csi == CSI.CURSOR_POSITION:
                     self.move(QTextCursor.End)
                     self.move(QTextCursor.StartOfLine)
-                    # self.move(QTextCursor.StartOfLine)
                     for a in range(0, 25 - line.n):
                         self.move(QTextCursor.Up)
 
@@ -247,7 +242,6 @@ class QTerminalWidget(QPlainTextEdit):
                 self.cur.insertHtml("<br>")
                 continue
 
-            # logging.debug(line)
             # self.append_html(line)
             l = len(line)
             if not self.cur.atEnd():
@@ -263,7 +257,7 @@ class QTerminalWidget(QPlainTextEdit):
             self.cur.movePosition(QTextCursor.Right, l)
             self.cr = False
 
-        self.limit()
+        self.limit_lines()
 
     # def keyPressEvent(self, e: QKeyEvent) -> None:
     #     logging.debug(f"  {e.key():x}  {get_description(e)}")
