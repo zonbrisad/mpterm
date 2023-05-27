@@ -1,4 +1,7 @@
 
+# Version 0.34
+- Fixed Port setting error
+
 # Version 0.33
 - Fixed Port setting error
 

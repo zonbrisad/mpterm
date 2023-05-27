@@ -94,7 +94,7 @@ self_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
 
 class App:
     NAME = "mpterm"
-    VERSION = "0.33"
+    VERSION = "0.34"
     DESCRIPTION = "MpTerm is a simple serial terminal program"
     LICENSE = ""
     AUTHOR = "Peter Malmberg"
@@ -102,7 +102,7 @@ class App:
     ORG = ""
     HOME = "github.com/zonbrisad/mpterm"
     ICON = f"{self_dir}/icons/mp_icon2.png"
-    MAX_LINES = 100
+    MAX_LINES = 150
     RECEIVE_BUFFER = 256
 
 
@@ -453,6 +453,7 @@ class MainForm(QMainWindow):
         self.serialPort.setReadBufferSize(256)
         self.serialPort.readyRead.connect(self.read)
         self.terminal = QTerminalWidget(self.centralwidget, serialPort=self.serialPort)
+        self.terminal.setMaxLines(App.MAX_LINES)
 
         # Layouts
         self.rightVLayout = QVBoxLayout()

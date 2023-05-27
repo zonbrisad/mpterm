@@ -122,14 +122,14 @@ An alternative to "kill" is to use the builtin function for suspending mpterm. I
 - [ ] Manage Bell character
 - [ ] copy/paste clipboard
 
-## Known Bugs
-- [ ] Underline dissapears
-- [ ] Real bright(bold) colors
-- [ ] anoying Tab cycling 
-- [x] programing mode does not show output from avrdude
-- [ ] Terminal performance is slow under certain conditions
-- [ ] Row removal fail
-- [ ] Reconnecting to port despite avrdude using the port
+## Known Issues
+- [ ] Rendering: Text lines overlap with one(maybe two) pixel row(s)
+- [ ] Rendering: Terminal rendering performance is low
+- [ ] Rendering: Real bright(bold) colors
+- [x] Rendering: Row removal fail
+- [ ] UI: Tab cycling is not correct 
+- [x] UI: programing mode does not show output from some external programs
+- [ ] Feature: Reconnecting to port despite avrdude using the port
 
 ## Future ideas
 
