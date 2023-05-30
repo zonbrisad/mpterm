@@ -7,6 +7,11 @@
     "stopbits": "1",
     "flowcontrol": "None",
     "mode": "Ascii",
-    "suspend_timeout": 7,
-    "ext_program": "avrdude -v -v -p atmega328p -b 57600 -c arduino -P __PORT__ -U flash:w:output/simple.hex:i"
+    "suspend_timeout": 8,
+    "ext_program": "",
+    "macro1": "help\\n",
+    "macro2": "c16\\n",
+    "macro3": "c256\\n",
+    "macro4": "r100\\n",
+    "macro5": "bar\\n"
 }

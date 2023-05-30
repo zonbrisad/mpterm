@@ -1,6 +1,6 @@
 
 # Version 0.34
-- Fixed Port setting error
+- Fixed line removal bug
 
 # Version 0.33
 - Fixed Port setting error

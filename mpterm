@@ -48,11 +48,12 @@ from PyQt5.QtWidgets import (
     QInputDialog,
     QDialog,
     QVBoxLayout,
+    QHBoxLayout,
+    QFormLayout,
     QMenu,
     QMenuBar,
     QAction,
     QStatusBar,
-    QHBoxLayout,
     QLabel,
     QTextEdit,
     QDialogButtonBox,
@@ -191,6 +192,11 @@ class mpProfile:
     mode: str = MpTerm.Ascii.name
     suspend_timeout: int = 8
     ext_program: str = ""
+    macro1: str = ""
+    macro2: str = ""
+    macro3: str = ""
+    macro4: str = ""
+    macro5: str = ""
 
     key_list = [
         "alias",
@@ -203,6 +209,11 @@ class mpProfile:
         "mode",
         "suspend_timeout",
         "ext_program",
+        "macro1",
+        "macro2",
+        "macro3",
+        "macro4",
+        "macro5",
     ]
     filename: str = ""
 
@@ -301,6 +312,54 @@ class StyleS:
     # error = "background-color:#CC6633; color:#F7F9FC; border:0"
 
 
+@dataclass
+class Macro:
+    name: str = ""
+    text: str = ""
+
+    def data(self):
+        return self.text.replace("\\n", "\n")
+
+
+class MacroDialog(QDialog):
+    def __init__(self, macros):
+        super().__init__()
+        self.setWindowTitle("Macros")
+        self.setMinimumWidth(600)
+        self.macros = macros
+        self.mainLayout = QVBoxLayout()
+        self.setLayout(self.mainLayout)
+        self.macroLayout = QFormLayout()
+        self.mainLayout.addLayout(self.macroLayout)
+
+        self.macroEdits = []
+        for m in self.macros:
+            self.add_macro_edit(m.name, m)
+
+        self.buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+        self.mainLayout.addWidget(self.buttonBox)
+
+    def exec(self, macros) -> int:
+        self.macros = macros
+        for i, m in enumerate(macros):
+            self.macroEdits[i].setText(m.text)
+
+        return super().exec()
+
+    def add_macro_edit(self, name, macro: Macro):
+        msg = QLabel(name)
+        macro = QLineEdit(macro.text)
+        self.macroLayout.addRow(msg, macro)
+        self.macroEdits.append(macro)
+
+    def accept(self):
+        for i, _ in enumerate(self.macros):
+            self.macros[i].text = self.macroEdits[i].text()
+        self.close()
+
+
 class MainForm(QMainWindow):
     # Handle windows close event
     def closeEvent(self, a0: QCloseEvent) -> None:
@@ -318,6 +377,14 @@ class MainForm(QMainWindow):
         self.portLayout.addWidget(comboBox)
         return comboBox
 
+    def add_macro(self, name) -> Macro:
+        macro = Macro(name)
+        mb = QPushButton(
+            macro.name, self.centralwidget, pressed=lambda: self.send_macro(macro)
+        )
+        self.macroLayout.addWidget(mb)
+        return macro
+
     def __init__(self, args, parent=None):
         super(MainForm, self).__init__(parent)
 
@@ -333,7 +400,7 @@ class MainForm(QMainWindow):
 
         # Serial port settings above terminal widget
         self.portLayout = QHBoxLayout()
-        self.portLayout.addSpacing(70)
+        # self.portLayout.addSpacing(70)
 
         self.cbPort = self.add_label_combobox("Port")
 
@@ -395,6 +462,8 @@ class MainForm(QMainWindow):
         self.cbDisplay.currentIndexChanged.connect(self.mode_change)
         self.cbDisplay.activated.connect(self.set_sp)
 
+        self.portLayout.addSpacing(20)
+
         # self.cbNewline = QComboBox(self.centralwidget)
         # self.cbNewline.addItem("nl", 0)
         # self.cbNewline.addItem("cr", 1)
@@ -436,6 +505,7 @@ class MainForm(QMainWindow):
         spacerItem = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
         self.buttonLayout = QVBoxLayout()
+        self.buttonLayout.addSpacing(20)
         self.buttonLayout.addWidget(self.pbOpen)
         self.buttonLayout.addWidget(self.cbMode)
         self.buttonLayout.addWidget(self.cbDisplay)
@@ -465,6 +535,36 @@ class MainForm(QMainWindow):
 
         self.verticalLayout.addLayout(self.portLayout)
         self.verticalLayout.addLayout(self.mainLayout)
+
+        # Macro
+        self.macroLayout = QVBoxLayout(self.centralwidget)
+        self.macroLayout.setContentsMargins(2, 2, 2, 2)
+        self.macroLayout.setSpacing(2)
+        self.macroLayout.addSpacing(20)
+
+        self.m1 = self.add_macro("M1")
+        self.m2 = self.add_macro("M2")
+        self.m3 = self.add_macro("M3")
+        self.m4 = self.add_macro("M4")
+        self.m5 = self.add_macro("M5")
+
+        self.macros = [self.m1, self.m2, self.m3, self.m4, self.m5]
+        self.mdialog = MacroDialog(self.macros)
+        self.macro_set = QPushButton("Set macro", self.centralwidget)
+        self.macro_set.pressed.connect(self.macro_dialog)
+        # self.macro_set.pressed.connect(
+        #     lambda: self.mdialog.exec([self.m1, self.m2, self.m3, self.m4, self.m5])
+        # )
+
+        macroSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        # macroSpacer = QSpacerItem(20, 40, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        # self.macroLayout.addWidget(self.macro1)
+        # self.macroLayout.addWidget(self.macro2)
+
+        self.macroLayout.addSpacing(20)
+        self.macroLayout.addWidget(self.macro_set)
+        self.macroLayout.addSpacerItem(macroSpacer)
+        self.mainLayout.addLayout(self.macroLayout)
 
         # Status bar
         self.statusbar = QStatusBar(self)
@@ -660,12 +760,15 @@ class MainForm(QMainWindow):
         # self.terminal.addAction(testAction)
         # self.terminal.keyPressEvent.connect(self.key)
 
+    def macro_dialog(self):
+        self.mdialog.exec([self.m1, self.m2, self.m3, self.m4, self.m5])
+
     def set_suspend_timeout(self):
         dlg = QInputDialog()
-        val, x = dlg.getInt(
+        val, name = dlg.getInt(
             self, "Suspend timeout", "Timeout (s)", value=self.prof.suspend_timeout
         )
-        if x is True:
+        if name is True:
             self.prof.suspend_timeout = val
 
     def set_ext_program(self):
@@ -684,7 +787,7 @@ class MainForm(QMainWindow):
 
     def keyPressEvent(self, e: QKeyEvent) -> None:
         super().keyPressEvent(e)
-        logging.debug(f"  {e.key():x}  {get_description(e)}")
+        # logging.debug(f"  {e.key():name}  {get_description(e)}")
         self.serialPort.send_string(get_key(e))
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
@@ -714,8 +817,11 @@ class MainForm(QMainWindow):
 
         # return super().eventFilter(obj, event)
 
+    def send_macro(self, m: Macro):
+        self.serialPort.send_string(m.data())
+
     # def key(self, e: QKeyEvent) -> None:
-    #     # logging.debug(f"  {e.key():x}  {get_description(e)}")
+    #     # logging.debug(f"  {e.key():name}  {get_description(e)}")
     #     # self.sp.send_string(get_key(e))
     #     print("Keypressed")
 
@@ -793,7 +899,7 @@ class MainForm(QMainWindow):
         self.update_ui()
 
     def port_handler(self) -> None:
-        portNames = [x.portName() for x in QSerialPortInfo.availablePorts()]
+        portNames = [name.portName() for name in QSerialPortInfo.availablePorts()]
 
         # Check if current port is still connecter (USB to serial adapters), if not close port
         if self.serialPort.isOpen():
@@ -804,14 +910,14 @@ class MainForm(QMainWindow):
                 )
 
         # Update list of serialports in combobox
-        for x in range(self.cbPort.count()):
-            if self.cbPort.itemText(x) not in portNames:
-                self.cbPort.removeItem(x)
+        for name in range(self.cbPort.count()):
+            if self.cbPort.itemText(name) not in portNames:
+                self.cbPort.removeItem(name)
             else:
-                portNames.remove(self.cbPort.itemText(x))
+                portNames.remove(self.cbPort.itemText(name))
 
-        for x in portNames:
-            self.cbPort.addItem(x)
+        for name in portNames:
+            self.cbPort.addItem(name)
 
     def timerEvent(self):
         self.port_handler()
@@ -1027,33 +1133,43 @@ class MainForm(QMainWindow):
         self.prof.flowcontrol = self.cbFlowControl.currentText()
         self.prof.mode = self.cbDisplay.currentData().name
 
-        # self.prof.sync = self.ui.leSyncString.text()
+        self.prof.macro1 = self.m1.text
+        self.prof.macro2 = self.m2.text
+        self.prof.macro3 = self.m3.text
+        self.prof.macro4 = self.m4.text
+        self.prof.macro5 = self.m5.text
+
         self.prof.write()
 
-    def load_setting(self, cb, setting):
+    def load_cb_setting(self, cb, setting):
         idx = cb.findText(setting)
         if idx != -1:
             cb.setCurrentIndex(idx)
 
     def load_settings(self):
-        # Handle settings
         self.prof = mpProfile(filename=mp_settings)
         self.prof.load()
 
-        self.load_setting(self.cbBitrate, self.prof.bitrate)
-        self.load_setting(self.cbBitrate, self.prof.bitrate)
-        self.load_setting(self.cbPort, self.prof.port)
-        self.load_setting(self.cbStopBits, self.prof.stopbits)
-        self.load_setting(self.cbBits, self.prof.databits)
-        self.load_setting(self.cbParity, self.prof.parity)
-        self.load_setting(self.cbFlowControl, self.prof.flowcontrol)
+        self.load_cb_setting(self.cbBitrate, self.prof.bitrate)
+        self.load_cb_setting(self.cbBitrate, self.prof.bitrate)
+        self.load_cb_setting(self.cbPort, self.prof.port)
+        self.load_cb_setting(self.cbStopBits, self.prof.stopbits)
+        self.load_cb_setting(self.cbBits, self.prof.databits)
+        self.load_cb_setting(self.cbParity, self.prof.parity)
+        self.load_cb_setting(self.cbFlowControl, self.prof.flowcontrol)
 
         idx = self.cbDisplay.findData(MpTerm(self.prof.mode))
         self.cbDisplay.setCurrentIndex(idx)
 
+        self.m1.text = self.prof.macro1
+        self.m2.text = self.prof.macro2
+        self.m3.text = self.prof.macro3
+        self.m4.text = self.prof.macro4
+        self.m5.text = self.prof.macro5
+
     def exitProgram(self, e):
         self.serialPort.close()
-        self.save_settings()
+        # self.save_settings()
         self.close()
 
     def ss(self, str):
