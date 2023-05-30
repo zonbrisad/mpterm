@@ -45,16 +45,16 @@
 MpTerm is a lightweight serial port terminal aimed at embedded development.
 
 
-MpTerm does not have full ANSII terminal support and will likely never have. At present it supports setting font attributes like foreground and background colors, bold, underline and a few others. Some basic cursormovement it also supported.
+MpTerm does not have full ANSI terminal support and will likely never have. At present it supports setting font attributes like foreground and background colors, bold, underline and a few others. Some basic cursormovement it also supported.
 
 ![mainwin][mainwin]
 
 ## Features
-- Basic ANSII Terminal functionality
+- Basic ANSI Terminal functionality
 - Externaly triggered suspend function
 - Externaly triggered programing function
-- Echo mode
 - Userdefineable macros
+- Echo mode
  
 
 ## Requirements
@@ -119,7 +119,8 @@ An alternative to "kill" is to use the builtin function for suspending mpterm. I
 - [ ] Pause history
 - [x] Programming button
 - [ ] Sync feature
-- [ ] Hex mode
+- [x] Hex mode
+- [ ] Setting for chars per row in hex mode
 - [ ] Show pin status
 - [ ] Set pin status
 - [ ] Loopback port
