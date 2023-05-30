@@ -54,6 +54,7 @@ MpTerm does not have full ANSII terminal support and will likely never have. At 
 - Externaly triggered suspend function
 - Externaly triggered programing function
 - Echo mode
+- Userdefineable macros
  
 
 ## Requirements
@@ -107,6 +108,9 @@ An alternative to "kill" is to use the builtin function for suspending mpterm. I
 - [ ] delete
 - [ ] FXX 
 - Feature
+- [x] Userdefined quick access macros
+- [ ] Hexadecimal macros
+- [ ] auto repeat macros in intervall
 - [x] Settings file
 - [ ] Multiple settings profiles
 - [x] Echo mode
@@ -144,8 +148,6 @@ Enable access from network
 
 ### Terminal state monitor (mabye as plugin)
 
-### Quick macro's
-Add user defined macros for often used sequences
 
 ### Logg tag 
 Define some sort of tag that indicates that data should be redirected to another stream (escape or html) ex. <logg> </logg> or \e[XX for ansi terminal

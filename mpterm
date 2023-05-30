@@ -63,7 +63,6 @@ from PyQt5.QtWidgets import (
     QMessageBox,
     QWidget,
     QFileDialog,
-    QSpacerItem,
     QSizePolicy,
     QLineEdit,
     QCheckBox,
@@ -95,7 +94,7 @@ self_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
 
 class App:
     NAME = "mpterm"
-    VERSION = "0.34"
+    VERSION = "0.35"
     DESCRIPTION = "MpTerm is a simple serial terminal program"
     LICENSE = ""
     AUTHOR = "Peter Malmberg"
@@ -324,7 +323,7 @@ class Macro:
 class MacroDialog(QDialog):
     def __init__(self, macros):
         super().__init__()
-        self.setWindowTitle("Macros")
+        self.setWindowTitle("Userdefined Macros")
         self.setMinimumWidth(600)
         self.macros = macros
         self.mainLayout = QVBoxLayout()
@@ -400,7 +399,9 @@ class MainForm(QMainWindow):
 
         # Serial port settings above terminal widget
         self.portLayout = QHBoxLayout()
-        # self.portLayout.addSpacing(70)
+        self.portLayout.setSpacing(5)
+        # self.portLayout.addSpacing(90)
+        self.portLayout.addStretch()
 
         self.cbPort = self.add_label_combobox("Port")
 
@@ -446,23 +447,23 @@ class MainForm(QMainWindow):
         self.cbFlowControl.addItem("Software", QSerialPort.SoftwareControl)
         self.cbFlowControl.setCurrentIndex(0)
         self.cbFlowControl.activated.connect(self.set_sp)
+        # self.portLayout.addSpacing(20)
+        self.portLayout.addStretch()
 
         # "Buttons" layout, to the left
         self.pbOpen = QPushButton("Open", self.centralwidget)
+        self.pbOpen.setFixedHeight(50)
         self.pbOpen.pressed.connect(self.openPort)
 
         self.cbMode = QComboBox(self.centralwidget)
         self.cbMode.addItem(Mode.Normal.name, Mode.Normal)
         self.cbMode.addItem(Mode.Echo.name, Mode.Echo)
-
         self.cbDisplay = QComboBox(self.centralwidget)
         self.cbDisplay.addItem("Ascii", MpTerm.Ascii)
         self.cbDisplay.addItem("Hex", MpTerm.Hex)
         self.cbDisplay.addItem("Hex + Ascii", MpTerm.AsciiHex)
         self.cbDisplay.currentIndexChanged.connect(self.mode_change)
         self.cbDisplay.activated.connect(self.set_sp)
-
-        self.portLayout.addSpacing(20)
 
         # self.cbNewline = QComboBox(self.centralwidget)
         # self.cbNewline.addItem("nl", 0)
@@ -483,11 +484,11 @@ class MainForm(QMainWindow):
         # self.cbDTR.setTristate(False)
         # self.cbDTR.clicked.connect(self.handle_dtr)
 
-        self.bpProgram = QPushButton("Program", self.centralwidget)
-        self.bpProgram.pressed.connect(self.run_ext_program)
+        self.pbProgram = QPushButton("Program", self.centralwidget)
+        self.pbProgram.pressed.connect(self.run_ext_program)
 
-        self.bpPause = QPushButton("Pause", self.centralwidget)
-        self.bpPause.pressed.connect(self.pause)
+        self.pbPause = QPushButton("Pause", self.centralwidget)
+        self.pbPause.pressed.connect(self.pause)
 
         self.pbSuspend = QPushButton("Suspend", self.centralwidget)
         self.pbSuspend.pressed.connect(self.suspend)
@@ -502,10 +503,8 @@ class MainForm(QMainWindow):
         # self.cbProfiles.addItem("New...", 3)
         # self.cbProfiles.hide()
 
-        spacerItem = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-
         self.buttonLayout = QVBoxLayout()
-        self.buttonLayout.addSpacing(20)
+        self.buttonLayout.addSpacing(10)
         self.buttonLayout.addWidget(self.pbOpen)
         self.buttonLayout.addWidget(self.cbMode)
         self.buttonLayout.addWidget(self.cbDisplay)
@@ -514,9 +513,9 @@ class MainForm(QMainWindow):
         # self.buttonLayout.addWidget(self.cbDTR)
         # self.buttonLayout.addWidget(self.dtrLabel)
         # self.buttonLayout.addWidget(self.rtsLabel)
-        self.buttonLayout.addItem(spacerItem)
-        self.buttonLayout.addWidget(self.bpProgram)
-        self.buttonLayout.addWidget(self.bpPause)
+        self.buttonLayout.addStretch()
+        self.buttonLayout.addWidget(self.pbProgram)
+        self.buttonLayout.addWidget(self.pbPause)
         self.buttonLayout.addWidget(self.pbSuspend)
 
         self.serialPort = SerialPort()
@@ -536,8 +535,8 @@ class MainForm(QMainWindow):
         self.verticalLayout.addLayout(self.portLayout)
         self.verticalLayout.addLayout(self.mainLayout)
 
-        # Macro
-        self.macroLayout = QVBoxLayout(self.centralwidget)
+        # Macro layout (to the right)
+        self.macroLayout = QVBoxLayout()
         self.macroLayout.setContentsMargins(2, 2, 2, 2)
         self.macroLayout.setSpacing(2)
         self.macroLayout.addSpacing(20)
@@ -548,22 +547,14 @@ class MainForm(QMainWindow):
         self.m4 = self.add_macro("M4")
         self.m5 = self.add_macro("M5")
 
-        self.macros = [self.m1, self.m2, self.m3, self.m4, self.m5]
-        self.mdialog = MacroDialog(self.macros)
-        self.macro_set = QPushButton("Set macro", self.centralwidget)
-        self.macro_set.pressed.connect(self.macro_dialog)
-        # self.macro_set.pressed.connect(
-        #     lambda: self.mdialog.exec([self.m1, self.m2, self.m3, self.m4, self.m5])
-        # )
-
-        macroSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-        # macroSpacer = QSpacerItem(20, 40, QSizePolicy.Expanding, QSizePolicy.Minimum)
-        # self.macroLayout.addWidget(self.macro1)
-        # self.macroLayout.addWidget(self.macro2)
+        self.macro_list = [self.m1, self.m2, self.m3, self.m4, self.m5]
+        self.macro_dialog = MacroDialog(self.macro_list)
+        self.macro_set = QPushButton("Edit macro's", self.centralwidget)
+        self.macro_set.pressed.connect(self.edit_macro_dialog)
 
         self.macroLayout.addSpacing(20)
         self.macroLayout.addWidget(self.macro_set)
-        self.macroLayout.addSpacerItem(macroSpacer)
+        self.macroLayout.addStretch()
         self.mainLayout.addLayout(self.macroLayout)
 
         # Status bar
@@ -760,8 +751,8 @@ class MainForm(QMainWindow):
         # self.terminal.addAction(testAction)
         # self.terminal.keyPressEvent.connect(self.key)
 
-    def macro_dialog(self):
-        self.mdialog.exec([self.m1, self.m2, self.m3, self.m4, self.m5])
+    def edit_macro_dialog(self):
+        self.macro_dialog.exec(self.macro_list)
 
     def set_suspend_timeout(self):
         dlg = QInputDialog()
@@ -834,10 +825,10 @@ class MainForm(QMainWindow):
     def pause(self):
         if self.isPaused:
             self.isPaused = False
-            self.bpPause.setText("Pause")
+            self.pbPause.setText("Pause")
         else:
             self.isPaused = True
-            self.bpPause.setText("Paused")
+            self.pbPause.setText("Paused")
 
     def suspend(self):
         logging.debug(f"Suspending port for {self.prof.suspend_timeout} s.")
@@ -1185,6 +1176,7 @@ class MainForm(QMainWindow):
     def portInfo(self):
         # if not self.sp.state == State.DISCONNECTED:
         #     return
+        self.appendHtml("<br>")
         ports = QSerialPortInfo.availablePorts()
         for port in ports:
             self.appendInfo("Port:", port.portName())

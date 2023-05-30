@@ -1,4 +1,8 @@
 
+# Version 0.35
+- Added userdefineable macro function
+- Minor GUI adjustments
+
 # Version 0.34
 - Fixed line removal bug
 
@@ -17,6 +21,5 @@
 - Added external program function
 
 # Version 0.3
-
 - Major revision of GUI
 - Major code refactoring
