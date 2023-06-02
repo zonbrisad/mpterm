@@ -34,14 +34,11 @@ from datetime import datetime, date, time
 from PyQt5.QtCore import (
     Qt,
     QTimer,
-    QSettings,
-    QIODevice,
     QProcess,
     QEvent,
     QObject,
-    QRect,
 )
-from PyQt5.QtGui import QTextCursor, QIcon, QFont, QKeyEvent, QCloseEvent
+from PyQt5.QtGui import QTextCursor, QIcon, QKeyEvent, QCloseEvent
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -55,17 +52,11 @@ from PyQt5.QtWidgets import (
     QAction,
     QStatusBar,
     QLabel,
-    QTextEdit,
     QDialogButtonBox,
     QPushButton,
-    QToolButton,
     QComboBox,
-    QMessageBox,
     QWidget,
-    QFileDialog,
-    QSizePolicy,
     QLineEdit,
-    QCheckBox,
 )
 
 from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
@@ -94,8 +85,8 @@ self_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
 
 class App:
     NAME = "mpterm"
-    VERSION = "0.35"
-    DESCRIPTION = "MpTerm is a simple serial terminal program"
+    VERSION = "0.36"
+    DESCRIPTION = "MpTerm is a simple serial terminal program, aimed at embedded systems development"
     LICENSE = ""
     AUTHOR = "Peter Malmberg"
     EMAIL = "peter.malmberg@gmail.com"
@@ -451,19 +442,28 @@ class MainForm(QMainWindow):
         self.portLayout.addStretch()
 
         # "Buttons" layout, to the left
+        self.buttonLayout = QVBoxLayout()
+        self.buttonLayout.addSpacing(10)
+
         self.pbOpen = QPushButton("Open", self.centralwidget)
         self.pbOpen.setFixedHeight(50)
         self.pbOpen.pressed.connect(self.openPort)
+        self.buttonLayout.addWidget(self.pbOpen)
 
         self.cbMode = QComboBox(self.centralwidget)
         self.cbMode.addItem(Mode.Normal.name, Mode.Normal)
         self.cbMode.addItem(Mode.Echo.name, Mode.Echo)
+        self.buttonLayout.addWidget(self.cbMode)
+
         self.cbDisplay = QComboBox(self.centralwidget)
         self.cbDisplay.addItem("Ascii", MpTerm.Ascii)
         self.cbDisplay.addItem("Hex", MpTerm.Hex)
         self.cbDisplay.addItem("Hex + Ascii", MpTerm.AsciiHex)
         self.cbDisplay.currentIndexChanged.connect(self.mode_change)
         self.cbDisplay.activated.connect(self.set_sp)
+        self.buttonLayout.addWidget(self.cbDisplay)
+
+        self.buttonLayout.addStretch()
 
         # self.cbNewline = QComboBox(self.centralwidget)
         # self.cbNewline.addItem("nl", 0)
@@ -486,12 +486,15 @@ class MainForm(QMainWindow):
 
         self.pbProgram = QPushButton("Program", self.centralwidget)
         self.pbProgram.pressed.connect(self.run_ext_program)
+        self.buttonLayout.addWidget(self.pbProgram)
 
-        self.pbPause = QPushButton("Pause", self.centralwidget)
-        self.pbPause.pressed.connect(self.pause)
+        # self.pbPause = QPushButton("Pause", self.centralwidget)
+        # self.pbPause.pressed.connect(self.pause)
+        # self.buttonLayout.addWidget(self.pbPause)
 
         self.pbSuspend = QPushButton("Suspend", self.centralwidget)
         self.pbSuspend.pressed.connect(self.suspend)
+        self.buttonLayout.addWidget(self.pbSuspend)
 
         # self.leSyncString = QLineEdit(self.centralwidget)
         # self.buttonLayout.addWidget(self.leSyncString)
@@ -502,21 +505,11 @@ class MainForm(QMainWindow):
         # self.cbProfiles.addItem("115200", 2)
         # self.cbProfiles.addItem("New...", 3)
         # self.cbProfiles.hide()
-
-        self.buttonLayout = QVBoxLayout()
-        self.buttonLayout.addSpacing(10)
-        self.buttonLayout.addWidget(self.pbOpen)
-        self.buttonLayout.addWidget(self.cbMode)
-        self.buttonLayout.addWidget(self.cbDisplay)
         # self.buttonLayout.addWidget(self.cbNewline)
         # self.buttonLayout.addWidget(self.cbRTS)
         # self.buttonLayout.addWidget(self.cbDTR)
         # self.buttonLayout.addWidget(self.dtrLabel)
         # self.buttonLayout.addWidget(self.rtsLabel)
-        self.buttonLayout.addStretch()
-        self.buttonLayout.addWidget(self.pbProgram)
-        self.buttonLayout.addWidget(self.pbPause)
-        self.buttonLayout.addWidget(self.pbSuspend)
 
         self.serialPort = SerialPort()
         self.serialPort.setReadBufferSize(256)
@@ -555,6 +548,11 @@ class MainForm(QMainWindow):
         self.macroLayout.addSpacing(20)
         self.macroLayout.addWidget(self.macro_set)
         self.macroLayout.addStretch()
+
+        self.pbPause = QPushButton("Pause", self.centralwidget)
+        self.pbPause.pressed.connect(self.pause)
+        self.macroLayout.addWidget(self.pbPause)
+
         self.mainLayout.addLayout(self.macroLayout)
 
         # Status bar
@@ -739,7 +737,8 @@ class MainForm(QMainWindow):
         self.isPaused = False
 
         self.terminal.installEventFilter(self)
-        self.terminal.append_terminal_text(
+        self.terminal.append_html(
+            # self.terminal.append_terminal_text(
             f"""MpTerm Ver: <b>{App.VERSION}</b><br><br>"""
         )
 
@@ -838,7 +837,7 @@ class MainForm(QMainWindow):
         self.update_ui()
 
     def program_stdout_available(self):
-        logging.debug("Program received data")
+        logging.debug("Program received stdout data")
         data = self.process.readAllStandardOutput()
         data_str = str(data, "utf-8")
         self.terminal.append_terminal_text(data_str)
@@ -846,7 +845,7 @@ class MainForm(QMainWindow):
         self.update_ui()
 
     def program_stderr_available(self):
-        logging.debug("Program received data")
+        logging.debug("Program received stderr data")
         data = self.process.readAllStandardError()
         data_str = str(data, "utf-8")
         self.terminal.append_terminal_text(data_str)
@@ -1160,7 +1159,6 @@ class MainForm(QMainWindow):
 
     def exitProgram(self, e):
         self.serialPort.close()
-        # self.save_settings()
         self.close()
 
     def ss(self, str):
@@ -1214,12 +1212,17 @@ def main():
     parser.add_argument("--list", action="store_true", help="List serialports")
     parser.add_argument("--debug", action="store_true", help="Activate debug printout")
     parser.add_argument(
-        "--ext_program", action="store", type=str, help="Program to run", default=""
+        "--ext-program",
+        action="store",
+        type=str,
+        dest="ext_program",
+        help="Set external program to execute when signaled",
+        default="",
     )
     parser.add_argument(
-        "--run_ext_program",
+        "--exec-program",
         action="store_true",
-        help="Send signal to initiate external program",
+        help="Send signal to initiate external program execution",
     )
 
     args = parser.parse_args()
@@ -1242,9 +1245,9 @@ def main():
 
         sys.exit()
 
-    if args.run_ext_program:
+    if args.exec_program:
         with os.popen(
-            "ps aux | grep mpterm | grep -v -e 'grep' -e '--program_start'"
+            "ps aux | grep mpterm | grep -v -e 'grep' -e '--exec-program'"
         ) as f:
             res = f.readlines()
 

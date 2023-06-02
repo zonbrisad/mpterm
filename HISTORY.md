@@ -1,4 +1,9 @@
 
+# Version 0.36
+- Moved Pause button
+- Fixed <> character interpretation
+- Fixed default CSS for qterminalwidget
+
 # Version 0.35
 - Added userdefineable macro function
 - Minor GUI adjustments

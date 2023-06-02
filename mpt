@@ -65,6 +65,13 @@ ard() { ##D Program testprogram to arduiono
   avrdude -v -v -p m328p -P "${AVRDUDE_PORT}" -c arduino -b 57600 -D -U flash:w:arduino-blink.hex:i
 }
 
+release() { ##D Build release
+  REL=$(bpRead "Release version")
+
+  tar -czvf mpterm_${REL}.tar.gz mpterm qterminalwidget.py README.md HISTORY.md serialport.py escape.py mpterm_init icons/mp_icon.png
+
+}
+
 ##- Terminal tests
 
 underline() { ##D Test of extended underline attributes

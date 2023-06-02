@@ -956,7 +956,6 @@ class TerminalState:
         self.reset()
 
     def attr_html(self, data) -> str:
-
         if self.REVERSE:
             bg_color = self.fg_color
             fg_color = self.bg_color
@@ -1136,7 +1135,9 @@ class TerminalState:
             if token in [Ascii.BEL]:
                 continue
 
-            token_space = token.replace(" ", "&nbsp;")
+            token_space = (
+                token.replace(" ", "&nbsp;").replace("<", "&lt;").replace("<", "&gt;")
+            )
             l.append(self.attr_html(token_space))
 
         return l

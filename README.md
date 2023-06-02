@@ -67,23 +67,48 @@ MpTerm does not have full ANSI terminal support and will likely never have. At p
 ``` bash
 git clone https://github.com/zonbrisad/mpterm.git
 ```
-
-
 ### Installation
+Include programdir in path or add the follwing to .bashrc.
+``` bash
+source mpterm_init
+```
 
-## Functions
 
+
+## Feature highlights
 ### Temporary suspend
 
-MpTerm has a function that enables it to temporary release the port for a short time and thereafter automaticly reconnect. This feature can be usefull if some other program needs to connect to the device via the serialport. For example a program for updating firmware like avrdude needs the serialport to write to the Arduino flash. Suspending can be done in several different ways. The simplest is by pressing the suspend button. However, the port can also be suspended from the commandline which simplifies automation. To suspend MpTerm, simply send the USR1 signal to the process.
+Temporary suspend is a feature that briefly yield the serialport and therafter automaticly reconnect to it. This is usefefull when you want to allow some another program to access the serialport. For example when developing software for embedded systems a serial port is often used as both debugport and for writing firmware. This feature simplifies the task of "sharing" the serialport betwen debugging and flashing. Suspending can be done in several different ways. The simplest is by pressing the suspend button. However, the port can also be suspended from the commandline which simplifies automation. To suspend MpTerm, simply send the USR1 signal to the process.
 ``` bash
 >kill -s SIGUSR1 pid
 ```
-An alternative to "kill" is to use the builtin function for suspending mpterm. It will automaticly send SIGUSR1 to all instances of mpterm running. 
+An alternative to "kill" is to use the builtin function for suspending mpterm. It will automaticly lookup the PID's to all instances of Mpterm and send SIGUSR1 to them.
 ``` bash
 >mpterm --suspend
 ```
+A third way to suspend it to press the suspend button to the left. 
 
+### External program 
+Mpterm can also be made to run a external program whithin the terminal itself. During the exectuion of the external program the serial port will be yielded. The external program can be triggerded from a button in the gui by from sending the USR2 signal to mpterm.
+
+To set the external program use the cmdoption `--ext-program` or use setting in UI.
+``` bash
+>mpterm --ext-program "myprogram --mypoption"
+```
+To trigger external program use the UI button or use one of the following commands.
+``` bash
+>mpterm --exec-program
+```
+
+``` bash
+>kill -s SIGUSR2 pid
+```
+
+When plugging and unplugging USB<>serial adapters devicenames have a habit of changing from time to time. This will cause a fixed string external program to stop working. Therefor a macro is provided when defining the external program. `__PORT__` whill be replaced with the port set in the UI.
+
+``` bash
+>mpterm --ext-program "avrdude -p atmega328p -P __PORT__"
+```
 
 ## History
 
@@ -107,6 +132,7 @@ An alternative to "kill" is to use the builtin function for suspending mpterm. I
 - [ ] home
 - [ ] delete
 - [ ] FXX 
+- [ ] Fix color rendering for basic 16 colors
 - Feature
 - [x] Userdefined quick access macros
 - [ ] Hexadecimal macros
@@ -126,10 +152,12 @@ An alternative to "kill" is to use the builtin function for suspending mpterm. I
 - [ ] Loopback port
 - [ ] Manage Bell character
 - [ ] copy/paste clipboard
+- [ ] Changeable color palets
 
 ## Known Issues
+- [x] Rendering: Error when <> characters are included
 - [ ] Rendering: Text lines overlap with one(maybe two) pixel row(s)
-- [ ] Rendering: Terminal rendering performance is low
+- [ ] Rendering: Terminal rendering performance is slow
 - [ ] Rendering: Real bright(bold) colors
 - [x] Rendering: Row removal fail
 - [ ] UI: Tab cycling is not correct 

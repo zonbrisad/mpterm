@@ -8,7 +8,7 @@
     "flowcontrol": "None",
     "mode": "Ascii",
     "suspend_timeout": 8,
-    "ext_program": "",
+    "ext_program": "git __PORT__",
     "macro1": "help\\n",
     "macro2": "c16\\n",
     "macro3": "c256\\n",

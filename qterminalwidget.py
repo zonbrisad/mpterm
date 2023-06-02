@@ -21,7 +21,6 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QTextCursor, QFont, QKeyEvent
 from PyQt5.QtWidgets import QTextEdit, QPlainTextEdit
 
-# from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
 from escape import Escape, Ascii, TerminalState, CSI, SGR, EscapeObj
 
 # Variables ------------------------------------------------------------------
@@ -92,14 +91,14 @@ class QTerminalWidget(QPlainTextEdit):
 
         font = QFont()
         font.setFamily("Monospace")
-        font.setPointSize(11)
+        font.setPointSize(10)
         self.setFont(font)
         # self.maximumBlockCount = 100
         # self.setMaximumBlockCount(10)
 
         # self.setFocusPolicy(Qt.NoFocus)
         self.setStyleSheet(
-            "background-color: rgb(0, 0, 0); color : White; font-family:Monospace; font-size:large; line-height:1.5;"
+            "background-color: rgb(0, 0, 0); color : White; font-family:Monospace; font-size:10pt; line-height:1.5;"
         )
         # self.setStyleSheet("background-color: rgb(0, 0, 0); color : White; line-height:20pt; font-family:Monospace")
 
@@ -243,17 +242,20 @@ class QTerminalWidget(QPlainTextEdit):
                 continue
 
             # self.append_html(line)
-            l = len(line)
+            # text = line.replace("<", "&lt;")
+            text = line
+            l = len(text)
             if not self.cur.atEnd():
                 self.cur.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, l)
                 # print(f"Distance to end: {l}")
                 # self.cur.setPosition()
                 # self.cur.removeSelectedText()
-                self.cur.insertHtml(line)
+                self.cur.insertHtml(text)
                 self.cur.movePosition(QTextCursor.Right, l)
                 continue
 
-            self.cur.insertHtml(line)
+            # text = text.replace("<", "&lt;")
+            self.cur.insertHtml(text)
             self.cur.movePosition(QTextCursor.Right, l)
             self.cr = False
 
