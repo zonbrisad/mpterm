@@ -212,20 +212,20 @@ class mpProfile:
         logging.debug(f"{key} = {val}")
         setattr(self, key, val)
 
-    def toJSON(self) -> dict:
+    def to_json(self) -> dict:
         jsonDict = {}
         for key in self.key_list:
             jsonDict[key] = getattr(self, key)
 
         return jsonDict
 
-    def fromJSON(self, jsonDict):
+    def from_json(self, jsonDict):
         for key in self.key_list:
             self.set_member(key, jsonDict)
 
     def write(self):
         with open(self.filename, "w") as outfile:
-            json.dump(self.toJSON(), outfile, indent=4)
+            json.dump(self.to_json(), outfile, indent=4)
 
     def load(self):
         if not os.path.exists(self.filename):
@@ -234,17 +234,17 @@ class mpProfile:
         with open(self.filename, "r") as infile:
             jsd = json.load(infile)
 
-        self.fromJSON(jsd)
+        self.from_json(jsd)
 
 
-class FormatHex:
+class HexFormater:
     def __init__(self) -> None:
         self.index = 0
         self.max = 15
         self.end = "<br>"
-        self.setMode(MpTerm.Ascii)
+        self.set_mode(MpTerm.Ascii)
 
-    def setMode(self, mode):
+    def set_mode(self, mode):
         self.mode = mode
         self.index = 0
 
@@ -703,7 +703,7 @@ class MainForm(QMainWindow):
 
         # Scan for serialports
         self.update_ports()
-        self.formater = FormatHex()
+        self.formater = HexFormater()
 
         self.load_settings()
         self.mode_change()
@@ -1019,7 +1019,7 @@ class MainForm(QMainWindow):
 
     def mode_change(self):
         self.terminal.clear()
-        self.formater.setMode(self.cbDisplay.currentData())
+        self.formater.set_mode(self.cbDisplay.currentData())
         logging.debug(f"Setting display mode {self.cbDisplay.currentData()}")
 
     def appendHtml(self, str):
@@ -1043,7 +1043,8 @@ class MainForm(QMainWindow):
             self.terminal.append_terminal_text(data_str)
 
         if DisplayMode != MpTerm.Ascii:  # Hexadecimal display mode
-            self.terminal.append_terminal_text(self.formater.update(data))
+            # self.terminal.append_terminal_text(self.formater.update(data))
+            self.terminal.append_html(self.formater.update(data))
 
         self.terminal.scroll_down()
         self.update_ui()

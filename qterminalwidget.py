@@ -174,6 +174,7 @@ class QTerminalWidget(QPlainTextEdit):
     def append_html(self, html):
         self.move(QTextCursor.End)
         self.insert(html)
+        self.limit_lines()
 
     def insertHtml(self, html):
         l = len(html)

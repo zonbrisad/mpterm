@@ -6,7 +6,7 @@
     "parity": "None",
     "stopbits": "1",
     "flowcontrol": "None",
-    "mode": "Ascii",
+    "mode": "Hex",
     "suspend_timeout": 8,
     "ext_program": "git __PORT__",
     "macro1": "help\\n",

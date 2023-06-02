@@ -1,4 +1,7 @@
 
+# Version 0.37
+- fixed hex mode newline missing
+
 # Version 0.36
 - Moved Pause button
 - Fixed <> character interpretation

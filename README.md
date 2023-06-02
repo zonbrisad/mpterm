@@ -163,6 +163,7 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 - [ ] UI: Tab cycling is not correct 
 - [x] UI: programing mode does not show output from some external programs
 - [ ] Feature: Reconnecting to port despite avrdude using the port
+- [ ] Hexmode newline error
 
 ## Future ideas
 
