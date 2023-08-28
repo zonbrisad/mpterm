@@ -23,6 +23,7 @@ from re import ASCII
 import sys
 import os
 import subprocess
+from tkinter import NO
 import traceback
 import logging
 import argparse
@@ -41,6 +42,7 @@ from PyQt5.QtCore import (
 from PyQt5.QtGui import QTextCursor, QIcon, QKeyEvent, QCloseEvent
 from PyQt5.QtWidgets import (
     QApplication,
+    QCheckBox,
     QMainWindow,
     QInputDialog,
     QDialog,
@@ -72,7 +74,7 @@ from escape import (
     color_256_test,
     hex2str,
 )
-from qterminalwidget import QTerminalWidget, get_key, get_description
+from qterminalwidget import QTerminalWidget, get_key
 from serialport import SerialPort, State
 
 from aboutdialog import AboutDialog
@@ -306,9 +308,113 @@ class StyleS:
 class Macro:
     name: str = ""
     text: str = ""
+    hex: bool = True
+    repeat: bool = False
+    intervall: int = 1000
 
     def data(self):
         return self.text.replace("\\n", "\n")
+
+
+class IntegerEdit(QLineEdit):
+    def __init__(self):
+        super().__init__("")
+        self.textChanged.connect(self.textChangedx)
+        # self.setMaxLength(4)
+        # self.setSizePolicy(5)
+        self.setMaximumWidth(40)
+
+    def textChangedx(self, a0: str) -> None:
+        if self.text().isnumeric():
+            self.setStyleSheet(StyleS.normal)
+        else:
+            self.setStyleSheet(StyleS.error)
+        # return super().textChanged()
+
+
+class MacroEdit(QLineEdit):
+    def __init__(self, macro):
+        self.macro = macro
+        super().__init__(macro.text)
+        self.textChanged.connect(self.textChangedx)
+        # self.setMaxLength(4)
+        # self.setSizePolicy(5)
+        # self.setMaximumWidth(40)
+        # self.hexMode = False
+        # self.hexMode = True
+
+    def hexMode(self) -> bool:
+        return self.macro.hex
+
+    def textChangedx(self, a0: str) -> None:
+        if self.hexMode() is True:
+            for x in self.text().strip().split(" "):
+                if x.isnumeric() is False:
+                    self.setStyleSheet(StyleS.error)
+                    return
+            self.setStyleSheet(StyleS.normal)
+        else:
+            self.setStyleSheet(StyleS.normal)
+        None
+
+
+class MacroEditWidget(QWidget):
+    def __init__(self, macro: Macro, parent=None):
+        super().__init__()
+        self.macro = macro
+        self.layout = QHBoxLayout()
+        self.layout.setContentsMargins(2, 2, 2, 2)
+        # self.layout.setSpacing(2)
+        self.setLayout(self.layout)
+
+        self.name = QLabel(macro.name)
+        self.macrow = QLineEdit(macro.text)
+        self.macrow.textChanged.connect(self.macroChanged)
+        self.hexMode = QCheckBox("Hex")
+        self.hexMode.stateChanged.connect(self.macroChanged)
+        self.check = QCheckBox("Repeat")
+
+        self.intervall = QLineEdit(str(macro.intervall))
+        self.intervall.textChanged.connect(self.intervallChanged)
+        self.intervall.setMaximumWidth(40)
+        # self.setMaxLength(4)
+        # self.setSizePolicy(5)
+
+        self.layout.addWidget(self.name)
+        self.layout.addWidget(self.macrow)
+        self.layout.addWidget(self.hexMode)
+        # self.layout.addWidget(self.check)
+        # self.layout.addWidget(self.intervall)
+
+    def intervallChanged(self, a0: str) -> None:
+        if self.intervall.text().isnumeric():
+            self.intervall.setStyleSheet(StyleS.normal)
+        else:
+            self.intervall.setStyleSheet(StyleS.error)
+
+    def update(self):
+        self.macrow.setText(self.macro.text)
+
+    def hex_mode(self) -> bool:
+        return self.hexMode.isChecked()
+
+    def hex_mode_changed(self, a0: str) -> None:
+        None
+
+    def macroChanged(self, a0: str) -> None:
+        print(self.hex_mode())
+        if self.hex_mode() is True:
+            for x in self.macrow.text().strip().split(" "):
+                if x.isnumeric() is False:
+                    self.macrow.setStyleSheet(StyleS.error)
+                    return
+            self.macrow.setStyleSheet(StyleS.normal)
+        else:
+            self.macrow.setStyleSheet(StyleS.normal)
+
+    def accept(self) -> None:
+        self.macro.text = self.macrow.text()
+        self.macro.hex = self.hexMode.isChecked()
 
 
 class MacroDialog(QDialog):
@@ -318,13 +424,17 @@ class MacroDialog(QDialog):
         self.setMinimumWidth(600)
         self.macros = macros
         self.mainLayout = QVBoxLayout()
+        self.mainLayout.setSpacing(2)
         self.setLayout(self.mainLayout)
         self.macroLayout = QFormLayout()
         self.mainLayout.addLayout(self.macroLayout)
 
         self.macroEdits = []
-        for m in self.macros:
-            self.add_macro_edit(m.name, m)
+
+        for macro in self.macros:
+            mew = MacroEditWidget(macro)
+            self.mainLayout.addWidget(mew)
+            self.macroEdits.append(mew)
 
         self.buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         self.buttonBox.accepted.connect(self.accept)
@@ -332,21 +442,15 @@ class MacroDialog(QDialog):
         self.mainLayout.addWidget(self.buttonBox)
 
     def exec(self, macros) -> int:
-        self.macros = macros
-        for i, m in enumerate(macros):
-            self.macroEdits[i].setText(m.text)
+        for mew in self.macroEdits:
+            mew.update()
 
         return super().exec()
 
-    def add_macro_edit(self, name, macro: Macro):
-        msg = QLabel(name)
-        macro = QLineEdit(macro.text)
-        self.macroLayout.addRow(msg, macro)
-        self.macroEdits.append(macro)
-
     def accept(self):
-        for i, _ in enumerate(self.macros):
-            self.macros[i].text = self.macroEdits[i].text()
+        for mew in self.macroEdits:
+            mew.accept()
+
         self.close()
 
 
@@ -807,8 +911,8 @@ class MainForm(QMainWindow):
 
         # return super().eventFilter(obj, event)
 
-    def send_macro(self, m: Macro):
-        self.serialPort.send_string(m.data())
+    def send_macro(self, macrow: Macro):
+        self.serialPort.send_string(macrow.data())
 
     # def key(self, e: QKeyEvent) -> None:
     #     # logging.debug(f"  {e.key():name}  {get_description(e)}")
@@ -1001,21 +1105,21 @@ class MainForm(QMainWindow):
         self.serialPort.clear_counters()
         self.update()
 
-    def _message(self, msg):
-        self.statusbar.showMessage(msg, 4000)
+    def _message(self, name):
+        self.statusbar.showMessage(name, 4000)
         self.statusbar.show
 
     # Show message in status bar
-    def message(self, msg):
+    def message(self, name):
         self.statusbar.setStyleSheet(StyleS.normal)
-        self._message(msg)
-        logging.debug(msg)
+        self._message(name)
+        logging.debug(name)
 
     # Show error message in status bar
-    def message_error(self, msg):
+    def message_error(self, name):
         self.statusbar.setStyleSheet(StyleS.error)
-        self._message(msg)
-        logging.error(msg)
+        self._message(name)
+        logging.error(name)
 
     def mode_change(self):
         self.terminal.clear()
