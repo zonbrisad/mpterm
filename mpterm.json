@@ -1,17 +1,39 @@
 {
     "alias": "default",
-    "port": "ttyUSB0",
-    "bitrate": "115200",
+    "port": "ttyUSB1",
+    "bitrate": "57600",
     "databits": "8",
     "parity": "None",
     "stopbits": "1",
     "flowcontrol": "None",
     "mode": "Ascii",
     "suspend_timeout": 8,
-    "ext_program": "git __PORT__",
-    "macro1": "help\\n ",
-    "macro2": "c16\\n",
-    "macro3": "c256\\n",
-    "macro4": "r1000\\n",
-    "macro5": "bar\\n"
+    "ext_program": "ls",
+    "macros": [
+        {
+            "name": "M1",
+            "hex": false,
+            "text": "help\\n"
+        },
+        {
+            "name": "M2",
+            "hex": false,
+            "text": "c16\\n"
+        },
+        {
+            "name": "M3",
+            "hex": false,
+            "text": "c256\\n"
+        },
+        {
+            "name": "M4",
+            "hex": false,
+            "text": "r1000\\n"
+        },
+        {
+            "name": "M5",
+            "hex": true,
+            "text": "63 31 36 0a"
+        }
+    ]
 }
