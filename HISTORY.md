@@ -1,4 +1,8 @@
 
+# Version 0.38
+- Rewrote macro subsystem
+- Added hex macro
+
 # Version 0.37
 - fixed hex mode newline missing
 

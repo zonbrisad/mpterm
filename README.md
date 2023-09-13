@@ -135,7 +135,7 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 - [ ] Fix color rendering for basic 16 colors
 - Feature
 - [x] Userdefined quick access macros
-- [ ] Hexadecimal macros
+- [x] Hexadecimal macros
 - [ ] auto repeat macros in intervall
 - [x] Settings file
 - [ ] Multiple settings profiles
