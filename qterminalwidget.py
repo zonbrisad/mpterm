@@ -192,6 +192,26 @@ class QTerminalWidget(QPlainTextEdit):
                     continue
 
                 if line.csi == CSI.ERASE_IN_LINE:
+                    if line.n == 0:  # clear from cursor to end of line
+                        self.cur.movePosition(
+                            QTextCursor.EndOfLine, QTextCursor.KeepAnchor
+                        )
+
+                    if line.n == 1:  # clear from cursor to begining of line
+                        self.cur.movePosition(
+                            QTextCursor.StartOfLine, QTextCursor.KeepAnchor
+                        )
+
+                    if line.n == 2:  # clear entire line
+                        self.cur.movePosition(
+                            QTextCursor.EndOfÖome, QTextCursor.MoveAnchor
+                        )
+                        self.cur.movePosition(
+                            QTextCursor.StartOfLine, QTextCursor.KeepAnchor
+                        )
+
+                    self.cur.removeSelectedText()
+                    self.cur.deleteChar()
                     continue
 
                 if line.csi == CSI.CURSOR_POSITION:
@@ -212,7 +232,6 @@ class QTerminalWidget(QPlainTextEdit):
 
             if line == Ascii.BS:
                 logging.debug("Backspace")
-                # self.cur.deletePreviousChar()
                 self.move(QTextCursor.Left)
                 continue
 

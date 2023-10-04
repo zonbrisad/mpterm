@@ -283,14 +283,20 @@ class EscapeObj:
             if tc == csi.value:
                 self.csi = csi
 
-        params = seq[2:-1].replace(":", ";").split(";")
+        # The following CSI's has 0 as default for n
+        if self.csi in [CSI.ERASE_IN_DISPLAY, CSI.ERASE_IN_LINE]:
+            self.n = 0
+
+        paramsx = seq[2:-1].replace(":", ";").split(";")
+        params = [param for param in paramsx if param != ""]  # removing empty strings
+
+        logging.debug(f'Found {self.csi}  "{Escape.to_str(seq)}" {params}')
         if len(params) > 0:
             self.n = int(params[0])
         if len(params) > 1:
             self.m = int(params[1])
 
-        logging.debug(f'Found {self.csi}  "{Escape.to_str(seq)}" {params}')
-
+        # Decode SGR (Select Graphic Rendition)
         if self.csi == CSI.SGR:
             self.decode_sgr(seq)
 
@@ -1009,6 +1015,7 @@ class TerminalState:
                     CSI.CURSOR_BACK,
                     CSI.CURSOR_PREVIOUS_LINE,
                     CSI.ERASE_IN_DISPLAY,
+                    CSI.ERASE_IN_LINE,
                     CSI.CURSOR_POSITION,
                 ]:
                     l.append(eo)

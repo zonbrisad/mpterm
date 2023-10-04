@@ -1,6 +1,7 @@
 # Version 0.3x
 - Added support for selectable newline
 - Added support for CURSOR_BACK "CSI n D"
+- Added support for ERASE IN LINE "CSI n K", only partially tested
 
 # Version 0.38
 - Rewrote macro subsystem
