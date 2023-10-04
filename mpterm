@@ -589,10 +589,6 @@ class MainForm(QMainWindow):
         self.pbProgram.pressed.connect(self.run_ext_program)
         self.buttonLayout.addWidget(self.pbProgram)
 
-        # self.pbPause = QPushButton("Pause", self.centralwidget)
-        # self.pbPause.pressed.connect(self.pause)
-        # self.buttonLayout.addWidget(self.pbPause)
-
         self.pbSuspend = QPushButton("Suspend", self.centralwidget)
         self.pbSuspend.pressed.connect(self.suspend)
         self.buttonLayout.addWidget(self.pbSuspend)
@@ -840,18 +836,10 @@ class MainForm(QMainWindow):
         self.isPaused = False
 
         self.terminal.installEventFilter(self)
-        self.terminal.append_html(
-            # self.terminal.append_terminal_text(
-            f"""MpTerm Ver: <b>{App.VERSION}</b><br><br>"""
-        )
+        self.terminal.append_html(f"""MpTerm Ver: <b>{App.VERSION}</b><br><br>""")
 
         self.update_ui()
         self.init_port()
-
-        # testAction = QAction("Testactopm", self)
-        # testAction.triggered.connect(lambda: print("TestAction"))
-        # self.terminal.addAction(testAction)
-        # self.terminal.keyPressEvent.connect(self.key)
 
     def edit_macro_dialog(self):
         # self.macro_dialog.exec(self.macro_list)
@@ -1206,20 +1194,6 @@ class MainForm(QMainWindow):
         self.serialPort.setFlowControl(self.cbFlowControl.currentData())
         logging.debug(self.cbBitrate.currentData())
 
-    # def setCbText(self, cb, txt):
-    #     a = cb.findText(txt)
-    #     if a == -1:
-    #         cb.setCurrentIndex(0)
-    #     else:
-    #         cb.setCurrentIndex(a)
-
-    # def setCbData(self, cb, data):
-    #     a = cb.findData(data)
-    #     if a == -1:
-    #         cb.setCurrentIndex(0)
-    #     else:
-    #         cb.setCurrentIndex(a)
-
     def save_settings(self):
         self.prof.port = self.cbPort.currentText()
         self.prof.bitrate = self.cbBitrate.currentText()
@@ -1229,13 +1203,6 @@ class MainForm(QMainWindow):
         self.prof.flowcontrol = self.cbFlowControl.currentText()
         self.prof.mode = self.cbDisplay.currentData().name
         self.prof.newline = self.cbNewlineMode.currentText()
-
-        # self.prof.macro1 = self.m1.text
-        # self.prof.macro2 = self.m2.text
-        # self.prof.macro3 = self.m3.text
-        # self.prof.macro4 = self.m4.text
-        # self.prof.macro5 = self.m5.text
-
         self.prof.write()
 
     def load_cb_setting(self, cb, setting):
@@ -1255,12 +1222,6 @@ class MainForm(QMainWindow):
 
         idx = self.cbDisplay.findData(MpTerm(self.prof.mode))
         self.cbDisplay.setCurrentIndex(idx)
-
-        # self.m1.text = self.prof.macro1
-        # self.m2.text = self.prof.macro2
-        # self.m3.text = self.prof.macro3
-        # self.m4.text = self.prof.macro4
-        # self.m5.text = self.prof.macro5
 
     def exitProgram(self, e):
         self.serialPort.close()

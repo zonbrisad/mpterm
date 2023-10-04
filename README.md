@@ -166,7 +166,7 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 - [x] UI: programing mode does not show output from some external programs
 - [ ] Feature: Reconnecting to port despite avrdude using the port
 - [ ] Hexmode newline error
-- [ ] Fail when pressing arrow upp/down on Raspberry Pi Pico, CSI.CURSOR_BACK "\e[12D" needs support
+- [x] Fail when pressing arrow upp/down on Raspberry Pi Pico, CSI.CURSOR_BACK "\e[12D" needs support
 
 ## Future ideas
 

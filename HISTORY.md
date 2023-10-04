@@ -1,6 +1,6 @@
-
 # Version 0.3x
 - Added support for selectable newline
+- Added support for CURSOR_BACK "CSI n D"
 
 # Version 0.38
 - Rewrote macro subsystem

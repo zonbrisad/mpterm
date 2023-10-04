@@ -283,23 +283,16 @@ class EscapeObj:
             if tc == csi.value:
                 self.csi = csi
 
-        logging.debug(f'Found {self.csi}  "{Escape.to_str(seq)}"')
+        params = seq[2:-1].replace(":", ";").split(";")
+        if len(params) > 0:
+            self.n = int(params[0])
+        if len(params) > 1:
+            self.m = int(params[1])
+
+        logging.debug(f'Found {self.csi}  "{Escape.to_str(seq)}" {params}')
 
         if self.csi == CSI.SGR:
             self.decode_sgr(seq)
-
-        if self.csi == CSI.CURSOR_POSITION:
-            paramstring = seq[2:-1]
-            params = paramstring.replace(":", ";").split(";")
-            # logging.debug(f"Paramstring len: {len(paramstring)}  len: {len(params)}")
-
-            if len(paramstring) == 0:
-                return
-            if len(params) == 1:
-                self.n = int(params[0])
-            if len(params) == 2:
-                self.n = int(params[0])
-                self.m = int(params[1])
 
     @staticmethod
     def find_sgr(sgr_code: str) -> SGR:
@@ -1013,6 +1006,7 @@ class TerminalState:
                 if eo.csi in [
                     CSI.CURSOR_UP,
                     CSI.CURSOR_DOWN,
+                    CSI.CURSOR_BACK,
                     CSI.CURSOR_PREVIOUS_LINE,
                     CSI.ERASE_IN_DISPLAY,
                     CSI.CURSOR_POSITION,

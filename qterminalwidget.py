@@ -135,9 +135,8 @@ class QTerminalWidget(QPlainTextEdit):
         self.cur.insertHtml(html)
         # self.printpos(None)
 
-    def move(self, newPos: QTextCursor) -> None:
-        self.cur.movePosition(newPos)
-        # self.printpos(newPos)
+    def move(self, newPos: QTextCursor, n: int = 1) -> None:
+        self.cur.movePosition(newPos, n=n)
 
     def remove_rows_alt(self, lines):
         logging.debug(f"Removing {lines} lines")
@@ -163,9 +162,8 @@ class QTerminalWidget(QPlainTextEdit):
         self.limit_lines()
 
     def insertHtml(self, html):
-        l = len(html)
         self.cur.insertHtml(html)
-        self.cur.movePosition(QTextCursor.Right, l)
+        self.cur.movePosition(QTextCursor.Right, len(html))
 
     def append_terminal_text(self, s: str) -> None:
         lines = self.ts.update(s)
@@ -180,6 +178,10 @@ class QTerminalWidget(QPlainTextEdit):
 
                 if line.csi == CSI.CURSOR_DOWN:
                     self.move(QTextCursor.Down)
+                    continue
+
+                if line.csi == CSI.CURSOR_BACK:
+                    self.cur.movePosition(QTextCursor.Left, n=line.n)
                     continue
 
                 if line.csi == CSI.CURSOR_NEXT_LINE:
