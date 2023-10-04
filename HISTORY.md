@@ -1,4 +1,7 @@
 
+# Version 0.3x
+- Added support for selectable newline
+
 # Version 0.38
 - Rewrote macro subsystem
 - Added hex macro
