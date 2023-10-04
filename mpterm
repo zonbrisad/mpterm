@@ -224,6 +224,7 @@ class mpProfile:
     mode: str = MpTerm.Ascii.name
     suspend_timeout: int = 8
     ext_program: str = ""
+    newline: str = "\n"
     macros: list[Macro] = field(default_factory=list)
     key_list = [
         "alias",
@@ -236,6 +237,7 @@ class mpProfile:
         "mode",
         "suspend_timeout",
         "ext_program",
+        "newline",
     ]
     filename: str = ""
 
@@ -556,6 +558,12 @@ class MainForm(QMainWindow):
         self.cbDisplay.activated.connect(self.set_sp)
         self.buttonLayout.addWidget(self.cbDisplay)
 
+        self.cbNewlineMode = QComboBox(self.centralwidget)
+        self.cbNewlineMode.addItem("LF", "\n")
+        self.cbNewlineMode.addItem("CR", "\r")
+        self.cbNewlineMode.addItem("CRLF", "\r\n")
+        self.buttonLayout.addWidget(self.cbNewlineMode)
+
         self.buttonLayout.addStretch()
 
         # self.cbNewline = QComboBox(self.centralwidget)
@@ -607,7 +615,8 @@ class MainForm(QMainWindow):
         self.serialPort = SerialPort()
         self.serialPort.setReadBufferSize(256)
         self.serialPort.readyRead.connect(self.read)
-        self.terminal = QTerminalWidget(self.centralwidget, serialPort=self.serialPort)
+        self.terminal = QTerminalWidget(self.centralwidget)
+        # self.terminal = QTerminalWidget(self.centralwidget, serialPort=self.serialPort)
         self.terminal.setMaxLines(App.MAX_LINES)
 
         # Layouts
@@ -884,14 +893,17 @@ class MainForm(QMainWindow):
             Qt.Key_Down: Escape.DOWN,
             Qt.Key_Delete: Escape.KEY_DELETE,
             Qt.Key_Space: " ",
+            Qt.Key_Enter: "",
+            Qt.Key_Return: "",
         }
         # logging.debug(f"Event: {event}")
 
-        # if event == Qt.Key_CTR
-
         if event.type() == QEvent.KeyPress:
-            # logging.debug(f"Keypress Event: {event}")
             keyEvent = QKeyEvent(event)
+            if keyEvent.key() in [Qt.Key_Enter, Qt.Key_Return]:
+                self.serialPort.send_string(self.cbNewlineMode.currentData())
+                return True
+
             if keyEvent.key() in key2key:
                 logging.debug(f"Key:{keyEvent.key()}")
                 self.serialPort.send_string(key2key[keyEvent.key()])
@@ -899,8 +911,6 @@ class MainForm(QMainWindow):
             else:
                 return False
         return False
-
-        # return super().eventFilter(obj, event)
 
     def send_macro(self, macro: Macro):
         self.serialPort.send(macro.data())
@@ -1218,6 +1228,7 @@ class MainForm(QMainWindow):
         self.prof.parity = self.cbParity.currentText()
         self.prof.flowcontrol = self.cbFlowControl.currentText()
         self.prof.mode = self.cbDisplay.currentData().name
+        self.prof.newline = self.cbNewlineMode.currentText()
 
         # self.prof.macro1 = self.m1.text
         # self.prof.macro2 = self.m2.text
@@ -1240,6 +1251,7 @@ class MainForm(QMainWindow):
         self.load_cb_setting(self.cbBits, self.prof.databits)
         self.load_cb_setting(self.cbParity, self.prof.parity)
         self.load_cb_setting(self.cbFlowControl, self.prof.flowcontrol)
+        self.load_cb_setting(self.cbNewlineMode, self.prof.newline)
 
         idx = self.cbDisplay.findData(MpTerm(self.prof.mode))
         self.cbDisplay.setCurrentIndex(idx)

@@ -136,7 +136,7 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 - Feature
 - [x] Userdefined quick access macros
 - [x] Hexadecimal macros
-- [ ] auto repeat macros in intervall
+- [ ] auto repeat macros with intervalsetting
 - [x] Settings file
 - [ ] Multiple settings profiles
 - [x] Echo mode
@@ -153,6 +153,8 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 - [ ] Manage Bell character
 - [ ] copy/paste clipboard
 - [ ] Changeable color palets
+- [x] Changable newline mode
+- [ ] Escape sequence monitor
 
 ## Known Issues
 - [x] Rendering: Error when <> characters are included
@@ -164,6 +166,7 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 - [x] UI: programing mode does not show output from some external programs
 - [ ] Feature: Reconnecting to port despite avrdude using the port
 - [ ] Hexmode newline error
+- [ ] Fail when pressing arrow upp/down on Raspberry Pi Pico, CSI.CURSOR_BACK "\e[12D" needs support
 
 ## Future ideas
 

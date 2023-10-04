@@ -19,7 +19,7 @@ import logging
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QTextCursor, QFont, QKeyEvent
-from PyQt5.QtWidgets import QTextEdit, QPlainTextEdit
+from PyQt5.QtWidgets import QPlainTextEdit
 
 from escape import Escape, Ascii, TerminalState, CSI, SGR, EscapeObj
 
@@ -28,8 +28,8 @@ from escape import Escape, Ascii, TerminalState, CSI, SGR, EscapeObj
 # Code -----------------------------------------------------------------------
 
 keys = {
-    Qt.Key_Enter: ("\n", "Enter"),
-    Qt.Key_Return: ("\n", "Return"),
+    # Qt.Key_Enter: ("\n", "Enter"),
+    # Qt.Key_Return: ("\n\r", "Return"),
     Qt.Key_Escape: ("", "Escape"),
     Qt.Key_Delete: ("", "Delete"),
     Qt.Key_Left: (Escape.BACK, "Left"),
@@ -84,10 +84,15 @@ def get_key(key: QKeyEvent) -> str:
 
 
 class QTerminalWidget(QPlainTextEdit):
-    def __init__(self, parent=None, serialPort=None, init=""):
+    def __init__(self, parent=None, init=""):
         super().__init__(parent)
-        self.serialPort = serialPort
-        # self.setObjectName("textEdit")
+
+        self.cur = QTextCursor(self.document())
+        self.ts = TerminalState()
+        self.setCursorWidth(2)
+        self.ensureCursorVisible()
+        self.setReadOnly(True)
+        self.clear()
 
         font = QFont()
         font.setFamily("Monospace")
@@ -102,25 +107,6 @@ class QTerminalWidget(QPlainTextEdit):
         )
         # self.setStyleSheet("background-color: rgb(0, 0, 0); color : White; line-height:20pt; font-family:Monospace")
 
-        self.cur = QTextCursor(self.document())
-
-        # self.insert(init)
-        # self.setPlaceholderText("asdfasdfasdf")
-        # doc = self.document()
-        # settings = QTextOption()
-        # settings.setFlags(QTextOption.IncludeTrailingSpaces | QTextOption.ShowTabsAndSpaces )
-        # doc.setDefaultTextOption(settings)
-        # p = self.viewport().palette()
-        # p.setColor(self.viewport().backgroundRole(), QColor(0,0,0))
-        # self.viewport().setPalette(p)
-
-        self.ts = TerminalState()
-
-        self.setReadOnly(True)
-        self.clear()
-
-        self.ensureCursorVisible()
-        self.setCursorWidth(2)
         self.overwrite = False
         self.idx = 0
         self.maxLines = 100
@@ -157,7 +143,7 @@ class QTerminalWidget(QPlainTextEdit):
         logging.debug(f"Removing {lines} lines")
         cursor = self.textCursor()  # QTextCursor(self.document())
 
-        for x in range(lines):
+        for _ in range(lines):
             cursor.movePosition(QTextCursor.Start, QTextCursor.MoveAnchor)
             cursor.select(QTextCursor.LineUnderCursor)
             cursor.removeSelectedText()
@@ -261,11 +247,6 @@ class QTerminalWidget(QPlainTextEdit):
             self.cr = False
 
         self.limit_lines()
-
-    # def keyPressEvent(self, e: QKeyEvent) -> None:
-    #     logging.debug(f"  {e.key():x}  {get_description(e)}")
-    #     self.sp.send_string(get_key(e))
-    #     #super().keyPressEvent(e)
 
     def scroll_down(self):
         vsb = self.verticalScrollBar()
