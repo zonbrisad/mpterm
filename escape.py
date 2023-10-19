@@ -405,7 +405,7 @@ class Escape:
     NOT_SSCRIPT = "\x1b[75m"
     NOT_OVERLINE = "\x1b[55m"
 
-    END = "\x1b[0m"
+    END = "\x1b[m"  # Clear Attributes
     CLEAR = "\x1b[2J"
     RESET = "\x1b[m"
 
@@ -413,22 +413,13 @@ class Escape:
 
     # ANSI cursor operations
     #
-    RETURN = "\x1b[F"  # Move cursor to begining of line
     UP = "\x1b[A"  # Move cursor one line up
     DOWN = "\x1b[B"  # Move cursor one line down
     FORWARD = "\x1b[C"  # Move cursor forward
     BACK = "\x1b[D"  # Move cursor backward
+    RETURN = "\x1b[F"  # Move cursor to begining of line
     HIDE = "\x1b[?25l"  # Hide cursor
-    END = "\x1b[m"  # Clear Attributes
-
-    # ANSI movement codes
-    UP = "\x1b[A"  # cursor up
-    DOWN = "\x1b[B"  # cursor down
-    FORWARD = "\x1b[C"  # cursor forward
-    BACK = "\x1b[D"  # cursor back
-    RETURN = "\x1b[F"  # cursor return
-    HIDE = "\x1b[?25l"  # hide cursor
-    SHOW = "\x1b[?25h"  # show cursor
+    SHOW = "\x1b[?25h"  # Show cursor
 
     KEY_HOME = "\x1b[1~"  # Home
     KEY_INSERT = "\x1b[2~"  #

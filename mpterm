@@ -672,22 +672,11 @@ class MainForm(QMainWindow):
         self.menubar = QMenuBar(self)
         self.setMenuBar(self.menubar)
 
-        # Menu
+        # File menu
         self.menuFile = QMenu(self.menubar, title="&File")
         self.menubar.addAction(self.menuFile.menuAction())
-        self.menuSettings = QMenu(self.menubar, title="Settings")
-        self.menubar.addAction(self.menuSettings.menuAction())
-        self.menuAction = QMenu(self.menubar, title="&Action")
-        self.menubar.addAction(self.menuAction.menuAction())
-        self.menuSend = QMenu(self.menubar, title="Send")
-        self.menubar.addAction(self.menuSend.menuAction())
-        self.menuHelp = QMenu(self.menubar, title="&Help")
-        self.menubar.addAction(self.menuHelp.menuAction())
-
-        # Menu actions
         self.actionNew = QAction("New", self, triggered=self.new_terminal)
         self.menuFile.addAction(self.actionNew)
-
         self.actionExit = QAction("Quit", self, triggered=self.exitProgram)
         self.actionExit.setToolTip("Quit")
         self.actionExit.setShortcutContext(Qt.WidgetShortcut)
@@ -698,6 +687,9 @@ class MainForm(QMainWindow):
         # )
         # self.menuSettings.addAction(self.actionEcho)
 
+        # Settings menu
+        self.menuSettings = QMenu(self.menubar, title="Settings")
+        self.menubar.addAction(self.menuSettings.menuAction())
         self.actionSetProgram = QAction(
             "Ext. Program", self, triggered=self.set_ext_program
         )
@@ -707,6 +699,9 @@ class MainForm(QMainWindow):
         )
         self.menuSettings.addAction(self.actionSetTimeout)
 
+        # Action menu
+        self.menuAction = QMenu(self.menubar, title="&Action")
+        self.menubar.addAction(self.menuAction.menuAction())
         self.actionClear = QAction(self, text="Clear")
         self.actionClear.triggered.connect(self.terminal_clear)
         self.menuAction.addAction(self.actionClear)
@@ -715,22 +710,20 @@ class MainForm(QMainWindow):
         self.actionPortInfo = QAction(self, text="Port info", triggered=self.portInfo)
         self.menuAction.addAction(self.actionPortInfo)
 
-        self.actionAbout = QAction(self, text="About")
-        self.actionAbout.triggered.connect(
-            lambda: AboutDialog.about(App.NAME, about_html)
-        )
-        self.menuHelp.addAction(self.actionAbout)
-
         # Send menu
-        ctrlcAction = QAction("Ctrl-C (ETX)", self)
-        ctrlcAction.triggered.connect(lambda: self.send_string(Escape.ETX))
-        self.menuSend.addAction(ctrlcAction)
-        ctrlcAction = QAction("Break (NULL)", self)
-        ctrlcAction.triggered.connect(lambda: self.send_string(Ascii.NULL))
-        self.menuSend.addAction(ctrlcAction)
-        tabAction = QAction("Tab (0x09)", self)
-        tabAction.triggered.connect(lambda: self.send_string(Ascii.TAB))
-        self.menuSend.addAction(tabAction)
+        self.menuSend = QMenu(self.menubar, title="Send")
+        self.menubar.addAction(self.menuSend.menuAction())
+        self.add_action(
+            "Break (0x00)", self.menuSend, lambda: self.send_string(Ascii.NULL)
+        )
+        self.add_action(
+            "Ctrl-C (0x03)", self.menuSend, lambda: self.send_string(Ascii.ETX)
+        )
+        self.add_action(
+            "Tab (0x09)", self.menuSend, lambda: self.send_string(Ascii.TAB)
+        )
+        self.add_action("LF (0x0a)", self.menuSend, lambda: self.send_string(Ascii.NL))
+        self.add_action("CR (0x0d)", self.menuSend, lambda: self.send_string(Ascii.CR))
 
         self.testMenu = self.menuSend.addMenu("Tests")
 
@@ -799,6 +792,27 @@ class MainForm(QMainWindow):
         self.add_action(
             "Crossed", self.attrMenu, lambda: self.send_string(Escape.CROSSED)
         )
+
+        self.attrMenu = self.menuSend.addMenu("Cursor")
+        self.add_action("Up", self.attrMenu, lambda: self.send_string(Escape.UP))
+        self.add_action("Down", self.attrMenu, lambda: self.send_string(Escape.DOWN))
+        self.add_action(
+            "Forward", self.attrMenu, lambda: self.send_string(Escape.FORWARD)
+        )
+        self.add_action(
+            "Backward",
+            self.attrMenu,
+            lambda: self.send_string(Escape.BACK),
+        )
+
+        # Help menu
+        self.menuHelp = QMenu(self.menubar, title="&Help")
+        self.menubar.addAction(self.menuHelp.menuAction())
+        self.actionAbout = QAction(self, text="About")
+        self.actionAbout.triggered.connect(
+            lambda: AboutDialog.about(App.NAME, about_html)
+        )
+        self.menuHelp.addAction(self.actionAbout)
 
         # Scan for serialports
         self.update_ports()
@@ -915,12 +929,10 @@ class MainForm(QMainWindow):
         return action
 
     def pause(self):
-        if self.isPaused:
+        if self.isPaused is True:
             self.isPaused = False
-            self.pbPause.setText("Pause")
         else:
             self.isPaused = True
-            self.pbPause.setText("Paused")
 
     def suspend(self):
         logging.debug(f"Suspending port for {self.prof.suspend_timeout} s.")
@@ -1031,6 +1043,11 @@ class MainForm(QMainWindow):
             State.RECONNECTING: f"""<span style="color:Magenta">Reconnecting {self.serialPort.cntReconnect}</span>""",
         }
         self.stateLabel.setText(f"{states[self.serialPort.state]}")
+
+        if self.isPaused is True:
+            self.pbPause.setText("Pause")
+        else:
+            self.pbPause.setText("Paused")
 
         # if self.serialPort.isDataTerminalReady():
         #     self.dtrLabel.setText("\u26AA  DTR")
