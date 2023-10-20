@@ -21,7 +21,16 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QTextCursor, QFont, QKeyEvent, QIcon, QKeyEvent, QCloseEvent
 from PyQt5.QtWidgets import QPlainTextEdit
 
-from escape import Escape, Ascii, TerminalState, CSI, SGR, EscapeObj, TextObj
+from escape import (
+    Escape,
+    Ascii,
+    TerminalState,
+    CSI,
+    SGR,
+    EscapeObj,
+    TextObj,
+    TerminalLine,
+)
 
 import sys
 from PyQt5.QtWidgets import (
@@ -133,6 +142,7 @@ class QTerminalWidget(QPlainTextEdit):
         self.idx = 0
         self.maxLines = 100
         self.cr = False
+        self.last_id = 0
 
     def setMaxLines(self, maxLines):
         self.maxLines = maxLines
@@ -159,9 +169,9 @@ class QTerminalWidget(QPlainTextEdit):
 
     def move(self, direction: QTextCursor, anchor: QTextCursor, steps: int = 1) -> None:
         self.cur.movePosition(direction, anchor, n=steps)
-        print(
-            f"Cursor back: direction: {direction:2}  lines: {self.document().lineCount():3}  col: {self.cur.columnNumber():2}  steps: {steps:3}"
-        )
+        # print(
+        #     f"Cursor back: direction: {direction:2}  lines: {self.document().lineCount():3}  col: {self.cur.columnNumber():2}  steps: {steps:3}"
+        # )
 
     def remove_rows_alt(self, lines):
         logging.debug(f"Removing {lines} lines")
@@ -274,51 +284,43 @@ class QTerminalWidget(QPlainTextEdit):
                 self.cur.insertHtml("<br>")
                 continue
 
-            # self.append_html(token)
-            # text = token.replace("<", "&lt;")
-            if type(token) is TextObj:
-                # text = token
-                l = len(token.text)
-                if not self.cur.atEnd():
-                    # self.cur.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, l)
-                    # self.cur.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, l)
-                    self.move(QTextCursor.Right, QTextCursor.KeepAnchor, l)
-                    # self.move(QTextCursor.Right, QTextCursor.MoveAnchor, l)
-                    # print(f"Distance to end: {l}")
-                    # self.cur.setPosition()
-                    # self.cur.removeSelectedText()
-                    print(f"X: {l:3} {token}")
-                    self.cur.insertHtml(token.html)
-                    self.move(QTextCursor.Right, QTextCursor.MoveAnchor, l)
-                    # self.cur.movePosition(QTextCursor.Right, l)
-                    continue
+            # if type(token) is TextObj:
+            #     # text = token
+            #     l = len(token.text)
+            #     if not self.cur.atEnd():
+            #         # self.cur.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, l)
+            #         # self.cur.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, l)
+            #         self.move(QTextCursor.Right, QTextCursor.KeepAnchor, l)
+            #         # self.move(QTextCursor.Right, QTextCursor.MoveAnchor, l)
+            #         # print(f"Distance to end: {l}")
+            #         # self.cur.setPosition()
+            #         # self.cur.removeSelectedText()
+            #         print(f"X: {l:3} {token}")
+            #         self.cur.insertHtml(token.html)
+            #         self.move(QTextCursor.Right, QTextCursor.MoveAnchor, l)
+            #         # self.cur.movePosition(QTextCursor.Right, l)
+            #         continue
 
-                # text = text.replace("<", "&lt;")
-                self.cur.insertHtml(token.html)
-                # self.cur.movePosition(QTextCursor.Right, l)
-                self.cur.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, l)
-                self.cr = False
-            # text = token
-            # l = len(text)
-            # if not self.cur.atEnd():
-            #     # self.cur.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, l)
-            #     # self.cur.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, l)
-            #     self.move(QTextCursor.Right, QTextCursor.KeepAnchor, l)
-            #     # self.move(QTextCursor.Right, QTextCursor.MoveAnchor, l)
-            #     # print(f"Distance to end: {l}")
-            #     # self.cur.setPosition()
-            #     # self.cur.removeSelectedText()
-            #     print(f"X: {l:3} {token}")
-            #     self.cur.insertHtml(text)
-            #     self.move(QTextCursor.Right, QTextCursor.MoveAnchor, l)
+            #     # text = text.replace("<", "&lt;")
+            #     self.cur.insertHtml(token.html)
             #     # self.cur.movePosition(QTextCursor.Right, l)
-            #     continue
+            #     self.cur.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, l)
+            #     self.cr = False
 
-            # # text = text.replace("<", "&lt;")
-            # self.cur.insertHtml(text)
-            # # self.cur.movePosition(QTextCursor.Right, l)
-            # self.cur.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, l)
-            # self.cr = False
+            if type(token) is TerminalLine:
+                if token.id > self.last_id:
+                    self.last_id = token.id
+                    self.move(QTextCursor.End, QTextCursor.MoveAnchor)
+                    self.cur.insertHtml("<br>")
+
+                if token.id == self.last_id:
+                    self.move(QTextCursor.StartOfLine, QTextCursor.MoveAnchor)
+                    self.move(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+
+                html = token.line_to_html()
+                print(f"Token: {token}")
+                print(f"Html {html}")
+                self.cur.insertHtml(html)
 
         self.limit_lines()
 
@@ -565,7 +567,7 @@ def main() -> None:
     # app.setAttribute(Qt.AA_UseHighDpiPixmaps)
 
     app = QApplication(sys.argv)
-    mainForm = MainForm(args)
+    mainForm = MainForm(sys.argv)
     mainForm.show()
     sys.exit(app.exec_())
 

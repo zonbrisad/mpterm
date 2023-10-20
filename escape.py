@@ -30,6 +30,7 @@
 #
 
 from __future__ import annotations
+from copy import copy
 from dataclasses import dataclass
 import logging
 from enum import Enum
@@ -879,28 +880,19 @@ sgr_to_escape_color_bold = {
 }
 
 
-class TerminalCharacterState:
-    def __init__(self):
-        self.reset()
-        ch = ""
-
-    def __eq__(self, __o: TerminalCharacterState) -> bool:
-        X = [
-            "BOLD",
-            "DIM",
-            "ITALIC",
-            "UNDERLINE",
-            "BLINK",
-            "REVERSE",
-            "CROSSED",
-            "FG_COLOR",
-            "BG_COLOR",
-        ]
-        for x in X:
-            if getattr(self, x) != getattr(__o, x):
-                return False
-
-        return True
+@dataclass
+class TerminalAttributeState:
+    BOLD: bool = False
+    DIM: bool = False
+    ITALIC: bool = False
+    CROSSED: bool = False
+    UNDERLINE: bool = False
+    SUPERSCRIPT: bool = False
+    SUBSCRIPT: bool = False
+    REVERSE: bool = False
+    OVERLINE: bool = False
+    FG_COLOR: str = ""
+    BG_COLOR: str = ""
 
     def reset(self):
         self.BOLD = False
@@ -916,17 +908,76 @@ class TerminalCharacterState:
         self.BG_COLOR = ""
 
 
-class TerminalLine:
-    def __init__(self, len: int = 80) -> None:
-        self.line = []
-        self.id = 0
-        for x in range(80):
-            ch = TerminalCharacterState()
-            self.line.append(ch)
-        pass
+class TerminalCharacter:
+    def __init__(self, ch: str, tas: TerminalAttributeState):
+        self.tas = TerminalAttributeState()
+        self.tas = copy(tas)
+        self.ch = ch
 
-    def line_to_html(self):
-        pass
+
+class TerminalLine:
+    def __init__(self, id: int = 0) -> None:
+        self.line = []
+        self.id = id
+
+    def __str__(self) -> str:
+        text = ""
+        for tc in self.line:
+            text += tc.ch
+
+        return text
+
+    def attr_html(self, data: str, tas: TerminalAttributeState) -> str:
+        if tas.REVERSE:
+            bg_color = tas.FG_COLOR
+            fg_color = tas.BG_COLOR
+        else:
+            fg_color = tas.FG_COLOR
+            bg_color = tas.BG_COLOR
+
+        # b = f'<span style="color:{fg_color};background-color:{bg_color};font-size:10pt;line-height:1.38;'
+        b = f'<span style="color:{fg_color};background-color:{bg_color};font-size:10pt;'
+
+        if tas.BOLD:
+            b += "font-weight:bold;"
+        if tas.ITALIC:
+            b += "font-style:italic;"
+        if tas.UNDERLINE:
+            b += "text-decoration:underline;"
+        if tas.CROSSED:
+            b += "text-decoration:line-through;"
+        if tas.OVERLINE:
+            b += "text-decoration:overline;"
+
+        b += '">'
+        b += data.replace(" ", "&nbsp;").replace("<", "&lt;").replace("<", "&gt;")
+        b += "</span>"
+        # print(f"{data=} {b=}")
+        return b
+
+    def line_to_html(self) -> str:
+        html = ""
+        text = ""
+        for idx, tc in enumerate(self.line):
+            if idx == 0:
+                tas = tc.tas
+
+            if tas == tc.tas:
+                text += tc.ch
+            else:
+                html += self.attr_html(text, tas)
+                text = tc.ch
+                tas = tc.tas
+
+        if len(text) > 0:
+            html += self.attr_html(text, tas)
+
+        return html
+
+    def append(self, text: str, tas: TerminalAttributeState):
+        for ch in text:
+            tc = TerminalCharacter(ch, tas)
+            self.line.append(tc)
 
 
 @dataclass
@@ -935,7 +986,7 @@ class TextObj:
     html: str = ""
 
 
-class TerminalState(TerminalCharacterState):
+class TerminalState(TerminalAttributeState):
     cur_x = None
     cur_y = None
 
@@ -944,28 +995,31 @@ class TerminalState(TerminalCharacterState):
 
     def __init__(self) -> None:
         self.et = EscapeTokenizer()
+        self.line_id = 0
+        self.cur_line = TerminalLine(id=self.line_id)
+        self.tas = TerminalAttributeState()
         self.reset()
 
     def attr_html(self, data: str) -> str:
-        if self.REVERSE:
-            bg_color = self.FG_COLOR
-            fg_color = self.BG_COLOR
+        if self.tas.REVERSE:
+            bg_color = self.tas.FG_COLOR
+            fg_color = self.tas.BG_COLOR
         else:
-            fg_color = self.FG_COLOR
-            bg_color = self.BG_COLOR
+            fg_color = self.tas.FG_COLOR
+            bg_color = self.tas.BG_COLOR
 
         # b = f'<span style="color:{fg_color};background-color:{bg_color};font-size:10pt;line-height:1.38;'
         b = f'<span style="color:{fg_color};background-color:{bg_color};font-size:10pt;'
 
-        if self.BOLD:
+        if self.tas.BOLD:
             b += "font-weight:bold;"
-        if self.ITALIC:
+        if self.tas.ITALIC:
             b += "font-style:italic;"
-        if self.UNDERLINE:
+        if self.tas.UNDERLINE:
             b += "text-decoration:underline;"
-        if self.CROSSED:
+        if self.tas.CROSSED:
             b += "text-decoration:line-through;"
-        if self.OVERLINE:
+        if self.tas.OVERLINE:
             b += "text-decoration:overline;"
 
         b += '">'
@@ -975,10 +1029,13 @@ class TerminalState(TerminalCharacterState):
         return b
 
     def reset(self):
-        super().reset()
-        self.FG_COLOR = self.default_fg_color
-        self.BG_COLOR = self.default_bg_color
         self.et.clear()
+        self.reset_attr()
+
+    def reset_attr(self):
+        self.tas.reset()
+        self.tas.FG_COLOR = self.default_fg_color
+        self.tas.BG_COLOR = self.default_bg_color
 
     def update(self, s: str) -> list:
         self.et.append_string(s)
@@ -1012,15 +1069,18 @@ class TerminalState(TerminalCharacterState):
                             SGR.SUPERSCRIPT,
                             SGR.SUBSCRIPT,
                         ]:
-                            setattr(self, a.name, True)
+                            setattr(self.tas, a.name, True)
+
+                        if a == SGR.BOLD:
+                            self.tas.BOLD = True
 
                         if a == SGR.OVERLINE:
-                            self.OVERLINE = True
-                            self.UNDERLINE = False
-                            self.CROSSED = False
+                            self.tas.OVERLINE = True
+                            self.tas.UNDERLINE = False
+                            self.tas.CROSSED = False
 
                         if a == SGR.NOT_OVERLINE:
-                            self.OVERLINE = False
+                            self.tas.OVERLINE = False
 
                         # if a in [
                         #     SGR.NORMAL_INTENSITY,
@@ -1035,23 +1095,23 @@ class TerminalState(TerminalCharacterState):
                         # setattr(self, sgr_to_escape_color[a][1].name, False)
 
                         if a == SGR.NORMAL_INTENSITY:
-                            self.BOLD = False
-                            self.DIM = False
+                            self.tas.BOLD = False
+                            self.tas.DIM = False
 
                         if a == SGR.NOT_ITALIC:
-                            self.ITALIC = False
+                            self.tas.ITALIC = False
 
                         if a == SGR.NOT_UNDERLINED:
-                            self.UNDERLINE = False
+                            self.tas.UNDERLINE = False
                         # if a == SGR.NOT_BLINKING:
                         #     self.BLINKING = False
                         if a == SGR.NOT_REVERSED:
-                            self.REVERSE = False
+                            self.tas.REVERSE = False
                         # if a == SGR.REVEAL:
                         #     self.Reveal =
 
                         if a == SGR.NOT_CROSSED:
-                            self.CROSSED = False
+                            self.tas.CROSSED = False
 
                         if a in [
                             SGR.FG_COLOR_BLACK,
@@ -1064,9 +1124,9 @@ class TerminalState(TerminalCharacterState):
                             SGR.FG_COLOR_WHITE,
                         ]:
                             if self.BOLD:
-                                self.FG_COLOR = sgr_to_escape_color_bold[a]
+                                self.tas.FG_COLOR = sgr_to_escape_color_bold[a]
                             else:
-                                self.FG_COLOR = sgr_to_escape_color[a]
+                                self.tas.FG_COLOR = sgr_to_escape_color[a]
 
                         if a in [
                             SGR.BG_COLOR_BLACK,
@@ -1078,37 +1138,42 @@ class TerminalState(TerminalCharacterState):
                             SGR.BG_COLOR_CYAN,
                             SGR.BG_COLOR_WHITE,
                         ]:
-                            self.BG_COLOR = sgr_to_escape_color[a]
+                            self.tas.BG_COLOR = sgr_to_escape_color[a]
 
                         if a == SGR.SET_FG_COLOR:
-                            self.FG_COLOR = CC256[s["color"]]["hex"]
+                            self.tas.FG_COLOR = CC256[s["color"]]["hex"]
 
                         if a == SGR.SET_BG_COLOR:
-                            self.BG_COLOR = CC256[s["color"]]["hex"]
+                            self.tas.BG_COLOR = CC256[s["color"]]["hex"]
 
                         if a == SGR.REVERSE_VIDEO:
-                            self.REVERSE = True
+                            self.tas.REVERSE = True
 
                         if a == SGR.NOT_REVERSED:
-                            self.REVERSE = False
+                            self.tas.REVERSE = False
 
                         if a == SGR.RESET:
-                            self.reset_attr()
+                            self.tas.reset()
                 continue
 
-            if token in [Ascii.NL, Ascii.CR, Ascii.BS]:
-                l.append(token)
+            # if token in [Ascii.NL, Ascii.CR, Ascii.BS]:
+            # l.append(token)
+            #    continue
+
+            if token == Ascii.NL:
+                l.append(self.cur_line)
+                self.line_id += 1
+                self.cur_line = TerminalLine(id=self.line_id)
                 continue
 
             if token in [Ascii.BEL]:
                 continue
 
-            l.append(TextObj(text=token, html=self.attr_html(token)))
+            self.cur_line.append(token, self.tas)
 
-            # token_space = (
-            #     token.replace(" ", "&nbsp;").replace("<", "&lt;").replace("<", "&gt;")
-            # )
-            # l.append(self.attr_html(token_space))
+            l.append(self.cur_line)
+
+            # l.append(TextObj(text=token, html=self.attr_html(token)))
 
         return l
 
