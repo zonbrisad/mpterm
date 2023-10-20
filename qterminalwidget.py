@@ -21,7 +21,7 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QTextCursor, QFont, QKeyEvent, QIcon, QKeyEvent, QCloseEvent
 from PyQt5.QtWidgets import QPlainTextEdit
 
-from escape import Escape, Ascii, TerminalState, CSI, SGR, EscapeObj
+from escape import Escape, Ascii, TerminalState, CSI, SGR, EscapeObj, TextObj
 
 import sys
 from PyQt5.QtWidgets import (
@@ -157,8 +157,11 @@ class QTerminalWidget(QPlainTextEdit):
         self.cur.insertHtml(html)
         # self.printpos(None)
 
-    def move(self, newPos: QTextCursor, n: int = 1) -> None:
-        self.cur.movePosition(newPos, n=n)
+    def move(self, direction: QTextCursor, anchor: QTextCursor, steps: int = 1) -> None:
+        self.cur.movePosition(direction, anchor, n=steps)
+        print(
+            f"Cursor back: direction: {direction:2}  lines: {self.document().lineCount():3}  col: {self.cur.columnNumber():2}  steps: {steps:3}"
+        )
 
     def remove_rows_alt(self, lines):
         logging.debug(f"Removing {lines} lines")
@@ -179,7 +182,7 @@ class QTerminalWidget(QPlainTextEdit):
             self.remove_rows_alt(lines - self.maxLines)
 
     def append_html(self, html):
-        self.move(QTextCursor.End)
+        self.move(QTextCursor.End, QTextCursor.MoveAnchor)
         self.insert(html)
         self.limit_lines()
 
@@ -188,46 +191,44 @@ class QTerminalWidget(QPlainTextEdit):
         self.cur.movePosition(QTextCursor.Right, len(html))
 
     def append_terminal_text(self, s: str) -> None:
-        lines = self.ts.update(s)
+        tokens = self.ts.update(s)
 
         # lines = self.document().lineCount()
 
-        for line in lines:
-            if type(line) == EscapeObj:
-                if line.csi == CSI.CURSOR_UP:
-                    self.move(QTextCursor.Up)
+        for token in tokens:
+            if type(token) is EscapeObj:
+                if token.csi == CSI.CURSOR_UP:
+                    self.move(QTextCursor.Up, QTextCursor.MoveAnchor)
                     continue
 
-                if line.csi == CSI.CURSOR_DOWN:
-                    self.move(QTextCursor.Down)
+                if token.csi == CSI.CURSOR_DOWN:
+                    self.move(QTextCursor.Down, QTextCursor.MoveAnchor)
                     continue
 
-                if line.csi == CSI.CURSOR_BACK:
-                    self.cur.movePosition(
-                        QTextCursor.Left, n=min((self.cur.columnNumber(), QTextCursor.MoveAnchor, line.n))
-                    )
-                    # self.cur.movePosition(QTextCursor.Left, n=line.n)
+                if token.csi == CSI.CURSOR_BACK:
+                    n = min((self.cur.columnNumber(), token.n))
+                    self.move(QTextCursor.Left, QTextCursor.MoveAnchor, steps=n)
                     continue
 
-                if line.csi == CSI.CURSOR_NEXT_LINE:
+                if token.csi == CSI.CURSOR_NEXT_LINE:
                     continue
 
-                if line.csi == CSI.ERASE_IN_DISPLAY:
+                if token.csi == CSI.ERASE_IN_DISPLAY:
                     self.clear()
                     continue
 
-                if line.csi == CSI.ERASE_IN_LINE:
-                    if line.n == 0:  # clear from cursor to end of line
+                if token.csi == CSI.ERASE_IN_LINE:
+                    if token.n == 0:  # clear from cursor to end of token
                         self.cur.movePosition(
                             QTextCursor.EndOfLine, QTextCursor.KeepAnchor
                         )
 
-                    if line.n == 1:  # clear from cursor to begining of line
+                    if token.n == 1:  # clear from cursor to begining of token
                         self.cur.movePosition(
                             QTextCursor.StartOfLine, QTextCursor.KeepAnchor
                         )
 
-                    if line.n == 2:  # clear entire line
+                    if token.n == 2:  # clear entire token
                         self.cur.movePosition(
                             QTextCursor.EndOfLine, QTextCursor.MoveAnchor
                         )
@@ -239,58 +240,85 @@ class QTerminalWidget(QPlainTextEdit):
                     self.cur.deleteChar()
                     continue
 
-                if line.csi == CSI.CURSOR_POSITION:
+                if token.csi == CSI.CURSOR_POSITION:
                     self.move(QTextCursor.End)
                     self.move(QTextCursor.StartOfLine)
-                    for a in range(0, 25 - line.n):
-                        self.move(QTextCursor.Up)
+                    for a in range(0, 25 - token.n):
+                        self.move(QTextCursor.Up, QTextCursor.MoveAnchor)
 
-                    logging.debug(f"Cursor position: n: {line.n}  m: {line.m}")
+                    logging.debug(f"Cursor position: n: {token.n}  m: {token.m}")
                     continue
 
-                if line.csi == CSI.CURSOR_PREVIOUS_LINE:
-                    logging.debug("Cursor previous line")
-                    self.move(QTextCursor.StartOfLine)
-                    self.move(QTextCursor.Up)
+                if token.csi == CSI.CURSOR_PREVIOUS_LINE:
+                    logging.debug("Cursor previous token")
+                    self.move(QTextCursor.StartOfLine, QTextCursor.MoveAnchor)
+                    self.move(QTextCursor.Up, QTextCursor.MoveAnchor)
                     continue
 
-            if line == Ascii.BS:
+            if token == Ascii.BS:
                 logging.debug("Backspace")
-                self.move(QTextCursor.Left)
+                self.move(QTextCursor.Left, QTextCursor.MoveAnchor)
                 continue
 
-            if line == Ascii.CR:
+            if token == Ascii.CR:
                 logging.debug("Carriage return")
-                self.move(QTextCursor.StartOfLine)
+                self.move(QTextCursor.StartOfLine, QTextCursor.MoveAnchor)
                 self.cr = True
                 continue
 
-            if line == Ascii.NL:
+            if token == Ascii.NL:
                 logging.debug("Newline")
                 if self.cr:
-                    self.move(QTextCursor.EndOfLine)
+                    self.move(QTextCursor.EndOfLine, QTextCursor.MoveAnchor)
                     self.cr = False
                 self.cur.insertHtml("<br>")
                 continue
 
-            # self.append_html(line)
-            # text = line.replace("<", "&lt;")
-            text = line
-            l = len(text)
-            if not self.cur.atEnd():
-                # self.cur.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, l)
-                self.cur.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, l)
-                # print(f"Distance to end: {l}")
-                # self.cur.setPosition()
-                # self.cur.removeSelectedText()
-                self.cur.insertHtml(text)
-                self.cur.movePosition(QTextCursor.Right, l)
-                continue
+            # self.append_html(token)
+            # text = token.replace("<", "&lt;")
+            if type(token) is TextObj:
+                # text = token
+                l = len(token.text)
+                if not self.cur.atEnd():
+                    # self.cur.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, l)
+                    # self.cur.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, l)
+                    self.move(QTextCursor.Right, QTextCursor.KeepAnchor, l)
+                    # self.move(QTextCursor.Right, QTextCursor.MoveAnchor, l)
+                    # print(f"Distance to end: {l}")
+                    # self.cur.setPosition()
+                    # self.cur.removeSelectedText()
+                    print(f"X: {l:3} {token}")
+                    self.cur.insertHtml(token.html)
+                    self.move(QTextCursor.Right, QTextCursor.MoveAnchor, l)
+                    # self.cur.movePosition(QTextCursor.Right, l)
+                    continue
 
-            # text = text.replace("<", "&lt;")
-            self.cur.insertHtml(text)
-            self.cur.movePosition(QTextCursor.Right, l)
-            self.cr = False
+                # text = text.replace("<", "&lt;")
+                self.cur.insertHtml(token.html)
+                # self.cur.movePosition(QTextCursor.Right, l)
+                self.cur.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, l)
+                self.cr = False
+            # text = token
+            # l = len(text)
+            # if not self.cur.atEnd():
+            #     # self.cur.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, l)
+            #     # self.cur.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, l)
+            #     self.move(QTextCursor.Right, QTextCursor.KeepAnchor, l)
+            #     # self.move(QTextCursor.Right, QTextCursor.MoveAnchor, l)
+            #     # print(f"Distance to end: {l}")
+            #     # self.cur.setPosition()
+            #     # self.cur.removeSelectedText()
+            #     print(f"X: {l:3} {token}")
+            #     self.cur.insertHtml(text)
+            #     self.move(QTextCursor.Right, QTextCursor.MoveAnchor, l)
+            #     # self.cur.movePosition(QTextCursor.Right, l)
+            #     continue
+
+            # # text = text.replace("<", "&lt;")
+            # self.cur.insertHtml(text)
+            # # self.cur.movePosition(QTextCursor.Right, l)
+            # self.cur.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, l)
+            # self.cr = False
 
         self.limit_lines()
 

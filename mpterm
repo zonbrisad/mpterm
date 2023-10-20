@@ -1045,9 +1045,9 @@ class MainForm(QMainWindow):
         self.stateLabel.setText(f"{states[self.serialPort.state]}")
 
         if self.isPaused is True:
-            self.pbPause.setText("Pause")
-        else:
             self.pbPause.setText("Paused")
+        else:
+            self.pbPause.setText("Pause")
 
         # if self.serialPort.isDataTerminalReady():
         #     self.dtrLabel.setText("\u26AA  DTR")
@@ -1145,6 +1145,7 @@ class MainForm(QMainWindow):
         logging.debug(f'Data received: {len(data)} "{db}"')
 
         if self.isPaused:
+            self.update_ui()
             return
 
         DisplayMode = self.cbDisplay.currentData()

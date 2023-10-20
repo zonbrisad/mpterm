@@ -131,6 +131,7 @@ class CSI(Enum):
     DSR = "n"  # Device status report
 
     UNSUPPORED = "UNSUP"
+    # TEXT = "TEXT"
 
     @staticmethod
     def decode(s: str) -> CSI:
@@ -272,6 +273,8 @@ class EscapeObj:
     sgr: SGR = SGR.UNSUPPORTED
     n: int = 1
     m: int = 1
+    is_text: bool = False
+    text: str = ""
 
     def decode(self, seq: str) -> CSI:
         if not seq[0] == Escape.ESCAPE:
@@ -876,25 +879,12 @@ sgr_to_escape_color_bold = {
 }
 
 
-class CharacterState:
-    BOLD: bool = False
-    DIM: bool = False
-    ITALIC: bool = False
-    UNDERLINE: bool = False
-    BLINK: bool = False
-    #   rapid_blink : bool = False
-    REVERSE: bool = False
-    CROSSED: bool = False
-    SUPERSCRIPT: bool = False
-    SUBSCRIPT: bool = False
-    OVERLINE: bool = False
+class TerminalCharacterState:
+    def __init__(self):
+        self.reset()
+        ch = ""
 
-    FG_COLOR: str
-    BG_COLOR: str
-
-    ch: str
-
-    def __eq__(self, __o: CharacterState) -> bool:
+    def __eq__(self, __o: TerminalCharacterState) -> bool:
         X = [
             "BOLD",
             "DIM",
@@ -912,29 +902,40 @@ class CharacterState:
 
         return True
 
+    def reset(self):
+        self.BOLD = False
+        self.DIM = False
+        self.ITALIC = False
+        self.CROSSED = False
+        self.UNDERLINE = False
+        self.SUPERSCRIPT = False
+        self.SUBSCRIPT = False
+        self.REVERSE = False
+        self.OVERLINE = False
+        self.FG_COLOR = ""
+        self.BG_COLOR = ""
+
 
 class TerminalLine:
     def __init__(self, len: int = 80) -> None:
         self.line = []
+        self.id = 0
         for x in range(80):
-            ch = CharacterState()
+            ch = TerminalCharacterState()
             self.line.append(ch)
         pass
 
+    def line_to_html(self):
+        pass
 
-class TerminalState:
-    BOLD: bool = False
-    DIM: bool = False
-    ITALIC: bool = False
-    UNDERLINE: bool = False
-    slow_blink: bool = False
-    rapid_blink: bool = False
-    REVERSE: bool = False
-    CROSSED: bool = False
-    SUPERSCRIPT: bool = False
-    SUBSCRIPT: bool = False
-    OVERLINE: bool = False
 
+@dataclass
+class TextObj:
+    text: str = ""
+    html: str = ""
+
+
+class TerminalState(TerminalCharacterState):
     cur_x = None
     cur_y = None
 
@@ -945,13 +946,13 @@ class TerminalState:
         self.et = EscapeTokenizer()
         self.reset()
 
-    def attr_html(self, data) -> str:
+    def attr_html(self, data: str) -> str:
         if self.REVERSE:
-            bg_color = self.fg_color
-            fg_color = self.bg_color
+            bg_color = self.FG_COLOR
+            fg_color = self.BG_COLOR
         else:
-            fg_color = self.fg_color
-            bg_color = self.bg_color
+            fg_color = self.FG_COLOR
+            bg_color = self.BG_COLOR
 
         # b = f'<span style="color:{fg_color};background-color:{bg_color};font-size:10pt;line-height:1.38;'
         b = f'<span style="color:{fg_color};background-color:{bg_color};font-size:10pt;'
@@ -961,35 +962,23 @@ class TerminalState:
         if self.ITALIC:
             b += "font-style:italic;"
         if self.UNDERLINE:
-            b += f"text-decoration:underline;"
+            b += "text-decoration:underline;"
         if self.CROSSED:
             b += "text-decoration:line-through;"
         if self.OVERLINE:
             b += "text-decoration:overline;"
 
         b += '">'
-        b += data
+        b += data.replace(" ", "&nbsp;").replace("<", "&lt;").replace("<", "&gt;")
         b += "</span>"
+
         return b
 
     def reset(self):
-        self.reset_attr()
+        super().reset()
+        self.FG_COLOR = self.default_fg_color
+        self.BG_COLOR = self.default_bg_color
         self.et.clear()
-
-    def reset_attr(self):
-        self.BOLD = False
-        self.DIM = False
-        self.ITALIC = False
-        self.CROSSED = False
-        self.UNDERLINE = False
-        self.SUPERSCRIPT = False
-        self.SUBSCRIPT = False
-        self.slow_blink = False
-        self.rapid_blink = False
-        self.REVERSE = False
-        self.OVERLINE = False
-        self.fg_color = self.default_fg_color
-        self.bg_color = self.default_bg_color
 
     def update(self, s: str) -> list:
         self.et.append_string(s)
@@ -1075,9 +1064,9 @@ class TerminalState:
                             SGR.FG_COLOR_WHITE,
                         ]:
                             if self.BOLD:
-                                self.fg_color = sgr_to_escape_color_bold[a]
+                                self.FG_COLOR = sgr_to_escape_color_bold[a]
                             else:
-                                self.fg_color = sgr_to_escape_color[a]
+                                self.FG_COLOR = sgr_to_escape_color[a]
 
                         if a in [
                             SGR.BG_COLOR_BLACK,
@@ -1089,13 +1078,13 @@ class TerminalState:
                             SGR.BG_COLOR_CYAN,
                             SGR.BG_COLOR_WHITE,
                         ]:
-                            self.bg_color = sgr_to_escape_color[a]
+                            self.BG_COLOR = sgr_to_escape_color[a]
 
                         if a == SGR.SET_FG_COLOR:
-                            self.fg_color = CC256[s["color"]]["hex"]
+                            self.FG_COLOR = CC256[s["color"]]["hex"]
 
                         if a == SGR.SET_BG_COLOR:
-                            self.bg_color = CC256[s["color"]]["hex"]
+                            self.BG_COLOR = CC256[s["color"]]["hex"]
 
                         if a == SGR.REVERSE_VIDEO:
                             self.REVERSE = True
@@ -1111,26 +1100,15 @@ class TerminalState:
                 l.append(token)
                 continue
 
-            # if token == Ascii.NL:
-            #     l.append("<br>")
-            #     continue
-
-            # if token == Ascii.CR:
-            #     #l.append("<br>")
-            #     l.append(Ascii.CR)
-            #     continue
-
-            # if token == Ascii.BS:
-            #     l.append(Ascii.BS)
-            #     continue
-
             if token in [Ascii.BEL]:
                 continue
 
-            token_space = (
-                token.replace(" ", "&nbsp;").replace("<", "&lt;").replace("<", "&gt;")
-            )
-            l.append(self.attr_html(token_space))
+            l.append(TextObj(text=token, html=self.attr_html(token)))
+
+            # token_space = (
+            #     token.replace(" ", "&nbsp;").replace("<", "&lt;").replace("<", "&gt;")
+            # )
+            # l.append(self.attr_html(token_space))
 
         return l
 
