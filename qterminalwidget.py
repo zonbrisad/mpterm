@@ -164,7 +164,6 @@ class QTerminalWidget(QPlainTextEdit):
 
     def insert(self, html):
         self.cur.insertHtml(html)
-        # self.printpos(None)
 
     def move(self, direction: QTextCursor, anchor: QTextCursor, steps: int = 1) -> None:
         self.cur.movePosition(direction, anchor, n=steps)
@@ -202,124 +201,29 @@ class QTerminalWidget(QPlainTextEdit):
     def append_terminal_text(self, s: str) -> None:
         tokens = self.ts.update(s)
 
-        # lines = self.document().lineCount()
-
         for token in tokens:
-            if type(token) is EscapeObj:
-                if token.csi == CSI.CURSOR_UP:
-                    self.move(QTextCursor.Up, QTextCursor.MoveAnchor)
-                    continue
-
-                if token.csi == CSI.CURSOR_DOWN:
-                    self.move(QTextCursor.Down, QTextCursor.MoveAnchor)
-                    continue
-
-                if token.csi == CSI.CURSOR_BACK:
-                    n = min((self.cur.columnNumber(), token.n))
-                    self.move(QTextCursor.Left, QTextCursor.MoveAnchor, steps=n)
-                    continue
-
-                if token.csi == CSI.CURSOR_NEXT_LINE:
-                    continue
-
-                if token.csi == CSI.ERASE_IN_DISPLAY:
-                    self.clear()
-                    continue
-
-                if token.csi == CSI.ERASE_IN_LINE:
-                    if token.n == 0:  # clear from cursor to end of token
-                        self.cur.movePosition(
-                            QTextCursor.EndOfLine, QTextCursor.KeepAnchor
-                        )
-
-                    if token.n == 1:  # clear from cursor to begining of token
-                        self.cur.movePosition(
-                            QTextCursor.StartOfLine, QTextCursor.KeepAnchor
-                        )
-
-                    if token.n == 2:  # clear entire token
-                        self.cur.movePosition(
-                            QTextCursor.EndOfLine, QTextCursor.MoveAnchor
-                        )
-                        self.cur.movePosition(
-                            QTextCursor.StartOfLine, QTextCursor.KeepAnchor
-                        )
-
-                    self.cur.removeSelectedText()
-                    self.cur.deleteChar()
-                    continue
-
-                if token.csi == CSI.CURSOR_POSITION:
-                    self.move(QTextCursor.End)
-                    self.move(QTextCursor.StartOfLine)
-                    for a in range(0, 25 - token.n):
-                        self.move(QTextCursor.Up, QTextCursor.MoveAnchor)
-
-                    logging.debug(f"Cursor position: n: {token.n}  m: {token.m}")
-                    continue
-
-                if token.csi == CSI.CURSOR_PREVIOUS_LINE:
-                    logging.debug("Cursor previous token")
-                    self.move(QTextCursor.StartOfLine, QTextCursor.MoveAnchor)
-                    self.move(QTextCursor.Up, QTextCursor.MoveAnchor)
-                    continue
-
-            if token == Ascii.BS:
-                logging.debug("Backspace")
-                self.move(QTextCursor.Left, QTextCursor.MoveAnchor)
-                continue
-
-            if token == Ascii.CR:
-                logging.debug("Carriage return")
-                self.move(QTextCursor.StartOfLine, QTextCursor.MoveAnchor)
-                self.cr = True
-                continue
-
-            if token == Ascii.NL:
-                logging.debug("Newline")
-                if self.cr:
-                    self.move(QTextCursor.EndOfLine, QTextCursor.MoveAnchor)
-                    self.cr = False
-                self.cur.insertHtml("<br>")
-                continue
-
-            # if type(token) is TextObj:
-            #     # text = token
-            #     l = len(token.text)
-            #     if not self.cur.atEnd():
-            #         # self.cur.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, l)
-            #         # self.cur.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, l)
-            #         self.move(QTextCursor.Right, QTextCursor.KeepAnchor, l)
-            #         # self.move(QTextCursor.Right, QTextCursor.MoveAnchor, l)
-            #         # print(f"Distance to end: {l}")
-            #         # self.cur.setPosition()
-            #         # self.cur.removeSelectedText()
-            #         print(f"X: {l:3} {token}")
-            #         self.cur.insertHtml(token.html)
-            #         self.move(QTextCursor.Right, QTextCursor.MoveAnchor, l)
-            #         # self.cur.movePosition(QTextCursor.Right, l)
-            #         continue
-
-            #     # text = text.replace("<", "&lt;")
-            #     self.cur.insertHtml(token.html)
-            #     # self.cur.movePosition(QTextCursor.Right, l)
-            #     self.cur.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, l)
-            #     self.cr = False
-
             if type(token) is TerminalLine:
-                if token.id > self.last_id:
+                if token.id > self.last_id:  # a new line detected
                     self.last_id = token.id
                     self.move(QTextCursor.End, QTextCursor.MoveAnchor)
                     self.cur.insertHtml("<br>")
 
-                if token.id == self.last_id:
+                if token.id == self.last_id:  # last row
+                    self.move(QTextCursor.StartOfLine, QTextCursor.MoveAnchor)
+                    self.move(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+
+                if token.id < self.last_id:
+                    self.move(QTextCursor.End, QTextCursor.MoveAnchor)
+                    self.move(
+                        QTextCursor.Up, QTextCursor.MoveAnchor, self.last_id - token.id
+                    )
                     self.move(QTextCursor.StartOfLine, QTextCursor.MoveAnchor)
                     self.move(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
 
                 html = token.line_to_html()
-                print(f"Token: {token}")
-                print(f"Html: {html}")
                 self.cur.insertHtml(html)
+                # print(f"Token: {token}")
+                # print(f"Html: {html}")
 
         self.limit_lines()
 

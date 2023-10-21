@@ -952,7 +952,6 @@ class TerminalLine:
         b += '">'
         b += data.replace(" ", "&nbsp;").replace("<", "&lt;").replace("<", "&gt;")
         b += "</span>"
-        # print(f"{data=} {b=}")
         return b
 
     def line_to_html(self) -> str:
@@ -975,7 +974,7 @@ class TerminalLine:
         return html
 
     def append(self, text: str, tas: TerminalAttributeState, pos: int) -> int:
-        print(f"Append: {text}   Pos: {pos}")
+        # print(f"Append: {text}   Pos: {pos}")
         i = pos
         for ch in text:
             tc = TerminalCharacter(ch, tas)
@@ -1007,7 +1006,6 @@ class TerminalState(TerminalAttributeState):
     def __init__(self) -> None:
         self.et = EscapeTokenizer()
         self.line_id = 0
-        self.cur_line = TerminalLine(id=self.line_id)
         self.tas = TerminalAttributeState()
         self.default_fg_color = TColor.WHITE
         self.default_bg_color = TColor.BLACK
@@ -1015,6 +1013,9 @@ class TerminalState(TerminalAttributeState):
 
     def reset(self):
         self.pos_x = 0
+        self.pos_y = 0
+        self.lines = []
+        self.new_line()
         self.et.clear()
         self.reset_attr()
 
@@ -1022,6 +1023,14 @@ class TerminalState(TerminalAttributeState):
         self.tas.reset()
         # self.tas.FG_COLOR = self.default_fg_color
         # self.tas.BG_COLOR = self.default_bg_color
+
+    def new_line(self) -> TerminalLine:
+        self.cur_line = TerminalLine(id=self.line_id)
+        self.line_id += 1
+        self.lines.insert(0, self.cur_line)
+
+    def set_cur_line(self):
+        self.cur_line = self.lines[self.pos_y]
 
     def update(self, s: str) -> list:
         self.et.append_string(s)
@@ -1032,16 +1041,25 @@ class TerminalState(TerminalAttributeState):
                 eo = EscapeObj()
                 eo.decode(token)
 
-                # if eo.csi in [
-                #     CSI.CURSOR_UP,
-                #     CSI.CURSOR_DOWN,
-                #     CSI.CURSOR_BACK,
-                #     CSI.CURSOR_PREVIOUS_LINE,
-                #     CSI.ERASE_IN_DISPLAY,
-                #     CSI.ERASE_IN_LINE,
-                #     CSI.CURSOR_POSITION,
-                # ]:
-                #    l.append(eo)
+                if eo.csi == CSI.CURSOR_UP:
+                    self.pos_y += eo.n
+                    self.set_cur_line()
+
+                if eo.csi == CSI.CURSOR_DOWN:
+                    self.pos_y -= eo.n
+                    self.set_cur_line()
+
+                if eo.csi == CSI.CURSOR_FORWARD:
+                    pass
+
+                if eo.csi == CSI.CURSOR_BACK:
+                    pass
+
+                if eo.csi == CSI.CURSOR_NEXT_LINE:
+                    pass
+
+                if eo.csi == CSI.CURSOR_PREVIOUS_LINE:
+                    pass
 
                 if eo.csi == CSI.ERASE_IN_LINE:
                     self.cur_line.erase_in_line(self.pos_x, self.tas, eo.n)
@@ -1099,12 +1117,11 @@ class TerminalState(TerminalAttributeState):
                         if a == SGR.RESET:
                             self.tas.reset()
 
-                        # if a == SGR.NOT_BLINKING:
-                        #     self.BLINKING = False
-                        # if a == SGR.NOT_REVERSED:
-                        #     self.tas.REVERSE = False
-                        # if a == SGR.REVEAL:
-                        #     self.Reveal =
+                        if a == SGR.SLOW_BLINK:
+                            self.BLINKING = True
+
+                        if a == SGR.NOT_BLINKING:
+                            self.BLINKING = False
 
                         if a in [
                             SGR.FG_COLOR_BLACK,
@@ -1151,10 +1168,13 @@ class TerminalState(TerminalAttributeState):
                 continue
 
             if token == Ascii.NL:  # newline
-                l.append(self.cur_line)
-                self.line_id += 1
+                if self.pos_y == 0:
+                    self.new_line()
+                    l.append(self.cur_line)
+                else:
+                    self.pos_y -= 1
+                    self.cur_line = self.lines[self.pos_y]
                 self.pos_x = 0
-                self.cur_line = TerminalLine(id=self.line_id)
                 continue
 
             if token in [Ascii.BEL]:  # bell

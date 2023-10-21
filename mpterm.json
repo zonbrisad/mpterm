@@ -1,6 +1,6 @@
 {
     "alias": "default",
-    "port": "ttyACM0",
+    "port": "ttyUSB4",
     "bitrate": "57600",
     "databits": "8",
     "parity": "None",
@@ -9,7 +9,7 @@
     "mode": "Ascii",
     "suspend_timeout": 8,
     "ext_program": "ls",
-    "newline": "CR",
+    "newline": "LF",
     "macros": [
         {
             "name": "M1",
