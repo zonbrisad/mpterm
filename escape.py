@@ -974,22 +974,36 @@ class TerminalLine:
 
         return html
 
-    def append(self, text: str, tas: TerminalAttributeState):
+    def append(self, text: str, tas: TerminalAttributeState, pos: int) -> int:
+        print(f"Append: {text}   Pos: {pos}")
+        i = pos
         for ch in text:
             tc = TerminalCharacter(ch, tas)
-            self.line.append(tc)
+            try:
+                self.line[i] = tc
+            except IndexError:
+                self.line.append(tc)
+            i += 1
 
+        return i
 
-@dataclass
-class TextObj:
-    text: str = ""
-    html: str = ""
+    def erase_in_line(self, pos: int, tas, mode: int):
+        if mode == 0:  # erase after pos
+            erange = range(pos, pos + len(self.line))
+        elif mode == 1:  # erase before pos
+            erange = range(0, pos)
+        elif mode == 2:  # erase entirle line
+            erange = range(0, pos)
+
+        for x in erange:
+            tc = TerminalCharacter("", tas)
+            try:
+                self.line[x] = tc
+            except IndexError:
+                self.line.append(tc)
 
 
 class TerminalState(TerminalAttributeState):
-    # cur_x = None
-    # cur_y = None
-
     def __init__(self) -> None:
         self.et = EscapeTokenizer()
         self.line_id = 0
@@ -999,35 +1013,8 @@ class TerminalState(TerminalAttributeState):
         self.default_bg_color = TColor.BLACK
         self.reset()
 
-    # def attr_html(self, data: str) -> str:
-    #     if self.tas.REVERSE:
-    #         bg_color = self.tas.FG_COLOR
-    #         fg_color = self.tas.BG_COLOR
-    #     else:
-    #         fg_color = self.tas.FG_COLOR
-    #         bg_color = self.tas.BG_COLOR
-
-    #     # b = f'<span style="color:{fg_color};background-color:{bg_color};font-size:10pt;line-height:1.38;'
-    #     b = f'<span style="color:{fg_color};background-color:{bg_color};font-size:10pt;'
-
-    #     if self.tas.BOLD:
-    #         b += "font-weight:bold;"
-    #     if self.tas.ITALIC:
-    #         b += "font-style:italic;"
-    #     if self.tas.UNDERLINE:
-    #         b += "text-decoration:underline;"
-    #     if self.tas.CROSSED:
-    #         b += "text-decoration:line-through;"
-    #     if self.tas.OVERLINE:
-    #         b += "text-decoration:overline;"
-
-    #     b += '">'
-    #     b += data.replace(" ", "&nbsp;").replace("<", "&lt;").replace("<", "&gt;")
-    #     b += "</span>"
-
-    #     return b
-
     def reset(self):
+        self.pos_x = 0
         self.et.clear()
         self.reset_attr()
 
@@ -1045,16 +1032,20 @@ class TerminalState(TerminalAttributeState):
                 eo = EscapeObj()
                 eo.decode(token)
 
-                if eo.csi in [
-                    CSI.CURSOR_UP,
-                    CSI.CURSOR_DOWN,
-                    CSI.CURSOR_BACK,
-                    CSI.CURSOR_PREVIOUS_LINE,
-                    CSI.ERASE_IN_DISPLAY,
-                    CSI.ERASE_IN_LINE,
-                    CSI.CURSOR_POSITION,
-                ]:
-                    l.append(eo)
+                # if eo.csi in [
+                #     CSI.CURSOR_UP,
+                #     CSI.CURSOR_DOWN,
+                #     CSI.CURSOR_BACK,
+                #     CSI.CURSOR_PREVIOUS_LINE,
+                #     CSI.ERASE_IN_DISPLAY,
+                #     CSI.ERASE_IN_LINE,
+                #     CSI.CURSOR_POSITION,
+                # ]:
+                #    l.append(eo)
+
+                if eo.csi == CSI.ERASE_IN_LINE:
+                    self.cur_line.erase_in_line(self.pos_x, self.tas, eo.n)
+                    l.append(self.cur_line)
 
                 if eo.csi == CSI.SGR:
                     for s in eo.sgr:
@@ -1150,24 +1141,28 @@ class TerminalState(TerminalAttributeState):
 
                 continue
 
-            # if token in [Ascii.NL, Ascii.CR, Ascii.BS]:
-            # l.append(token)
-            #    continue
+            if token == Ascii.CR:  # carriage return
+                self.pos_x = 0
+                continue
 
-            if token == Ascii.NL:
+            if token == Ascii.BS:  # backspace
+                if self.pos_x > 0:
+                    self.pos_x -= 1
+                continue
+
+            if token == Ascii.NL:  # newline
                 l.append(self.cur_line)
                 self.line_id += 1
+                self.pos_x = 0
                 self.cur_line = TerminalLine(id=self.line_id)
                 continue
 
-            if token in [Ascii.BEL]:
+            if token in [Ascii.BEL]:  # bell
                 continue
 
-            self.cur_line.append(token, self.tas)
+            self.pos_x = self.cur_line.append(token, self.tas, self.pos_x)
 
             l.append(self.cur_line)
-
-            # l.append(TextObj(text=token, html=self.attr_html(token)))
 
         return l
 

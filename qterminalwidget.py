@@ -28,7 +28,6 @@ from escape import (
     CSI,
     SGR,
     EscapeObj,
-    TextObj,
     TerminalLine,
 )
 
@@ -319,7 +318,7 @@ class QTerminalWidget(QPlainTextEdit):
 
                 html = token.line_to_html()
                 print(f"Token: {token}")
-                print(f"Html {html}")
+                print(f"Html: {html}")
                 self.cur.insertHtml(html)
 
         self.limit_lines()
