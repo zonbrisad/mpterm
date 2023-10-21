@@ -1,7 +1,9 @@
-# Version 0.3x
+# Version 0.40
+- Major refactoring of terminal widget
 - Added support for selectable newline
+- Added support for CURSOR_UP "CSI n A"
 - Added support for CURSOR_BACK "CSI n D"
-- Added support for ERASE IN LINE "CSI n K", only partially tested
+- Added support for ERASE IN LINE "CSI n K", needs more testing
 
 # Version 0.38
 - Rewrote macro subsystem

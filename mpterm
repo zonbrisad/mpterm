@@ -88,7 +88,7 @@ self_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
 
 class App:
     NAME = "mpterm"
-    VERSION = "0.38"
+    VERSION = "0.40"
     DESCRIPTION = "MpTerm is a simple serial terminal program, aimed at embedded systems development"
     LICENSE = ""
     AUTHOR = "Peter Malmberg"
@@ -128,7 +128,10 @@ class MpTerm(enum.Enum):
 about_html = f"""
 <center><img src={App.ICON} width="54" height="54"></center>
 <center><h2>{App.NAME}</h2></center>
-
+<br>
+{App.DESCRIPTION}
+<br>
+<hr>
 
       <table>
         <tr>
@@ -165,11 +168,6 @@ about_html = f"""
           </td>
         </tr>
       </table>
-
-<hr>
-<br>
-{App.DESCRIPTION}
-<br>
 """
 
 # Code ----------------------------------------------------------------------
