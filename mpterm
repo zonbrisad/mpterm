@@ -133,41 +133,41 @@ about_html = f"""
 <br>
 <hr>
 
-      <table>
-        <tr>
-          <td> 
-            <b>Version: </b>
-          </td>
-          <td>  
-            {App.VERSION}
-          </td>
-        </tr>
-        <tr>
-          <td> 
-            <b>Author: </b>
-          </td>
-          <td>  
-            {App.AUTHOR}
-          </td/
-        </tr>
-        <tr>
-          <td> 
-            <b>Email: </b>
-          </td>
-          <td>  
-            </b><a href="{App.EMAIL}">{App.EMAIL}</a>
-          </td/
-        </tr>
-        <tr> 
-          <td>
-            <b>Github: </b>
-          </td>
-          <td>  
-            <a href="{App.HOME}">{App.HOME}</a>
-          </td/
-          </td>
-        </tr>
-      </table>
+<table>
+  <tr>
+    <td>
+      <b>Version: </b>
+    </td>
+    <td>
+      {App.VERSION}
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <b>Author: </b>
+    </td>
+    <td>
+      {App.AUTHOR}
+    </td/
+  </tr>
+  <tr>
+    <td>
+      <b>Email: </b>
+    </td>
+    <td> 
+      </b><a href="{App.EMAIL}">{App.EMAIL}</a>
+    </td/
+  </tr>
+  <tr>
+    <td>
+      <b>Github: </b>
+    </td>
+    <td> 
+      <a href="{App.HOME}">{App.HOME}</a>
+    </td/
+    </td>
+  </tr>
+</table>
 """
 
 # Code ----------------------------------------------------------------------
@@ -1093,7 +1093,7 @@ class MainForm(QMainWindow):
             else:
                 self.lSync.setText('<font color="Black">Sync string')
 
-        except:
+        except ValueError:
             self.sync = -1
             text = self.leSyncString.text()
             #            print(len(text), 'Text: '+text)
