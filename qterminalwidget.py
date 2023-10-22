@@ -18,12 +18,7 @@
 import logging
 import sys
 
-from escape import (
-    Escape,
-    Ascii,
-    TerminalState,
-    TerminalLine,
-)
+from escape import Escape, Ascii, TerminalState, TerminalLine, escape_attribute_test
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QTextCursor, QFont, QKeyEvent, QKeyEvent, QCloseEvent
 from PyQt5.QtWidgets import (
@@ -258,7 +253,8 @@ class MainForm(QMainWindow):
         self.terminal.setMaxLines(500)
         self.rightVLayout.addWidget(self.terminal)
 
-        self.add_button("Test", "test\n")
+        self.add_button("Attributes", escape_attribute_test)
+
         self.buttonLayout.addStretch()
 
         # Menu bar
