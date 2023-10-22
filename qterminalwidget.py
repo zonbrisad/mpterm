@@ -254,6 +254,11 @@ class MainForm(QMainWindow):
         self.rightVLayout.addWidget(self.terminal)
 
         self.add_button("Attributes", escape_attribute_test)
+        self.add_button("Cursor up", Escape.UP)
+        self.add_button("Cursor down", Escape.DOWN)
+        self.add_button("Cursor back", Escape.BACK)
+        self.add_button("Cursor forward", Escape.FORWARD)
+        self.add_button("Erase in line", "\x1b[K")
 
         self.buttonLayout.addStretch()
 
