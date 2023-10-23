@@ -224,7 +224,6 @@ class MainForm(QMainWindow):
 
     def add_button(self, label, text):
         pb = QPushButton(label, self.centralwidget)
-        pb.setToolTip("asdfasdf")
         pb.pressed.connect(lambda: self.terminal.append_terminal_text(text))
         self.buttonLayout.addWidget(pb)
 

@@ -1,3 +1,10 @@
+# Version 0.4x
+- Fixed unsupported CSI fail
+- Added support for cursor next line 
+- Added support for cursor previous line 
+- Minor refactoring of SGR class to fix no argument bug
+- Improved printouts
+
 # Version 0.40
 - Major refactoring of terminal widget
 - Added support for selectable newline

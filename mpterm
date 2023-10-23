@@ -562,6 +562,10 @@ class MainForm(QMainWindow):
         self.cbNewlineMode.addItem("CRLF", "\r\n")
         self.buttonLayout.addWidget(self.cbNewlineMode)
 
+        # self.pbTermSet = QPushButton("Find\nTerm", self.centralwidget)
+        # self.pbTermSet.pressed.connect(self.openPort)
+        # self.buttonLayout.addWidget(self.pbTermSet)
+
         self.buttonLayout.addStretch()
 
         # self.cbNewline = QComboBox(self.centralwidget)

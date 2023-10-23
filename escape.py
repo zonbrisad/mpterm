@@ -128,8 +128,12 @@ class CSI(Enum):
     ERASE_SCROLL_UP = "S"
     ERASE_SCROLL_DOWN = "T"
     SGR = "m"  # Select graphics rendition (SGR)
-    AUX = "i"
-    DSR = "n"  # Device status report
+    # AUX = "i"  # Enable/Disable aux serial port
+    # DSR = "n"  # Device status report
+
+    # Private sequences
+    # SCP = "s"  # Save Current Cursor Position
+    # RCP = "u"  # Restore Saved Curosr Position
 
     UNSUPPORED = "UNSUP"
     # TEXT = "TEXT"
@@ -151,65 +155,65 @@ class CSI(Enum):
 
 
 class SGR(Enum):
-    """Control Sequence Introducer
+    """Select Graphic Rendition
 
     Args:
         Enum (_type_): _description_
     """
 
     # SGR (Select Graphic Rendition)
-    RESET = "0"  # Reset all attributes
-    BOLD = "1"  # Bold/increased intensity
-    DIM = "2"  # Dim/decreased intensity
-    ITALIC = "3"
-    UNDERLINE = "4"
-    SLOW_BLINK = "5"
-    RAPID_BLINK = "6"
-    REVERSE_VIDEO = "7"
-    CONCEAL = "8"
-    CROSSED = "9"
-    PRIMARY = "10"  # Primary (default) font
+    RESET = 0  # Reset all attributes
+    BOLD = 1  # Bold/increased intensity
+    DIM = 2  # Dim/decreased intensity
+    ITALIC = 3
+    UNDERLINE = 4
+    SLOW_BLINK = 5
+    RAPID_BLINK = 6
+    REVERSE_VIDEO = 7
+    CONCEAL = 8
+    CROSSED = 9
+    PRIMARY = 10  # Primary (default) font
 
-    FRACTUR = "20"  # Gothic
-    DOUBLE_UNDERLINE = "21"
+    FRACTUR = 20  # Gothic
+    DOUBLE_UNDERLINE = 21
 
-    NORMAL_INTENSITY = "22"
-    NOT_ITALIC = "23"
-    NOT_UNDERLINED = "24"
-    NOT_BLINKING = "25"
-    NOT_REVERSED = "27"
-    REVEAL = "28"
-    NOT_CROSSED = "29"
-    FG_COLOR_BLACK = "30"
-    FG_COLOR_RED = "31"
-    FG_COLOR_GREEN = "32"
-    FG_COLOR_YELLOW = "33"
-    FG_COLOR_BLUE = "34"
-    FG_COLOR_MAGENTA = "35"
-    FG_COLOR_CYAN = "36"
-    FG_COLOR_WHITE = "37"
+    NORMAL_INTENSITY = 22
+    NOT_ITALIC = 23
+    NOT_UNDERLINED = 24
+    NOT_BLINKING = 25
+    NOT_REVERSED = 27
+    REVEAL = 28
+    NOT_CROSSED = 29
+    FG_COLOR_BLACK = 30
+    FG_COLOR_RED = 31
+    FG_COLOR_GREEN = 32
+    FG_COLOR_YELLOW = 33
+    FG_COLOR_BLUE = 34
+    FG_COLOR_MAGENTA = 35
+    FG_COLOR_CYAN = 36
+    FG_COLOR_WHITE = 37
 
-    BG_COLOR_BLACK = "40"
-    BG_COLOR_RED = "41"
-    BG_COLOR_GREEN = "42"
-    BG_COLOR_YELLOW = "43"
-    BG_COLOR_BLUE = "44"
-    BG_COLOR_MAGENTA = "45"
-    BG_COLOR_CYAN = "46"
-    BG_COLOR_WHITE = "47"
+    BG_COLOR_BLACK = 40
+    BG_COLOR_RED = 41
+    BG_COLOR_GREEN = 42
+    BG_COLOR_YELLOW = 43
+    BG_COLOR_BLUE = 44
+    BG_COLOR_MAGENTA = 45
+    BG_COLOR_CYAN = 46
+    BG_COLOR_WHITE = 47
 
-    OVERLINE = "53"
-    NOT_OVERLINE = "55"
+    OVERLINE = 53
+    NOT_OVERLINE = 55
 
-    SET_FG_COLOR = "38"  # Select 256 color or RGB color foreground
-    SET_BG_COLOR = "48"  # Select 256 color or RGB color background
-    SET_UL_COLOR = "58"  # Select underline color
-    FRAMED = "51"
+    SET_FG_COLOR = 38  # Select 256 color or RGB color foreground
+    SET_BG_COLOR = 48  # Select 256 color or RGB color background
+    SET_UL_COLOR = 58  # Select underline color
+    FRAMED = 51
 
-    SUPERSCRIPT = "73"
-    SUBSCRIPT = "74"
+    SUPERSCRIPT = 73
+    SUBSCRIPT = 74
 
-    UNSUPPORTED = "UNSP"
+    UNSUPPORTED = 0xFFFF
 
     @staticmethod
     def is_sgr(s: str) -> bool:
@@ -287,6 +291,10 @@ class EscapeObj:
             if tc == csi.value:
                 self.csi = csi
 
+        if self.csi == CSI.UNSUPPORED:
+            logging.debug(f'CSI unsupported:  "{Escape.to_str(seq)}"')
+            return
+
         # The following CSI's has 0 as default for n
         if self.csi in [CSI.ERASE_IN_DISPLAY, CSI.ERASE_IN_LINE]:
             self.n = 0
@@ -305,10 +313,10 @@ class EscapeObj:
             self.decode_sgr(seq)
 
     @staticmethod
-    def find_sgr(sgr_code: str) -> SGR:
-        for e in SGR:
-            if sgr_code == e.value:
-                return e
+    def find_sgr(sgr_code: int) -> SGR:
+        for sgr in SGR:
+            if sgr_code == sgr.value:
+                return sgr
         return SGR.UNSUPPORTED
 
     def decode_sgr(self, s: str):
@@ -317,12 +325,13 @@ class EscapeObj:
         attr_list = []
         for attr in attributes:
             if attr == "":  # If no number present it is a reset(0)
-                # attr_list.append({"SGR":SGR.RESET})
-                attr = "0"
+                attr = 0
+            else:
+                attr = int(attr)
 
             # Extended(256/Truecolor) color management
             if attr in [SGR.SET_BG_COLOR.value, SGR.SET_FG_COLOR.value]:
-                logging.debug(attributes)
+                # logging.debug(attributes)
                 # 256 color mode
                 if int(attributes[1]) == 5:
                     attr_list.append(
@@ -345,8 +354,9 @@ class EscapeObj:
 
             attr_list.append({"SGR": SGR.find_sgr(attr)})
 
-        # if isinstance(t, SGR):
-        logging.debug(f"SGR: {attr_list}")
+        for sgr in attr_list:
+            logging.debug(f"SGR: {sgr}")
+
         self.sgr = attr_list
 
 
@@ -1056,10 +1066,14 @@ class TerminalState(TerminalAttributeState):
                     pass
 
                 if eo.csi == CSI.CURSOR_NEXT_LINE:
-                    pass
+                    self.pos_x = 0
+                    self.pos_y -= eo.n
+                    self.set_cur_line()
 
                 if eo.csi == CSI.CURSOR_PREVIOUS_LINE:
-                    pass
+                    self.pos_x = 0
+                    self.pos_y += eo.n
+                    self.set_cur_line()
 
                 if eo.csi == CSI.ERASE_IN_LINE:
                     self.cur_line.erase_in_line(self.pos_x, self.tas, eo.n)
