@@ -5,15 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Extra test",
+            "name": "Mpterm debug",
             "type": "python",
             "request": "launch",
-            "program": "mpterm.py",
+            "program": "mpterm",
             "args": [
                 "--debug"
             ],
             "console": "integratedTerminal",
-            "justMyCode": true
+            "justMyCode": true,
         },
         {
             "name": "Python: Current File",

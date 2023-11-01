@@ -287,6 +287,10 @@ class EscapeObj:
 
         tc = seq[-1]  # termination character in Escape sequence
 
+        if seq[1] != "[":
+            self.csi = CSI.UNSUPPORED
+            return
+
         for csi in CSI:
             if tc == csi.value:
                 self.csi = csi
@@ -302,7 +306,7 @@ class EscapeObj:
         paramsx = seq[2:-1].replace(":", ";").split(";")
         params = [param for param in paramsx if param != ""]  # removing empty strings
 
-        logging.debug(f'Found {self.csi}  "{Escape.to_str(seq)}" {params}')
+        # logging.debug(f'Found {self.csi}  "{Escape.to_str(seq)}" {params}')
         if len(params) > 0:
             self.n = int(params[0])
         if len(params) > 1:
@@ -311,6 +315,9 @@ class EscapeObj:
         # Decode SGR (Select Graphic Rendition)
         if self.csi == CSI.SGR:
             self.decode_sgr(seq)
+
+    def __str__(self) -> str:
+        return f"{self.csi} n={self.n:<2} m={self.m:<2}"
 
     @staticmethod
     def find_sgr(sgr_code: int) -> SGR:
@@ -354,8 +361,8 @@ class EscapeObj:
 
             attr_list.append({"SGR": SGR.find_sgr(attr)})
 
-        for sgr in attr_list:
-            logging.debug(f"SGR: {sgr}")
+        # for sgr in attr_list:
+        #     logging.debug(f"SGR: {sgr}")
 
         self.sgr = attr_list
 
@@ -505,6 +512,8 @@ class Escape:
 
 
 class EscapeTokenizer:
+    """EscapeTokenizer"""
+
     def __init__(self):
         self.idx = 0
         self.seq = False
@@ -519,13 +528,8 @@ class EscapeTokenizer:
     def append_bytearray(self, ba: bytearray) -> None:
         self.buf += ba.decode("utf-8")
 
-    def __iter__(self):
-        self.i = 0
-        return self
-
-    def isTerminator(self, ch):
+    def is_terminator(self, ch: str) -> bool:
         o = ord(ch)
-        # print(f"Ord({ch}) = {o}")
 
         if o == 0x5B:  # "[" is excluded as terminator, possibly wrong
             return False
@@ -535,23 +539,27 @@ class EscapeTokenizer:
 
         return False
 
+    def __iter__(self):
+        self.i = 0
+        return self
+
     def __next__(self) -> str:
-        l = len(self.buf)
-        if l == 0:  # Buffer is empty, abort iteration
+        buf_len = len(self.buf)
+        if buf_len == 0:  # Buffer is empty, abort iteration
             raise StopIteration
 
         j = 0
 
         if self.buf[j] == Escape.ESCAPE:  # Escape sequence start character found
-            while j < l and not self.isTerminator(self.buf[j]):
+            while j < buf_len and not self.is_terminator(self.buf[j]):
                 j += 1
-            if j == l:
+            if j == buf_len:
                 raise StopIteration
 
-            if self.isTerminator(self.buf[j]):  # Termination character found
+            if self.is_terminator(self.buf[j]):  # Termination character found
                 res = self.buf[0 : j + 1]
                 self.buf = self.buf[j + 1 :]
-                # logging.debug(f"Found escape sequence: '\\e{res[1:]}' ")
+                logging.debug(f"Found escape sequence: '\\e{res[1:]}' ")
                 return res
 
             # Escape sequence not complete, abort iteration
@@ -563,7 +571,7 @@ class EscapeTokenizer:
             return res
 
         # Handle normal text
-        while j < l and self.buf[j] not in [
+        while j < buf_len and self.buf[j] not in [
             Escape.ESCAPE,
             Ascii.NL,
             Ascii.BEL,
@@ -929,6 +937,7 @@ class TerminalLine:
     def __init__(self, id: int = 0) -> None:
         self.line = []
         self.id = id
+        self.text = ""
 
     def __str__(self) -> str:
         text = ""
@@ -993,7 +1002,7 @@ class TerminalLine:
             except IndexError:
                 self.line.append(tc)
             i += 1
-
+        self.update()
         return i
 
     def erase_in_line(self, pos: int, tas, mode: int):
@@ -1010,6 +1019,10 @@ class TerminalLine:
                 self.line[x] = tc
             except IndexError:
                 self.line.append(tc)
+        self.update()
+
+    def update(self):
+        self.text = str(self)
 
 
 class TerminalState(TerminalAttributeState):
@@ -1034,12 +1047,19 @@ class TerminalState(TerminalAttributeState):
         # self.tas.FG_COLOR = self.default_fg_color
         # self.tas.BG_COLOR = self.default_bg_color
 
+    def pos_str(self) -> str:
+        ps = f"pos_y={self.pos_y} pos_x={self.pos_x}"
+        return ps
+
     def new_line(self) -> TerminalLine:
         self.cur_line = TerminalLine(id=self.line_id)
         self.line_id += 1
         self.lines.insert(0, self.cur_line)
 
-    def set_cur_line(self):
+    def set_cur_line(self, new_y: int):
+        self.pos_y = new_y
+        if self.pos_y < 0:
+            self.pos_y = 0
         self.cur_line = self.lines[self.pos_y]
 
     def update(self, s: str) -> list:
@@ -1052,12 +1072,10 @@ class TerminalState(TerminalAttributeState):
                 eo.decode(token)
 
                 if eo.csi == CSI.CURSOR_UP:
-                    self.pos_y += eo.n
-                    self.set_cur_line()
+                    self.set_cur_line(self.pos_y + eo.n)
 
                 if eo.csi == CSI.CURSOR_DOWN:
-                    self.pos_y -= eo.n
-                    self.set_cur_line()
+                    self.set_cur_line(self.pos_y - eo.n)
 
                 if eo.csi == CSI.CURSOR_FORWARD:
                     pass
@@ -1067,22 +1085,24 @@ class TerminalState(TerminalAttributeState):
 
                 if eo.csi == CSI.CURSOR_NEXT_LINE:
                     self.pos_x = 0
-                    self.pos_y -= eo.n
-                    self.set_cur_line()
+                    self.set_cur_line(self.pos_y - eo.n)
 
                 if eo.csi == CSI.CURSOR_PREVIOUS_LINE:
                     self.pos_x = 0
-                    self.pos_y += eo.n
-                    self.set_cur_line()
+                    self.set_cur_line(self.pos_y + eo.n)
+
+                if eo.csi == CSI.CURSOR_POSITION:
+                    self.pos_x = eo.m - 1
+                    self.set_cur_line(24 - eo.n)
 
                 if eo.csi == CSI.ERASE_IN_LINE:
                     self.cur_line.erase_in_line(self.pos_x, self.tas, eo.n)
                     l.append(self.cur_line)
+                # logging.debug(f'Found {self.csi}  "{Escape.to_str(seq)}" {params}')
 
                 if eo.csi == CSI.SGR:
                     for s in eo.sgr:
                         a = s["SGR"]
-
                         if a == SGR.BOLD:
                             self.tas.BOLD = True
 
@@ -1170,31 +1190,50 @@ class TerminalState(TerminalAttributeState):
                         if a == SGR.SET_BG_COLOR:
                             self.tas.BG_COLOR = CC256[s["color"]]["hex"]
 
+                if eo.csi == CSI.SGR:
+                    for s in eo.sgr:
+                        logging.debug(f"(CSI):  {str(s):40} {self.pos_str()}")
+                else:
+                    logging.debug(f"(CSI):  {str(eo):40} {self.pos_str()}")
+
                 continue
 
             if token == Ascii.CR:  # carriage return
                 self.pos_x = 0
+                logging.debug(
+                    f"(CR) Carriage Return                             {self.pos_str()}"
+                )
                 continue
 
             if token == Ascii.BS:  # backspace
                 if self.pos_x > 0:
                     self.pos_x -= 1
+                logging.debug(
+                    f"(BS) Backspace                                   {self.pos_str()}"
+                )
                 continue
 
             if token == Ascii.NL:  # newline
+                self.pos_x = 0
+
                 if self.pos_y == 0:
                     self.new_line()
                     l.append(self.cur_line)
                 else:
-                    self.pos_y -= 1
-                    self.cur_line = self.lines[self.pos_y]
-                self.pos_x = 0
+                    self.set_cur_line(self.pos_y - 1)
+
+                logging.debug(
+                    f"(NL) Newline                                     {self.pos_str()}"
+                )
                 continue
 
             if token in [Ascii.BEL]:  # bell
                 continue
 
+            # Adding normal text
             self.pos_x = self.cur_line.append(token, self.tas, self.pos_x)
+            tok_str = f'"{token}"'
+            logging.debug(f"(Text): {tok_str:40} {self.pos_str()}")
 
             l.append(self.cur_line)
 

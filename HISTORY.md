@@ -4,6 +4,8 @@
 - Added support for cursor previous line 
 - Minor refactoring of SGR class to fix no argument bug
 - Improved printouts
+- Added Ctrl-D shortcut
+- Fixed hex-ascii printout
 
 # Version 0.40
 - Major refactoring of terminal widget

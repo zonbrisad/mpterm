@@ -88,7 +88,7 @@ self_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
 
 class App:
     NAME = "mpterm"
-    VERSION = "0.40"
+    VERSION = "0.41"
     DESCRIPTION = "MpTerm is a simple serial terminal program, aimed at embedded systems development"
     LICENSE = ""
     AUTHOR = "Peter Malmberg"
@@ -294,7 +294,7 @@ class mpProfile:
 class HexFormater:
     def __init__(self) -> None:
         self.index = 0
-        self.max = 15
+        self.max = 10
         self.end = "<br>"
         self.set_mode(MpTerm.Ascii)
 
@@ -306,24 +306,20 @@ class HexFormater:
         self.index = 0
 
     def _format_ascii_hex(self, data) -> str:
-        s = ""
+        s = "<pre>"
         for i in range(0, data.count()):
+            if self.index >= self.max:
+                # s += "\n"  # self.end
+                s += "<br>"  # self.end
+                self.index = 0
             byte = data.at(i)
             ch = int.from_bytes(byte, "big")
             cs = hex2str(ch)
             if len(cs) == 1:
                 cs = f'"{cs}"'
-
-            # if ch == 0x1b:
-            #     s += "\mc"
-            #     self.index = 0
-
-            # s += f"""<b>{chd:02x}</b> "{str(ch, "utf-8")}" """
-            s += f"""<b>{ch:02x}</b> {cs:<3} """
+            s += f"""<b>{ch:02x}</b> {cs:3} """
             self.index += 1
-            if self.index == self.max:
-                s += self.end
-                self.index = 0
+        s += "</pre>"
         return s
 
     def _format_hex(self, data) -> str:
@@ -716,16 +712,19 @@ class MainForm(QMainWindow):
         self.menuSend = QMenu(self.menubar, title="Send")
         self.menubar.addAction(self.menuSend.menuAction())
         self.add_action(
-            "Break (0x00)", self.menuSend, lambda: self.send_string(Ascii.NULL)
+            "Break [0x00]", self.menuSend, lambda: self.send_string(Ascii.NULL)
         )
         self.add_action(
-            "Ctrl-C (0x03)", self.menuSend, lambda: self.send_string(Ascii.ETX)
+            "ETX [0x03] (Ctrl-C)", self.menuSend, lambda: self.send_string(Ascii.ETX)
         )
         self.add_action(
-            "Tab (0x09)", self.menuSend, lambda: self.send_string(Ascii.TAB)
+            "EOT [0x04] (Ctrl-D)", self.menuSend, lambda: self.send_string(Ascii.ETX)
         )
-        self.add_action("LF (0x0a)", self.menuSend, lambda: self.send_string(Ascii.NL))
-        self.add_action("CR (0x0d)", self.menuSend, lambda: self.send_string(Ascii.CR))
+        self.add_action(
+            "Tab [0x09]", self.menuSend, lambda: self.send_string(Ascii.TAB)
+        )
+        self.add_action("LF [0x0a]", self.menuSend, lambda: self.send_string(Ascii.NL))
+        self.add_action("CR [0x0d]", self.menuSend, lambda: self.send_string(Ascii.CR))
 
         self.testMenu = self.menuSend.addMenu("Tests")
 
@@ -1003,7 +1002,7 @@ class MainForm(QMainWindow):
             if self.serialPort.portName() not in portNames:
                 self.serialPort.close()
                 self.message_error(
-                    f"Port {self.serialPort.name()} no longer available."
+                    f"Port {self.serialPort.portName()} no longer available."
                 )
 
         # Update list of serialports in combobox
@@ -1282,7 +1281,7 @@ def list_ports():
 
 
 def main():
-    logging_format = "[%(levelname)s] %(lineno)d %(funcName)s() : %(message)s"
+    logging_format = "[%(levelname)s] %(lineno)4d %(funcName)-16s : %(message)s"
 
     # options parsing
     parser = argparse.ArgumentParser(

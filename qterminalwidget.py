@@ -134,10 +134,10 @@ class QTerminalWidget(QPlainTextEdit):
         self.ts.reset()
         self.moveCursor(QTextCursor.End)
 
-    def update(self, s: str) -> str:
-        self.ts.update(s)
-        self.buf += b
-        logging.debug(b)
+    # def update(self, s: str) -> str:
+    #     self.ts.update(s)
+    #     self.buf += b
+    #     logging.debug(b)
 
     def printpos(self, newPos: QTextCursor.MoveOperation) -> None:
         pos = self.cur.position()
@@ -191,8 +191,11 @@ class QTerminalWidget(QPlainTextEdit):
                     self.cur.insertHtml("<br>")
 
                 if token.id == self.last_id:  # last row
-                    self.move(QTextCursor.StartOfLine, QTextCursor.MoveAnchor)
-                    self.move(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+                    # self.move(QTextCursor.StartOfLine, QTextCursor.MoveAnchor)
+                    # self.move(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+                    self.move(QTextCursor.End, QTextCursor.MoveAnchor)
+                    self.move(QTextCursor.StartOfLine, QTextCursor.KeepAnchor)
+                    # self.move(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
 
                 if token.id < self.last_id:
                     self.move(QTextCursor.End, QTextCursor.MoveAnchor)

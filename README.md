@@ -118,7 +118,8 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 ## ToDo
 
 - Terminal functions
-- [ ] Cursor management
+- [ ] Cursor basic movement
+- [ ] Cursor visual presentation
 - [x] Color encoding (8 colors)
 - [x] 256 color encoding
 - [ ] Dim text
@@ -142,7 +143,7 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 - [x] Echo mode
 - [x] Suspend button
 - [x] Pause button 
-- [ ] Pause history
+- [ ] Pause with history
 - [x] Programming button
 - [ ] Sync feature
 - [x] Hex mode
@@ -165,7 +166,7 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 - [ ] UI: Tab cycling is not correct 
 - [x] UI: programing mode does not show output from some external programs
 - [ ] Feature: Reconnecting to port despite avrdude using the port
-- [ ] Hexmode newline error
+- [x] Hexmode newline error
 - [x] Fail when pressing arrow upp/down on Raspberry Pi Pico, CSI.CURSOR_BACK "\e[12D" needs support
 
 ## Future ideas
@@ -178,6 +179,9 @@ Support for Bluetooth serialports
 
 ### http server
 Enable access from network
+
+### Terminal dimension management
+Enable setting and getting terminal dimensions easily from gui.
 
 ### Terminal state monitor (mabye as plugin)
 
