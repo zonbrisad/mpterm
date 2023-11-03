@@ -185,13 +185,14 @@ Enable setting and getting terminal dimensions easily from gui.
 
 ### Terminal state monitor (mabye as plugin)
 
-
 ### Logg tag 
 Define some sort of tag that indicates that data should be redirected to another stream (escape or html) ex. <logg> </logg> or \e[XX for ansi terminal
 
 ### Multiple ports open
 
 ### Logging function
+
+### Tcp stream function
 
 ## License 
 

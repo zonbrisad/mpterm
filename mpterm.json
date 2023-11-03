@@ -1,7 +1,7 @@
 {
     "alias": "default",
     "port": "ttyUSB0",
-    "bitrate": "115200",
+    "bitrate": "57600",
     "databits": "8",
     "parity": "None",
     "stopbits": "1",
@@ -14,7 +14,7 @@
         {
             "name": "M1",
             "hex": false,
-            "text": "ls\\n"
+            "text": "erase\\n"
         },
         {
             "name": "M2",

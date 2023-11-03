@@ -132,8 +132,8 @@ class CSI(Enum):
     # DSR = "n"  # Device status report
 
     # Private sequences
-    # SCP = "s"  # Save Current Cursor Position
-    # RCP = "u"  # Restore Saved Curosr Position
+    SAVE_CURSOR_POSITION = "s"  # Save Current Cursor Position
+    RESTORE_CURSOR_POSITION = "u"  # Restore Saved Curosr Position
 
     UNSUPPORED = "UNSUP"
     # TEXT = "TEXT"
@@ -994,7 +994,7 @@ class TerminalLine:
 
     def append(self, text: str, tas: TerminalAttributeState, pos: int) -> int:
         # print(f"Append: {text}   Pos: {pos}")
-        i = pos
+        i = pos - 1
         for ch in text:
             tc = TerminalCharacter(ch, tas)
             try:
@@ -1003,14 +1003,21 @@ class TerminalLine:
                 self.line.append(tc)
             i += 1
         self.update()
-        return i
+        return i + 1
+
+    def erase(self):
+        self.line = []
+        tas = TerminalAttributeState()
+        for _ in range(80):
+            self.line.append(TerminalCharacter(" ", tas))
+        self.update()
 
     def erase_in_line(self, pos: int, tas, mode: int):
         if mode == 0:  # erase after pos
             erange = range(pos, pos + len(self.line))
         elif mode == 1:  # erase before pos
             erange = range(0, pos)
-        elif mode == 2:  # erase entirle line
+        elif mode == 2:  # erase entire line
             erange = range(0, pos)
 
         for x in erange:
@@ -1035,10 +1042,16 @@ class TerminalState(TerminalAttributeState):
         self.reset()
 
     def reset(self):
-        self.pos_x = 0
-        self.pos_y = 0
+        self.pos_x = 1
+        self.pos_y = 1
+        self.saved_pos_x = 1
+        self.saved_pos_y = 1
+        self.size_x = 80
+        self.size_y = 24
         self.lines = []
-        self.new_line()
+        self.lul = []
+        for _ in range(0, self.size_y):
+            self.new_line()
         self.et.clear()
         self.reset_attr()
 
@@ -1048,7 +1061,7 @@ class TerminalState(TerminalAttributeState):
         # self.tas.BG_COLOR = self.default_bg_color
 
     def pos_str(self) -> str:
-        ps = f"pos_y={self.pos_y} pos_x={self.pos_x}"
+        ps = f"{self.pos_y=} {self.pos_x=}"
         return ps
 
     def new_line(self) -> TerminalLine:
@@ -1056,15 +1069,32 @@ class TerminalState(TerminalAttributeState):
         self.line_id += 1
         self.lines.insert(0, self.cur_line)
 
-    def set_cur_line(self, new_y: int):
-        self.pos_y = new_y
-        if self.pos_y < 0:
-            self.pos_y = 0
-        self.cur_line = self.lines[self.pos_y]
+    def update_cur_line(self):
+        logging.debug(f"{self.size_y=}  {self.pos_y=}  lines={len(self.lines)}")
+        self.cur_line = self.lines[self.size_y - self.pos_y]
+
+    def set_pos(self, x=None, y=None):
+        if x is not None:
+            self.pos_x = x
+            if self.pos_x < 1:
+                self.pos_x = 1
+
+        if y is not None:
+            self.pos_y = y
+            if self.pos_y < 1:
+                self.pos_y = 1
+            if self.pos_y > self.size_y:
+                self.pos_y = self.size_y
+            self.update_cur_line()
+
+    def erase_line(self, line):
+        ll = self.size_y - line
+        self.lines[ll].erase()
+        self.lul.append(self.lines[ll])
 
     def update(self, s: str) -> list:
         self.et.append_string(s)
-        l = []
+        self.lul = []
 
         for token in self.et:
             if Escape.is_escape_seq(token):
@@ -1072,10 +1102,10 @@ class TerminalState(TerminalAttributeState):
                 eo.decode(token)
 
                 if eo.csi == CSI.CURSOR_UP:
-                    self.set_cur_line(self.pos_y + eo.n)
+                    self.set_pos(y=(self.pos_y - eo.n))
 
                 if eo.csi == CSI.CURSOR_DOWN:
-                    self.set_cur_line(self.pos_y - eo.n)
+                    self.set_pos(y=(self.pos_y + eo.n))
 
                 if eo.csi == CSI.CURSOR_FORWARD:
                     pass
@@ -1084,21 +1114,44 @@ class TerminalState(TerminalAttributeState):
                     pass
 
                 if eo.csi == CSI.CURSOR_NEXT_LINE:
-                    self.pos_x = 0
-                    self.set_cur_line(self.pos_y - eo.n)
+                    self.set_pos(x=1, y=(self.pos_y + eo.n))
 
                 if eo.csi == CSI.CURSOR_PREVIOUS_LINE:
-                    self.pos_x = 0
-                    self.set_cur_line(self.pos_y + eo.n)
+                    self.set_pos(x=1, y=(self.pos_y - eo.n))
 
                 if eo.csi == CSI.CURSOR_POSITION:
-                    self.pos_x = eo.m - 1
-                    self.set_cur_line(24 - eo.n)
+                    self.set_pos(x=eo.m, y=eo.n)
+
+                if eo.csi == CSI.ERASE_IN_DISPLAY:
+                    if eo.n == 0:  # Clear from cursor to end of screen
+                        for linenr in range(self.pos_y, self.size_y):
+                            self.erase_line(linenr)
+                            logging.debug(f"Erasing line: {linenr}")
+
+                    elif eo.n == 1:  # Clear from cursor to beginning of screen
+                        for linenr in range(1, self.pos_y):
+                            self.erase_line(linenr)
+                            logging.debug(f"Erasing line: {linenr}")
+
+                    elif eo.n == 2:  # Clear entire screen
+                        for x in range(1, self.size_y):
+                            self.erase_line(x)
+
+                    # elif eo.n == 3: # Clear entire screen and delete all lines in scrollback buffer
 
                 if eo.csi == CSI.ERASE_IN_LINE:
                     self.cur_line.erase_in_line(self.pos_x, self.tas, eo.n)
-                    l.append(self.cur_line)
+                    self.lul.append(self.cur_line)
                 # logging.debug(f'Found {self.csi}  "{Escape.to_str(seq)}" {params}')
+
+                if eo.csi == CSI.SAVE_CURSOR_POSITION:
+                    self.saved_pos_x = self.pos_x
+                    self.saved_pos_y = self.pos_y
+
+                if eo.csi == CSI.RESTORE_CURSOR_POSITION:
+                    self.pos_x = self.saved_pos_x
+                    self.pos_y = self.saved_pos_y
+                    self.update_cur_line()
 
                 if eo.csi == CSI.SGR:
                     for s in eo.sgr:
@@ -1199,28 +1252,25 @@ class TerminalState(TerminalAttributeState):
                 continue
 
             if token == Ascii.CR:  # carriage return
-                self.pos_x = 0
+                self.set_pos(x=1)
                 logging.debug(
                     f"(CR) Carriage Return                             {self.pos_str()}"
                 )
                 continue
 
             if token == Ascii.BS:  # backspace
-                if self.pos_x > 0:
-                    self.pos_x -= 1
+                self.set_pos(x=(self.pos_x - 1))
                 logging.debug(
                     f"(BS) Backspace                                   {self.pos_str()}"
                 )
                 continue
 
             if token == Ascii.NL:  # newline
-                self.pos_x = 0
-
-                if self.pos_y == 0:
+                if (self.pos_y) >= self.size_y:
                     self.new_line()
-                    l.append(self.cur_line)
-                else:
-                    self.set_cur_line(self.pos_y - 1)
+                    self.lul.append(self.cur_line)
+
+                self.set_pos(x=1, y=(self.pos_y + 1))
 
                 logging.debug(
                     f"(NL) Newline                                     {self.pos_str()}"
@@ -1235,9 +1285,9 @@ class TerminalState(TerminalAttributeState):
             tok_str = f'"{token}"'
             logging.debug(f"(Text): {tok_str:40} {self.pos_str()}")
 
-            l.append(self.cur_line)
+            self.lul.append(self.cur_line)
 
-        return l
+        return self.lul
 
 
 FLAG_BLUE = "\x1b[48;5;20m"

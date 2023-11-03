@@ -191,11 +191,8 @@ class QTerminalWidget(QPlainTextEdit):
                     self.cur.insertHtml("<br>")
 
                 if token.id == self.last_id:  # last row
-                    # self.move(QTextCursor.StartOfLine, QTextCursor.MoveAnchor)
-                    # self.move(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
                     self.move(QTextCursor.End, QTextCursor.MoveAnchor)
                     self.move(QTextCursor.StartOfLine, QTextCursor.KeepAnchor)
-                    # self.move(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
 
                 if token.id < self.last_id:
                     self.move(QTextCursor.End, QTextCursor.MoveAnchor)
@@ -207,8 +204,6 @@ class QTerminalWidget(QPlainTextEdit):
 
                 html = token.line_to_html()
                 self.cur.insertHtml(html)
-                # print(f"Token: {token}")
-                # print(f"Html: {html}")
 
         self.limit_lines()
 
