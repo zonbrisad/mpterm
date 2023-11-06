@@ -125,17 +125,23 @@ class CSI(Enum):
     CURSOR_POSITION = "H"
     ERASE_IN_DISPLAY = "J"
     ERASE_IN_LINE = "K"
-    ERASE_SCROLL_UP = "S"
-    ERASE_SCROLL_DOWN = "T"
+    INSERT_LINE = "L"
+    DELETE_LINE = "M"
+    SCROLL_UP = "S"  # "\e[2S" Move lines up, new lines at bottom
+    SCROLL_DOWN = "T"
     SGR = "m"  # Select graphics rendition (SGR)
     # AUX = "i"  # Enable/Disable aux serial port
     # DSR = "n"  # Device status report
+
+    SET_SCROLLING_REGION = "r"
+    # \e[12;24r  Set scrolling region between line 12 to 24
+    # If a linefeed is received while on row 24 line 12 is removed and lines 13-24 is scrolled up
 
     # Private sequences
     SAVE_CURSOR_POSITION = "s"  # Save Current Cursor Position
     RESTORE_CURSOR_POSITION = "u"  # Restore Saved Curosr Position
 
-    UNSUPPORED = "UNSUP"
+    UNSUPPORTED = "UNSUP"
     # TEXT = "TEXT"
 
     @staticmethod
@@ -150,8 +156,8 @@ class CSI(Enum):
                 logging.debug(f'Found {csi}  "{Escape.to_str(s)}"')
                 return csi
 
-        logging.debug(f'Found {CSI.UNSUPPORED}  "{Escape.to_str(s)}"')
-        return CSI.UNSUPPORED
+        logging.debug(f'Found {CSI.UNSUPPORTED}  "{Escape.to_str(s)}"')
+        return CSI.UNSUPPORTED
 
 
 class SGR(Enum):
@@ -274,7 +280,7 @@ class SGR(Enum):
 
 @dataclass
 class EscapeObj:
-    csi: CSI = CSI.UNSUPPORED
+    csi: CSI = CSI.UNSUPPORTED
     sgr: SGR = SGR.UNSUPPORTED
     n: int = 1
     m: int = 1
@@ -288,14 +294,14 @@ class EscapeObj:
         tc = seq[-1]  # termination character in Escape sequence
 
         if seq[1] != "[":
-            self.csi = CSI.UNSUPPORED
+            self.csi = CSI.UNSUPPORTED
             return
 
         for csi in CSI:
             if tc == csi.value:
                 self.csi = csi
 
-        if self.csi == CSI.UNSUPPORED:
+        if self.csi == CSI.UNSUPPORTED:
             logging.debug(f'CSI unsupported:  "{Escape.to_str(seq)}"')
             return
 
@@ -931,6 +937,7 @@ class TerminalCharacter:
         self.tas = TerminalAttributeState()
         self.tas = copy(tas)
         self.ch = ch
+        self.cursor: bool = False
 
 
 class TerminalLine:
@@ -938,6 +945,7 @@ class TerminalLine:
         self.line = []
         self.id = id
         self.text = ""
+        self.changed = False
 
     def __str__(self) -> str:
         text = ""
@@ -945,6 +953,17 @@ class TerminalLine:
             text += tc.ch
 
         return text
+
+    def clear(self, tas):
+        for ch in self.line:
+            ch.tas = tas
+            ch.ch = " "
+
+    def reset(self):
+        self.changed = False
+
+    def has_changed(self) -> bool:
+        return self.changed
 
     def attr_html(self, data: str, tas: TerminalAttributeState) -> str:
         if tas.REVERSE:
@@ -1029,6 +1048,7 @@ class TerminalLine:
         self.update()
 
     def update(self):
+        self.changed = True
         self.text = str(self)
 
 
@@ -1042,14 +1062,14 @@ class TerminalState(TerminalAttributeState):
         self.reset()
 
     def reset(self):
-        self.pos_x = 1
-        self.pos_y = 1
-        self.saved_pos_x = 1
-        self.saved_pos_y = 1
-        self.size_x = 80
-        self.size_y = 24
-        self.lines = []
-        self.lul = []
+        self.pos_x: int = 1
+        self.pos_y: int = 1
+        self.saved_pos_x: int = 1
+        self.saved_pos_y: int = 1
+        self.size_x: int = 80
+        self.size_y: int = 24
+        self.lines: list[TerminalLine] = []
+        # self.lul: list[TerminalLine] = []
         for _ in range(0, self.size_y):
             self.new_line()
         self.et.clear()
@@ -1057,15 +1077,53 @@ class TerminalState(TerminalAttributeState):
 
     def reset_attr(self):
         self.tas.reset()
-        # self.tas.FG_COLOR = self.default_fg_color
-        # self.tas.BG_COLOR = self.default_bg_color
 
     def pos_str(self) -> str:
         ps = f"{self.pos_y=} {self.pos_x=}"
         return ps
 
+    def print_lines(self):
+        for i in range(0, 24):
+            print(f"Index: {i:2}  Id:{self.lines[i].id:3}")
+
+    def clear_line(self, line: int):
+        self.lines[self.size_y - line].clear(self.tas)
+
+        # For some reason the following line is needed.
+        # A guess is that it might have with html rendering to do
+        self.lines[self.size_y - line].append(" ", self.tas, 1)
+
+    def delete(self, n: int = 1):
+        for i in range(self.size_y - self.pos_y, -1, -1):
+            # self.lines[self.size_y + i].line = self.lines[i - 1].line
+            self.lines[i].line = self.lines[i - 1].line
+            self.lines[i].changed = True
+
+        self.clear_line(self.size_y)
+
+        # for i in range(1, self.size_y + 1):
+        #     self.lul.append(self.lines[i - 1])
+
+    def insert(self, n: int = 1):
+        """insert n row(s) at cursor, existing rows scroll down"""
+
+        pos = self.size_y - self.pos_y
+        logging.debug(f"Insert at: {pos}")
+
+        for i in range(pos, 0, -1):
+            print(
+                f"Move id at {i:2} to {i-1:2}  {self.lines[i].id:3}  {self.lines[i-1].id:3}"
+            )
+            self.lines[i].id = self.lines[i - 1].id
+
+        self.clear_line(self.pos_y)
+
+        # for i in range(1, self.size_y + 1):
+        #     self.lul.append(self.lines[i - 1])
+
     def new_line(self) -> TerminalLine:
         self.cur_line = TerminalLine(id=self.line_id)
+        self.cur_line.append(" ", self.tas, self.pos_x)
         self.line_id += 1
         self.lines.insert(0, self.cur_line)
 
@@ -1090,11 +1148,19 @@ class TerminalState(TerminalAttributeState):
     def erase_line(self, line):
         ll = self.size_y - line
         self.lines[ll].erase()
-        self.lul.append(self.lines[ll])
+        # self.lul.append(self.lines[ll])
+
+    def append(self, text):
+        self.pos_x = self.cur_line.append(text, self.tas, self.pos_x)
+        tok_str = f'"{text}"'
+        # self.lul.append(self.cur_line)
+        logging.debug(f"(Text): {tok_str:40} {self.pos_str()}")
 
     def update(self, s: str) -> list:
         self.et.append_string(s)
-        self.lul = []
+        for i in range(0, 24):
+            self.lines[i].reset()
+        # self.lul = []
 
         for token in self.et:
             if Escape.is_escape_seq(token):
@@ -1141,7 +1207,7 @@ class TerminalState(TerminalAttributeState):
 
                 if eo.csi == CSI.ERASE_IN_LINE:
                     self.cur_line.erase_in_line(self.pos_x, self.tas, eo.n)
-                    self.lul.append(self.cur_line)
+                    # self.lul.append(self.cur_line)
                 # logging.debug(f'Found {self.csi}  "{Escape.to_str(seq)}" {params}')
 
                 if eo.csi == CSI.SAVE_CURSOR_POSITION:
@@ -1152,6 +1218,15 @@ class TerminalState(TerminalAttributeState):
                     self.pos_x = self.saved_pos_x
                     self.pos_y = self.saved_pos_y
                     self.update_cur_line()
+
+                if eo.csi == CSI.INSERT_LINE:
+                    self.insert(eo.n)
+
+                if eo.csi == CSI.DELETE_LINE:
+                    self.delete(eo.n)
+
+                if eo.csi == CSI.SET_SCROLLING_REGION:
+                    logging.debug(f"{eo.csi.name} is not implemented")
 
                 if eo.csi == CSI.SGR:
                     for s in eo.sgr:
@@ -1245,7 +1320,7 @@ class TerminalState(TerminalAttributeState):
 
                 if eo.csi == CSI.SGR:
                     for s in eo.sgr:
-                        logging.debug(f"(CSI):  {str(s):40} {self.pos_str()}")
+                        logging.debug(f"(CSI.SGR):  {str(s):36} {self.pos_str()}")
                 else:
                     logging.debug(f"(CSI):  {str(eo):40} {self.pos_str()}")
 
@@ -1268,7 +1343,7 @@ class TerminalState(TerminalAttributeState):
             if token == Ascii.NL:  # newline
                 if (self.pos_y) >= self.size_y:
                     self.new_line()
-                    self.lul.append(self.cur_line)
+                    # self.lul.append(self.cur_line)
 
                 self.set_pos(x=1, y=(self.pos_y + 1))
 
@@ -1281,13 +1356,14 @@ class TerminalState(TerminalAttributeState):
                 continue
 
             # Adding normal text
-            self.pos_x = self.cur_line.append(token, self.tas, self.pos_x)
-            tok_str = f'"{token}"'
-            logging.debug(f"(Text): {tok_str:40} {self.pos_str()}")
+            self.append(token)
 
-            self.lul.append(self.cur_line)
-
-        return self.lul
+        lul = []
+        # for i in range(0, self.size_y):
+        for i in range(self.size_y - 1, -1, -1):
+            if self.lines[i].has_changed() is True:
+                lul.append(self.lines[i])
+        return lul
 
 
 FLAG_BLUE = "\x1b[48;5;20m"

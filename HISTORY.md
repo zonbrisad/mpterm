@@ -2,10 +2,13 @@
 - Fixed unsupported CSI fail
 - Added support for cursor next line 
 - Added support for cursor previous line 
+- Added support for delete 
+- Added support for insert 
 - Minor refactoring of SGR class to fix no argument bug
 - Improved printouts
 - Added Ctrl-D shortcut
 - Fixed hex-ascii printout
+- More refactoring
 
 # Version 0.40
 - Major refactoring of terminal widget

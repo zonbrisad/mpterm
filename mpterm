@@ -665,6 +665,12 @@ class MainForm(QMainWindow):
         self.statusbar.addPermanentWidget(self.rxLabel, stretch=0)
         self.txLabel = QLabel("")
         self.statusbar.addPermanentWidget(self.txLabel, stretch=0)
+        self.dimensionsLabel = QLabel("")
+        self.statusbar.addPermanentWidget(self.dimensionsLabel, stretch=0)
+        # self.yyy = QComboBox(self.centralwidget)
+        # self.yyy.addItem("80x24", Mode.Normal)
+        # self.yyy.addItem("132x24", Mode.Normal)
+        # self.statusbar.addPermanentWidget(self.yyy)
 
         # Menu bar
         self.menubar = QMenuBar(self)
@@ -900,7 +906,7 @@ class MainForm(QMainWindow):
             Qt.Key_Return: "",
         }
         # logging.debug(f"Event: {event}")
-
+        # print(event.type())
         if event.type() == QEvent.KeyPress:
             keyEvent = QKeyEvent(event)
             if keyEvent.key() in [Qt.Key_Enter, Qt.Key_Return]:
@@ -1035,6 +1041,9 @@ class MainForm(QMainWindow):
         )
         self.txLabel.setText(
             f'<span style="color:Black">TX:</span> <span style="color:Purple">{self.serialPort.txCnt:06d}</span> '
+        )
+        self.dimensionsLabel.setText(
+            f'<span style="color:Black">{self.terminal.ts.size_x:3d}x{self.terminal.ts.size_y:2d}</span> '
         )
 
         states = {
