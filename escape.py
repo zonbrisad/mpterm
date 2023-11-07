@@ -1033,16 +1033,16 @@ class TerminalLine:
 
     def erase_in_line(self, pos: int, tas, mode: int):
         if mode == 0:  # erase after pos
-            erange = range(pos, pos + len(self.line))
+            erange = range(pos - 1, len(self.line))
         elif mode == 1:  # erase before pos
             erange = range(0, pos)
         elif mode == 2:  # erase entire line
             erange = range(0, pos)
 
-        for x in erange:
+        for i in erange:
             tc = TerminalCharacter("", tas)
             try:
-                self.line[x] = tc
+                self.line[i] = tc
             except IndexError:
                 self.line.append(tc)
         self.update()
@@ -1069,7 +1069,6 @@ class TerminalState(TerminalAttributeState):
         self.size_x: int = 80
         self.size_y: int = 24
         self.lines: list[TerminalLine] = []
-        # self.lul: list[TerminalLine] = []
         for _ in range(0, self.size_y):
             self.new_line()
         self.et.clear()
@@ -1082,10 +1081,6 @@ class TerminalState(TerminalAttributeState):
         ps = f"{self.pos_y=} {self.pos_x=}"
         return ps
 
-    def print_lines(self):
-        for i in range(0, 24):
-            print(f"Index: {i:2}  Id:{self.lines[i].id:3}")
-
     def clear_line(self, line: int):
         self.lines[self.size_y - line].clear(self.tas)
 
@@ -1095,14 +1090,10 @@ class TerminalState(TerminalAttributeState):
 
     def delete(self, n: int = 1):
         for i in range(self.size_y - self.pos_y, -1, -1):
-            # self.lines[self.size_y + i].line = self.lines[i - 1].line
             self.lines[i].line = self.lines[i - 1].line
             self.lines[i].changed = True
 
         self.clear_line(self.size_y)
-
-        # for i in range(1, self.size_y + 1):
-        #     self.lul.append(self.lines[i - 1])
 
     def insert(self, n: int = 1):
         """insert n row(s) at cursor, existing rows scroll down"""
@@ -1110,26 +1101,17 @@ class TerminalState(TerminalAttributeState):
         pos = self.size_y - self.pos_y
         logging.debug(f"Insert at: {pos}")
 
-        for i in range(pos, 0, -1):
-            print(
-                f"Move id at {i:2} to {i-1:2}  {self.lines[i].id:3}  {self.lines[i-1].id:3}"
-            )
-            self.lines[i].id = self.lines[i - 1].id
+        for i in range(0, pos + 1):
+            self.lines[i].line = self.lines[i + 1].line
+            self.lines[i].changed = True
 
         self.clear_line(self.pos_y)
 
-        # for i in range(1, self.size_y + 1):
-        #     self.lul.append(self.lines[i - 1])
-
     def new_line(self) -> TerminalLine:
-        self.cur_line = TerminalLine(id=self.line_id)
-        self.cur_line.append(" ", self.tas, self.pos_x)
+        nl = TerminalLine(id=self.line_id)
+        nl.append(" ", self.tas, 0)  # For some reason needed
         self.line_id += 1
-        self.lines.insert(0, self.cur_line)
-
-    def update_cur_line(self):
-        logging.debug(f"{self.size_y=}  {self.pos_y=}  lines={len(self.lines)}")
-        self.cur_line = self.lines[self.size_y - self.pos_y]
+        self.lines.insert(0, nl)
 
     def set_pos(self, x=None, y=None):
         if x is not None:
@@ -1143,24 +1125,21 @@ class TerminalState(TerminalAttributeState):
                 self.pos_y = 1
             if self.pos_y > self.size_y:
                 self.pos_y = self.size_y
-            self.update_cur_line()
 
     def erase_line(self, line):
-        ll = self.size_y - line
-        self.lines[ll].erase()
-        # self.lul.append(self.lines[ll])
+        self.lines[self.size_y - line].erase()
 
     def append(self, text):
-        self.pos_x = self.cur_line.append(text, self.tas, self.pos_x)
+        self.pos_x = self.lines[self.size_y - self.pos_y].append(
+            text, self.tas, self.pos_x
+        )
         tok_str = f'"{text}"'
-        # self.lul.append(self.cur_line)
         logging.debug(f"(Text): {tok_str:40} {self.pos_str()}")
 
     def update(self, s: str) -> list:
         self.et.append_string(s)
         for i in range(0, 24):
             self.lines[i].reset()
-        # self.lul = []
 
         for token in self.et:
             if Escape.is_escape_seq(token):
@@ -1174,10 +1153,10 @@ class TerminalState(TerminalAttributeState):
                     self.set_pos(y=(self.pos_y + eo.n))
 
                 if eo.csi == CSI.CURSOR_FORWARD:
-                    pass
+                    self.set_pos(x=(self.pos_x + eo.n))
 
                 if eo.csi == CSI.CURSOR_BACK:
-                    pass
+                    self.set_pos(x=(self.pos_x - eo.n))
 
                 if eo.csi == CSI.CURSOR_NEXT_LINE:
                     self.set_pos(x=1, y=(self.pos_y + eo.n))
@@ -1206,8 +1185,9 @@ class TerminalState(TerminalAttributeState):
                     # elif eo.n == 3: # Clear entire screen and delete all lines in scrollback buffer
 
                 if eo.csi == CSI.ERASE_IN_LINE:
-                    self.cur_line.erase_in_line(self.pos_x, self.tas, eo.n)
-                    # self.lul.append(self.cur_line)
+                    self.lines[self.size_y - self.pos_y].erase_in_line(
+                        self.pos_x, self.tas, eo.n
+                    )
                 # logging.debug(f'Found {self.csi}  "{Escape.to_str(seq)}" {params}')
 
                 if eo.csi == CSI.SAVE_CURSOR_POSITION:
@@ -1217,7 +1197,6 @@ class TerminalState(TerminalAttributeState):
                 if eo.csi == CSI.RESTORE_CURSOR_POSITION:
                     self.pos_x = self.saved_pos_x
                     self.pos_y = self.saved_pos_y
-                    self.update_cur_line()
 
                 if eo.csi == CSI.INSERT_LINE:
                     self.insert(eo.n)
@@ -1343,7 +1322,6 @@ class TerminalState(TerminalAttributeState):
             if token == Ascii.NL:  # newline
                 if (self.pos_y) >= self.size_y:
                     self.new_line()
-                    # self.lul.append(self.cur_line)
 
                 self.set_pos(x=1, y=(self.pos_y + 1))
 
