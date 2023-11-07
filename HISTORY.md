@@ -1,9 +1,10 @@
 # Version 0.4x
 - Fixed unsupported CSI fail
-- Added support for cursor next line 
-- Added support for cursor previous line 
-- Added support for delete 
-- Added support for insert 
+- Added support for cursor next line (CSI n E)
+- Added support for cursor previous line (CSI n F)
+- Added support for insert line (CSI n L)
+- Added support for delete line (CSI n M)
+- Added support for delete char (CSI n P)
 - Minor refactoring of SGR class to fix no argument bug
 - Improved printouts
 - Added Ctrl-D shortcut

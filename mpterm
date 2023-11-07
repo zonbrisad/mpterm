@@ -1069,7 +1069,7 @@ class MainForm(QMainWindow):
             f'<span style="color:Black">TX:</span> <span style="color:Purple">{self.serialPort.txCnt:06d}</span> '
         )
         self.dimensionsLabel.setText(
-            f'<span style="color:Black">{self.terminal.ts.size_x:3d}x{self.terminal.ts.size_y:2d}</span> '
+            f'<span style="color:Black">{self.terminal.ts.max.column:3d}x{self.terminal.ts.max.row:2d}</span> '
         )
 
         states = {
