@@ -118,7 +118,7 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 ## ToDo
 
 - Terminal functions
-- [ ] Cursor basic movement
+- [x] Cursor basic movement
 - [ ] Cursor visual presentation
 - [x] Color encoding (8 colors)
 - [x] 256 color encoding
@@ -131,7 +131,7 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 - [x] arrow button support 
 - [ ] end 
 - [ ] home
-- [ ] delete
+- [x] delete
 - [ ] FXX 
 - [ ] Fix color rendering for basic 16 colors
 - Feature
@@ -156,11 +156,13 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 - [ ] Changeable color palets
 - [x] Changable newline mode
 - [ ] Escape sequence monitor
+- [ ] Reorganize "Send" menu
+- [ ] Add support for different protocols in "Send" menu
 
 ## Known Issues
 - [x] Rendering: Error when <> characters are included
 - [ ] Rendering: Text lines overlap with one(maybe two) pixel row(s)
-- [ ] Rendering: Terminal rendering performance is slow
+- [x] Rendering: Terminal rendering performance is slow
 - [ ] Rendering: Real bright(bold) colors
 - [x] Rendering: Row removal fail
 - [ ] UI: Tab cycling is not correct 
