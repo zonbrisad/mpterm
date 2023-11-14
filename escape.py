@@ -108,6 +108,14 @@ def hex2str(c: int) -> str:
     return chr(c)
 
 
+class C1(Enum):
+    CSI = "["  # Control Sequence Introducer
+    DECSC = "7"  # Save cursor position and character attributes
+    DECRC = "8"  # Restore cursor and attributes to previously saved position
+
+    UNSUPPORTED = "UNSUPPORED"
+
+
 class CSI(Enum):
     """Control Sequence Introducer
 
@@ -281,6 +289,7 @@ class SGR(Enum):
 
 @dataclass
 class EscapeObj:
+    c1: C1 = C1.UNSUPPORTED
     csi: CSI = CSI.UNSUPPORTED
     sgr: SGR = SGR.UNSUPPORTED
     n: int = 1
@@ -522,18 +531,18 @@ class EscapeTokenizer:
     """EscapeTokenizer"""
 
     def __init__(self):
-        self.idx = 0
-        self.seq = False
         self.clear()
 
     def clear(self):
-        self.buf = ""
+        self.seq = ""
+        self.lbuf = []
 
     def append_string(self, s: str) -> None:
-        self.buf += s
+        self.lbuf.extend(list(s))
 
     def append_bytearray(self, ba: bytearray) -> None:
-        self.buf += ba.decode("utf-8")
+        utf = ba.decode("utf-8")
+        self.lbuf.extend(list(utf))
 
     def is_terminator(self, ch: str) -> bool:
         o = ord(ch)
@@ -551,6 +560,47 @@ class EscapeTokenizer:
         return self
 
     def __next__(self) -> str:
+        try:
+            while True:
+                ch = self.lbuf.pop(0)  # get next character from buffer
+
+                if ch in [Ascii.NL, Ascii.BEL, Ascii.BS, Ascii.CR]:
+                    if len(self.seq) > 0:
+                        ret = self.seq
+                        self.seq = ""
+                        self.lbuf.insert(0, ch)
+                        return ret
+                    return ch
+
+                if ch == Escape.ESCAPE:  # Escape sequence start character found
+                    if len(self.seq) > 0:
+                        ret = self.seq
+                        self.seq = ch
+                        return ret
+
+                    self.seq = ch
+                    continue
+
+                self.seq += ch
+
+                if self.seq[0] == Escape.ESCAPE:
+                    if self.is_terminator(ch) is True:
+                        ret = self.seq
+                        self.seq = ""
+                        return ret
+
+        except IndexError:
+            if len(self.seq) == 0:
+                raise StopIteration
+
+            if self.seq[0] == Escape.ESCAPE:
+                raise StopIteration
+
+            ret = self.seq
+            self.seq = ""
+            return ret
+
+    def old__next__(self) -> str:
         buf_len = len(self.buf)
         if buf_len == 0:  # Buffer is empty, abort iteration
             raise StopIteration

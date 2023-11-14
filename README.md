@@ -170,6 +170,7 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 - [ ] Feature: Reconnecting to port despite avrdude using the port
 - [x] Hexmode newline error
 - [x] Fail when pressing arrow upp/down on Raspberry Pi Pico, CSI.CURSOR_BACK "\e[12D" needs support
+- [ ] Bug causing terminal to go green and fail cursor movement during apt install 
 
 ## Future ideas
 
