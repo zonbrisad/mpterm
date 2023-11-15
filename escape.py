@@ -31,6 +31,7 @@
 
 from __future__ import annotations
 from copy import copy
+from curses import is_term_resized
 from dataclasses import dataclass
 import logging
 from enum import Enum
@@ -110,10 +111,16 @@ def hex2str(c: int) -> str:
 
 class C1(Enum):
     CSI = "["  # Control Sequence Introducer
+    # OSC = "]"  # Operating System Command
+    # Fs (independet function) sequences 0x60-0x7E
+    # RIS = "c"  # Reset to Initial State
+
+    # Fp (private use) sequences 0x30-0x3F
     DECSC = "7"  # Save cursor position and character attributes
     DECRC = "8"  # Restore cursor and attributes to previously saved position
 
-    UNSUPPORTED = "UNSUPPORED"
+    # RESERVERD = "'"  # Reserved for future standardization
+    UNSUPPORTED = "UNSUPPORTED"
 
 
 class CSI(Enum):
@@ -301,7 +308,17 @@ class EscapeObj:
         if not seq[0] == Escape.ESCAPE:
             return
 
+        self.text = Escape.to_str(seq)
+
         tc = seq[-1]  # termination character in Escape sequence
+
+        for c in C1:
+            if seq[1] == c.value:
+                self.c1 = c
+
+        if self.c1 == C1.UNSUPPORTED:
+            logging.debug(f'C1 unsupported:  "{self.text}"')
+            return
 
         if seq[1] != "[":
             self.csi = CSI.UNSUPPORTED
@@ -312,7 +329,7 @@ class EscapeObj:
                 self.csi = csi
 
         if self.csi == CSI.UNSUPPORTED:
-            logging.debug(f'CSI unsupported:  "{Escape.to_str(seq)}"')
+            logging.debug(f'CSI unsupported:  "{self.text}"')
             return
 
         # The following CSI's has 0 as default for n
@@ -333,7 +350,7 @@ class EscapeObj:
             self.decode_sgr(seq)
 
     def __str__(self) -> str:
-        return f"{self.csi} n={self.n:<2} m={self.m:<2}"
+        return f"{self.csi:20} n={self.n:<2} m={self.m:<2}"
 
     @staticmethod
     def find_sgr(sgr_code: int) -> SGR:
@@ -544,13 +561,56 @@ class EscapeTokenizer:
         utf = ba.decode("utf-8")
         self.lbuf.extend(list(utf))
 
-    def is_terminator(self, ch: str) -> bool:
-        o = ord(ch)
+    def is_csi(self) -> bool:
+        """Check if a string is CSI terminated"""
 
-        if o == 0x5B:  # "[" is excluded as terminator, possibly wrong
+        if self.seq[1] != C1.CSI.value:
             return False
 
-        if o >= 0x40 and o <= 0x7E:
+        lc = ord(self.seq[-1])
+        if lc == 0x5B:  # "[" is excluded as terminator, possibly wrong
+            return False
+
+        if lc >= 0x40 and lc <= 0x7E:
+            return True
+
+        return False
+
+    def is_Fp(self) -> bool:
+        """Check if independent function dequence"""
+
+        lc = ord(self.seq[1])
+        if (lc >= 0x60) and (lc <= 0x7E):
+            return True
+
+    def is_Fs(self) -> bool:
+        """Check if private two character sequence"""
+
+        lc = ord(self.seq[-1])
+        if (lc >= 0x30) and (lc <= 0x3F):
+            return True
+
+    def is_terminated(self) -> bool:
+        """Check if Escape sequence is terminated"""
+
+        seq_len = len(self.seq)
+
+        if seq_len <= 1:
+            return False
+
+        if seq_len == 2:
+            if self.is_Fp() is True:
+                return True
+
+            if self.is_Fs() is True:
+                return True
+
+        if seq_len == 3 and self.seq[1] == "(":
+            return True
+
+        # return False
+
+        if self.is_csi() is True:
             return True
 
         return False
@@ -584,10 +644,15 @@ class EscapeTokenizer:
                 self.seq += ch
 
                 if self.seq[0] == Escape.ESCAPE:
-                    if self.is_terminator(ch) is True:
+                    if self.is_terminated() is True:
                         ret = self.seq
                         self.seq = ""
                         return ret
+
+                    # if self.is_terminator(ch) is True:
+                    #     ret = self.seq
+                    #     self.seq = ""
+                    #     return ret
 
         except IndexError:
             if len(self.seq) == 0:
@@ -599,47 +664,6 @@ class EscapeTokenizer:
             ret = self.seq
             self.seq = ""
             return ret
-
-    def old__next__(self) -> str:
-        buf_len = len(self.buf)
-        if buf_len == 0:  # Buffer is empty, abort iteration
-            raise StopIteration
-
-        j = 0
-
-        if self.buf[j] == Escape.ESCAPE:  # Escape sequence start character found
-            while j < buf_len and not self.is_terminator(self.buf[j]):
-                j += 1
-            if j == buf_len:
-                raise StopIteration
-
-            if self.is_terminator(self.buf[j]):  # Termination character found
-                res = self.buf[0 : j + 1]
-                self.buf = self.buf[j + 1 :]
-                logging.debug(f"Found escape sequence: '\\e{res[1:]}' ")
-                return res
-
-            # Escape sequence not complete, abort iteration
-            raise StopIteration
-
-        if self.buf[j] in [Ascii.NL, Ascii.BEL, Ascii.BS, Ascii.CR]:
-            res = self.buf[j]
-            self.buf = self.buf[j + 1 :]
-            return res
-
-        # Handle normal text
-        while j < buf_len and self.buf[j] not in [
-            Escape.ESCAPE,
-            Ascii.NL,
-            Ascii.BEL,
-            Ascii.BS,
-            Ascii.CR,
-        ]:
-            j += 1
-        res = self.buf[0:j]
-        self.buf = self.buf[j:]
-        # logging.debug(f"Found text sequence: '" + res.replace("\x1b", "\\e").replace("\x0a", "\\n").replace("\x0d", '\\r')+"'")
-        return res
 
 
 @dataclass
@@ -1073,7 +1097,7 @@ class TerminalLine:
                 tas = tc.tas
 
             if self.cursor is not None:
-                print("XXXX")
+                # print("XXXX")
                 if idx == (self.cursor.column - 1):
                     tas.CURSOR = True
                 else:
@@ -1223,7 +1247,7 @@ class TerminalState(TerminalAttributeState):
             text, self.tas, self.cursor.column
         )
         tok_str = f'"{text}"'
-        logging.debug(f"(Text): {tok_str:40} {self.pos_str()}")
+        logging.debug(f"(Text): {tok_str}")
 
     def update(self, s: str) -> list:
         self.et.append_string(s)
@@ -1235,165 +1259,181 @@ class TerminalState(TerminalAttributeState):
                 eo = EscapeObj()
                 eo.decode(token)
 
-                if eo.csi == CSI.CURSOR_UP:
-                    self.set_pos(y=(self.cursor.row - eo.n))
+                if eo.c1 == C1.DECSC:  # Save cursor and attributes
+                    continue
 
-                if eo.csi == CSI.CURSOR_DOWN:
-                    self.set_pos(y=(self.cursor.row + eo.n))
+                if eo.c1 == C1.DECRC:  # Restore cursor and attributes
+                    continue
 
-                if eo.csi == CSI.CURSOR_FORWARD:
-                    self.set_pos(x=(self.cursor.column + eo.n))
+                if eo.c1 == C1.UNSUPPORTED:  # Restore cursor and attributes
+                    continue
 
-                if eo.csi == CSI.CURSOR_BACK:
-                    self.set_pos(x=(self.cursor.column - eo.n))
+                if eo.c1 == C1.CSI:
+                    if eo.csi == CSI.CURSOR_UP:
+                        self.set_pos(y=(self.cursor.row - eo.n))
 
-                if eo.csi == CSI.CURSOR_NEXT_LINE:
-                    self.set_pos(x=1, y=(self.cursor.row + eo.n))
+                    if eo.csi == CSI.CURSOR_DOWN:
+                        self.set_pos(y=(self.cursor.row + eo.n))
 
-                if eo.csi == CSI.CURSOR_PREVIOUS_LINE:
-                    self.set_pos(x=1, y=(self.cursor.row - eo.n))
+                    if eo.csi == CSI.CURSOR_FORWARD:
+                        self.set_pos(x=(self.cursor.column + eo.n))
 
-                if eo.csi == CSI.CURSOR_POSITION:
-                    self.set_pos(x=eo.m, y=eo.n)
+                    if eo.csi == CSI.CURSOR_BACK:
+                        self.set_pos(x=(self.cursor.column - eo.n))
 
-                if eo.csi == CSI.ERASE_IN_DISPLAY:
-                    if eo.n == 0:  # Clear from cursor to end of screen
-                        for linenr in range(self.cursor.row, self.max.row):
-                            self.erase_line(linenr)
-                            logging.debug(f"Erasing line: {linenr}")
+                    if eo.csi == CSI.CURSOR_NEXT_LINE:
+                        self.set_pos(x=1, y=(self.cursor.row + eo.n))
 
-                    elif eo.n == 1:  # Clear from cursor to beginning of screen
-                        for linenr in range(1, self.cursor.row):
-                            self.erase_line(linenr)
-                            logging.debug(f"Erasing line: {linenr}")
+                    if eo.csi == CSI.CURSOR_PREVIOUS_LINE:
+                        self.set_pos(x=1, y=(self.cursor.row - eo.n))
 
-                    elif eo.n == 2:  # Clear entire screen
-                        for x in range(1, self.max.row):
-                            self.erase_line(x)
+                    if eo.csi == CSI.CURSOR_POSITION:
+                        self.set_pos(x=eo.m, y=eo.n)
 
-                    # elif eo.n == 3: # Clear entire screen and delete all lines in scrollback buffer
+                    if eo.csi == CSI.ERASE_IN_DISPLAY:
+                        if eo.n == 0:  # Clear from cursor to end of screen
+                            for linenr in range(self.cursor.row, self.max.row):
+                                self.erase_line(linenr)
+                                logging.debug(f"Erasing line: {linenr}")
 
-                if eo.csi == CSI.ERASE_IN_LINE:
-                    self.lines[self.max.row - self.cursor.row].erase_in_line(
-                        self.cursor.column, self.tas, eo.n
-                    )
-                # logging.debug(f'Found {self.csi}  "{Escape.to_str(seq)}" {params}')
+                        elif eo.n == 1:  # Clear from cursor to beginning of screen
+                            for linenr in range(1, self.cursor.row):
+                                self.erase_line(linenr)
+                                logging.debug(f"Erasing line: {linenr}")
 
-                if eo.csi == CSI.SAVE_CURSOR_POSITION:
-                    self.saved_cursor = copy(self.cursor)
+                        elif eo.n == 2:  # Clear entire screen
+                            for x in range(1, self.max.row):
+                                self.erase_line(x)
 
-                if eo.csi == CSI.RESTORE_CURSOR_POSITION:
-                    self.cursor = copy(self.saved_cursor)
+                        # elif eo.n == 3: # Clear entire screen and delete all lines in scrollback buffer
 
-                if eo.csi == CSI.INSERT_LINE:
-                    self.insert(eo.n)
+                    if eo.csi == CSI.ERASE_IN_LINE:
+                        self.lines[self.max.row - self.cursor.row].erase_in_line(
+                            self.cursor.column, self.tas, eo.n
+                        )
+                    # logging.debug(f'Found {self.csi}  "{Escape.to_str(seq)}" {params}')
 
-                if eo.csi == CSI.DELETE_LINE:
-                    self.delete(eo.n)
+                    if eo.csi == CSI.SAVE_CURSOR_POSITION:
+                        self.saved_cursor = copy(self.cursor)
 
-                if eo.csi == CSI.DELETE_CHAR:
-                    self.delete_char(eo.n)
+                    if eo.csi == CSI.RESTORE_CURSOR_POSITION:
+                        self.cursor = copy(self.saved_cursor)
 
-                if eo.csi == CSI.SET_SCROLLING_REGION:
-                    logging.debug(f"{eo.csi.name} is not implemented")
+                    if eo.csi == CSI.INSERT_LINE:
+                        self.insert(eo.n)
 
-                if eo.csi == CSI.SGR:
-                    for s in eo.sgr:
-                        a = s["SGR"]
-                        if a == SGR.BOLD:
-                            self.tas.BOLD = True
+                    if eo.csi == CSI.DELETE_LINE:
+                        self.delete(eo.n)
 
-                        if a == SGR.ITALIC:
-                            self.tas.ITALIC = True
+                    if eo.csi == CSI.DELETE_CHAR:
+                        self.delete_char(eo.n)
 
-                        if a == SGR.NOT_ITALIC:
-                            self.tas.ITALIC = False
+                    if eo.csi == CSI.SET_SCROLLING_REGION:
+                        logging.debug(f"{eo.csi.name} is not implemented")
 
-                        if a == SGR.UNDERLINE:
-                            self.tas.UNDERLINE = True
+                    if eo.csi == CSI.SGR:
+                        for s in eo.sgr:
+                            a = s["SGR"]
+                            if a == SGR.BOLD:
+                                self.tas.BOLD = True
 
-                        if a == SGR.NOT_UNDERLINED:
-                            self.tas.UNDERLINE = False
+                            if a == SGR.ITALIC:
+                                self.tas.ITALIC = True
 
-                        if a == SGR.CROSSED:
-                            self.tas.CROSSED = True
+                            if a == SGR.NOT_ITALIC:
+                                self.tas.ITALIC = False
 
-                        if a == SGR.NOT_CROSSED:
-                            self.tas.CROSSED = False
+                            if a == SGR.UNDERLINE:
+                                self.tas.UNDERLINE = True
 
-                        if a == SGR.SUPERSCRIPT:
-                            self.tas.SUPERSCRIPT = True
+                            if a == SGR.NOT_UNDERLINED:
+                                self.tas.UNDERLINE = False
 
-                        if a == SGR.SUBSCRIPT:
-                            self.tas.SUBSCRIPT = True
+                            if a == SGR.CROSSED:
+                                self.tas.CROSSED = True
 
-                        if a == SGR.OVERLINE:
-                            self.tas.OVERLINE = True
-                            self.tas.UNDERLINE = False
-                            self.tas.CROSSED = False
+                            if a == SGR.NOT_CROSSED:
+                                self.tas.CROSSED = False
 
-                        if a == SGR.NOT_OVERLINE:
-                            self.tas.OVERLINE = False
+                            if a == SGR.SUPERSCRIPT:
+                                self.tas.SUPERSCRIPT = True
 
-                        if a == SGR.NORMAL_INTENSITY:
-                            self.tas.BOLD = False
-                            self.tas.DIM = False
+                            if a == SGR.SUBSCRIPT:
+                                self.tas.SUBSCRIPT = True
 
-                        if a == SGR.REVERSE_VIDEO:
-                            self.tas.REVERSE = True
+                            if a == SGR.OVERLINE:
+                                self.tas.OVERLINE = True
+                                self.tas.UNDERLINE = False
+                                self.tas.CROSSED = False
 
-                        if a == SGR.NOT_REVERSED:
-                            self.tas.REVERSE = False
+                            if a == SGR.NOT_OVERLINE:
+                                self.tas.OVERLINE = False
 
-                        if a == SGR.RESET:
-                            self.tas.reset()
+                            if a == SGR.NORMAL_INTENSITY:
+                                self.tas.BOLD = False
+                                self.tas.DIM = False
 
-                        if a == SGR.SLOW_BLINK:
-                            self.BLINKING = True
+                            if a == SGR.REVERSE_VIDEO:
+                                self.tas.REVERSE = True
 
-                        if a == SGR.NOT_BLINKING:
-                            self.BLINKING = False
+                            if a == SGR.NOT_REVERSED:
+                                self.tas.REVERSE = False
 
-                        if a in [
-                            SGR.FG_COLOR_BLACK,
-                            SGR.FG_COLOR_RED,
-                            SGR.FG_COLOR_GREEN,
-                            SGR.FG_COLOR_YELLOW,
-                            SGR.FG_COLOR_BLUE,
-                            SGR.FG_COLOR_MAGENTA,
-                            SGR.FG_COLOR_CYAN,
-                            SGR.FG_COLOR_WHITE,
-                        ]:
-                            if self.BOLD:
-                                self.tas.FG_COLOR = sgr_to_escape_color_bold[a]
+                            if a == SGR.RESET:
+                                self.tas.reset()
+
+                            if a == SGR.SLOW_BLINK:
+                                self.BLINKING = True
+
+                            if a == SGR.NOT_BLINKING:
+                                self.BLINKING = False
+
+                            if a in [
+                                SGR.FG_COLOR_BLACK,
+                                SGR.FG_COLOR_RED,
+                                SGR.FG_COLOR_GREEN,
+                                SGR.FG_COLOR_YELLOW,
+                                SGR.FG_COLOR_BLUE,
+                                SGR.FG_COLOR_MAGENTA,
+                                SGR.FG_COLOR_CYAN,
+                                SGR.FG_COLOR_WHITE,
+                            ]:
+                                if self.BOLD:
+                                    self.tas.FG_COLOR = sgr_to_escape_color_bold[a]
+                                else:
+                                    self.tas.FG_COLOR = sgr_to_escape_color[a]
+
+                            if a in [
+                                SGR.BG_COLOR_BLACK,
+                                SGR.BG_COLOR_RED,
+                                SGR.BG_COLOR_GREEN,
+                                SGR.BG_COLOR_YELLOW,
+                                SGR.BG_COLOR_BLUE,
+                                SGR.BG_COLOR_MAGENTA,
+                                SGR.BG_COLOR_CYAN,
+                                SGR.BG_COLOR_WHITE,
+                            ]:
+                                self.tas.BG_COLOR = sgr_to_escape_color[a]
+
+                            if a == SGR.SET_FG_COLOR:
+                                self.tas.FG_COLOR = CC256[s["color"]]["hex"]
+
+                            if a == SGR.SET_BG_COLOR:
+                                self.tas.BG_COLOR = CC256[s["color"]]["hex"]
+
+                    if eo.csi == CSI.SGR:
+                        for i, s in enumerate(eo.sgr):
+                            if i == 0:
+                                logging.debug(
+                                    f'(CSI.SGR):  {str(s):29}  "{str(eo.text)}"'
+                                )
                             else:
-                                self.tas.FG_COLOR = sgr_to_escape_color[a]
+                                logging.debug(f"            {str(s):36}")
+                    else:
+                        t = f'"{str(eo.text)}"'
+                        logging.debug(f"(CSI):  {str(eo):34} {t:12} {self.pos_str()}")
 
-                        if a in [
-                            SGR.BG_COLOR_BLACK,
-                            SGR.BG_COLOR_RED,
-                            SGR.BG_COLOR_GREEN,
-                            SGR.BG_COLOR_YELLOW,
-                            SGR.BG_COLOR_BLUE,
-                            SGR.BG_COLOR_MAGENTA,
-                            SGR.BG_COLOR_CYAN,
-                            SGR.BG_COLOR_WHITE,
-                        ]:
-                            self.tas.BG_COLOR = sgr_to_escape_color[a]
-
-                        if a == SGR.SET_FG_COLOR:
-                            self.tas.FG_COLOR = CC256[s["color"]]["hex"]
-
-                        if a == SGR.SET_BG_COLOR:
-                            self.tas.BG_COLOR = CC256[s["color"]]["hex"]
-
-                if eo.csi == CSI.SGR:
-                    for s in eo.sgr:
-                        logging.debug(f"(CSI.SGR):  {str(s):36} {self.pos_str()}")
-                else:
-                    logging.debug(f"(CSI):  {str(eo):40} {self.pos_str()}")
-
-                continue
+                    continue
 
             if token == Ascii.CR:  # carriage return
                 self.set_pos(x=1)
@@ -1430,7 +1470,7 @@ class TerminalState(TerminalAttributeState):
         for i in range(self.max.row - 1, -1, -1):
             if (i + 1) == self.cursor.row:
                 cur = copy(self.cursor)
-                print(f"Cursor on: {self.cursor}")
+                logging.debug(f"Cursor on: {self.cursor}")
             else:
                 cur = None
 
