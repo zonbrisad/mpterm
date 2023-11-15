@@ -170,7 +170,10 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 - [ ] Feature: Reconnecting to port despite avrdude using the port
 - [x] Hexmode newline error
 - [x] Fail when pressing arrow upp/down on Raspberry Pi Pico, CSI.CURSOR_BACK "\e[12D" needs support
-- [ ] Bug causing terminal to go green and fail cursor movement during apt install 
+- [x] Bug causing terminal to go green during "apt install" 
+- [x] Cursor movement during "apt install" fail 
+- [ ] Line not completely erased during   "sudo apt install rolldice" results in "Processing triggers for man-db (2.9.4-2) ...####################............]"
+-                                                                    should be   "Processing triggers for man-db (2.9.4-2) ..."
 
 ## Future ideas
 

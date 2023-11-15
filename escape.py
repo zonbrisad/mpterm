@@ -147,6 +147,11 @@ class CSI(Enum):
     SCROLL_DOWN = "T"
 
     HVP = "f"  #  Horizontal and Vertical Position(depends on PUM=Positioning Unit Mode)
+    RESET_MODE = "l"  # Reset mode (RM)
+    #                   2   - Keyboard Action Mode (KAM).
+    #                   4   - Replace Mode (IRM).
+    #                   1 2 - Send/receive (SRM).
+    #                   2 0 - Normal Linefeed (LNM
 
     SGR = "m"  # Select graphics rendition (SGR)
     # AUX = "i"  # Enable/Disable aux serial port
@@ -1038,8 +1043,8 @@ class TerminalLine:
         self, tas: TerminalAttributeState, id: int = 0, columns: int = 80
     ) -> None:
         self.line = []
-        for i in range(0, columns):
-            self.line.append(TerminalCharacter(" ", tas))
+        # for i in range(0, columns):
+        #     self.line.append(TerminalCharacter(" ", tas))
         self.id = id
         self.text = ""
         self.changed = False
@@ -1129,7 +1134,6 @@ class TerminalLine:
         return html
 
     def append(self, text: str, tas: TerminalAttributeState, pos: int) -> int:
-        # print(f"Append: {text}   Pos: {pos}")
         i = pos - 1
         for ch in text:
             tc = TerminalCharacter(ch, tas)
@@ -1141,12 +1145,11 @@ class TerminalLine:
         self.update()
         return i + 1
 
-    def erase(self, tas: TerminalAttributeState):
-        self.line = []
-        # tas = TerminalAttributeState()
-        for _ in range(80):
-            self.line.append(TerminalCharacter(" ", tas))
-        self.update()
+    # def erase(self, tas: TerminalAttributeState):
+    #     self.line = []
+    #     for _ in range(80):
+    #         self.line.append(TerminalCharacter(" ", tas))
+    #     self.update()
 
     def delete_char(self, column: int, n: int):
         for i in range(column, column + n):
@@ -1247,9 +1250,6 @@ class TerminalState(TerminalAttributeState):
                 self.cursor.row = 1
             if self.cursor.row > self.max.row:
                 self.cursor.row = self.max.row
-
-    def erase_line(self, line):
-        self.lines[self.max.row - line].erase()
 
     def erase_in_line(self, mode):
         logging.debug(
