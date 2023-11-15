@@ -145,6 +145,9 @@ class CSI(Enum):
     DELETE_CHAR = "P"  # Delete character(s) from cursor position (VT102)
     SCROLL_UP = "S"  # "\e[2S" Move lines up, new lines at bottom
     SCROLL_DOWN = "T"
+
+    HVP = "f"  #  Horizontal and Vertical Position(depends on PUM=Positioning Unit Mode)
+
     SGR = "m"  # Select graphics rendition (SGR)
     # AUX = "i"  # Enable/Disable aux serial port
     # DSR = "n"  # Device status report
@@ -226,6 +229,9 @@ class SGR(Enum):
 
     OVERLINE = 53
     NOT_OVERLINE = 55
+
+    SET_FG_COLOR_DEFAULT = 39  # Set default color foreground
+    SET_BG_COLOR_DEFAULT = 49  # Set default color background
 
     SET_FG_COLOR = 38  # Select 256 color or RGB color foreground
     SET_BG_COLOR = 48  # Select 256 color or RGB color background
@@ -317,7 +323,7 @@ class EscapeObj:
                 self.c1 = c
 
         if self.c1 == C1.UNSUPPORTED:
-            logging.debug(f'C1 unsupported:  "{self.text}"')
+            # logging.debug(f'C1 unsupported:  "{self.text}"')
             return
 
         if seq[1] != "[":
@@ -329,7 +335,7 @@ class EscapeObj:
                 self.csi = csi
 
         if self.csi == CSI.UNSUPPORTED:
-            logging.debug(f'CSI unsupported:  "{self.text}"')
+            # logging.debug(f'CSI unsupported:  "{self.text}"')
             return
 
         # The following CSI's has 0 as default for n
@@ -999,6 +1005,8 @@ class TerminalAttributeState:
     FG_COLOR: str = TColor.WHITE
     BG_COLOR: str = TColor.BLACK
     CURSOR: bool = False
+    DEFAULT_FG_COLOR: str = TColor.WHITE
+    DEFAULT_BG_COLOR: str = TColor.BLACK
 
     def reset(self):
         self.BOLD = False
@@ -1010,8 +1018,10 @@ class TerminalAttributeState:
         self.SUBSCRIPT = False
         self.REVERSE = False
         self.OVERLINE = False
-        self.FG_COLOR = TColor.WHITE
-        self.BG_COLOR = TColor.BLACK
+        self.FG_COLOR = self.DEFAULT_FG_COLOR
+        self.BG_COLOR = self.DEFAULT_BG_COLOR
+        # self.FG_COLOR = TColor.WHITE
+        # self.BG_COLOR = TColor.BLACK
         self.CURSOR = False
 
 
@@ -1131,9 +1141,9 @@ class TerminalLine:
         self.update()
         return i + 1
 
-    def erase(self):
+    def erase(self, tas: TerminalAttributeState):
         self.line = []
-        tas = TerminalAttributeState()
+        # tas = TerminalAttributeState()
         for _ in range(80):
             self.line.append(TerminalCharacter(" ", tas))
         self.update()
@@ -1150,14 +1160,13 @@ class TerminalLine:
         elif mode == 1:  # erase before pos
             erange = range(0, pos)
         elif mode == 2:  # erase entire line
-            erange = range(0, pos)
+            erange = range(0, len(self.line))
 
         for i in erange:
-            tc = TerminalCharacter("", tas)
             try:
-                self.line[i] = tc
+                self.line[i] = TerminalCharacter(" ", tas)
             except IndexError:
-                self.line.append(tc)
+                self.line.append(TerminalCharacter(" ", tas))
         self.update()
 
     def update(self):
@@ -1242,6 +1251,25 @@ class TerminalState(TerminalAttributeState):
     def erase_line(self, line):
         self.lines[self.max.row - line].erase()
 
+    def erase_in_line(self, mode):
+        logging.debug(
+            f"Erase in line: {self.cursor.row=}  {self.cursor.column=} {mode=}"
+        )
+        self.lines[self.max.row - self.cursor.row].erase_in_line(
+            self.cursor.column, self.tas, mode
+        )
+
+    def erase_in_display(self, mode):
+        if mode == 0:  # Clear from cursor to end of screen
+            for line in range(self.cursor.row, self.max.row + 1):
+                self.lines[self.max.row - line].erase_in_line(1, self.tas, 2)
+        elif mode == 1:  # Clear from cursor to beginning of screen
+            for line in range(1, self.cursor.row):
+                self.lines[self.max.row - line].erase_in_line(1, self.tas, 2)
+        elif mode == 2:  # Clear entire screen
+            for line in range(1, self.max.row):
+                self.lines[self.max.row - line].erase_in_line(1, self.tas, 2)
+
     def append(self, text):
         self.cursor.column = self.lines[self.max.row - self.cursor.row].append(
             text, self.tas, self.cursor.column
@@ -1260,13 +1288,12 @@ class TerminalState(TerminalAttributeState):
                 eo.decode(token)
 
                 if eo.c1 == C1.DECSC:  # Save cursor and attributes
-                    continue
+                    self.saved_cursor = copy(self.cursor)
+                    self.saved_tas = copy(self.tas)
 
                 if eo.c1 == C1.DECRC:  # Restore cursor and attributes
-                    continue
-
-                if eo.c1 == C1.UNSUPPORTED:  # Restore cursor and attributes
-                    continue
+                    self.cursor = copy(self.saved_cursor)
+                    self.tas = copy(self.saved_tas)
 
                 if eo.c1 == C1.CSI:
                     if eo.csi == CSI.CURSOR_UP:
@@ -1290,28 +1317,15 @@ class TerminalState(TerminalAttributeState):
                     if eo.csi == CSI.CURSOR_POSITION:
                         self.set_pos(x=eo.m, y=eo.n)
 
+                    # Horizontal and Vertical Position(depends on PUM)
+                    if eo.csi == CSI.HVP:
+                        self.set_pos(x=eo.m, y=eo.n)
+
                     if eo.csi == CSI.ERASE_IN_DISPLAY:
-                        if eo.n == 0:  # Clear from cursor to end of screen
-                            for linenr in range(self.cursor.row, self.max.row):
-                                self.erase_line(linenr)
-                                logging.debug(f"Erasing line: {linenr}")
-
-                        elif eo.n == 1:  # Clear from cursor to beginning of screen
-                            for linenr in range(1, self.cursor.row):
-                                self.erase_line(linenr)
-                                logging.debug(f"Erasing line: {linenr}")
-
-                        elif eo.n == 2:  # Clear entire screen
-                            for x in range(1, self.max.row):
-                                self.erase_line(x)
-
-                        # elif eo.n == 3: # Clear entire screen and delete all lines in scrollback buffer
+                        self.erase_in_display(eo.n)
 
                     if eo.csi == CSI.ERASE_IN_LINE:
-                        self.lines[self.max.row - self.cursor.row].erase_in_line(
-                            self.cursor.column, self.tas, eo.n
-                        )
-                    # logging.debug(f'Found {self.csi}  "{Escape.to_str(seq)}" {params}')
+                        self.erase_in_line(eo.n)
 
                     if eo.csi == CSI.SAVE_CURSOR_POSITION:
                         self.saved_cursor = copy(self.cursor)
@@ -1421,31 +1435,37 @@ class TerminalState(TerminalAttributeState):
                             if a == SGR.SET_BG_COLOR:
                                 self.tas.BG_COLOR = CC256[s["color"]]["hex"]
 
+                            if a == SGR.SET_FG_COLOR_DEFAULT:
+                                self.tas.FG_COLOR = self.DEFAULT_FG_COLOR
+
+                            if a == SGR.SET_BG_COLOR_DEFAULT:
+                                self.tas.BG_COLOR = self.DEFAULT_BG_COLOR
+
+                if eo.c1 == C1.CSI:
                     if eo.csi == CSI.SGR:
                         for i, s in enumerate(eo.sgr):
                             if i == 0:
-                                logging.debug(
-                                    f'(CSI.SGR):  {str(s):29}  "{str(eo.text)}"'
-                                )
+                                logging.debug(f'(SGR):  {str(s):29}  "{str(eo.text)}"')
                             else:
                                 logging.debug(f"            {str(s):36}")
                     else:
                         t = f'"{str(eo.text)}"'
                         logging.debug(f"(CSI):  {str(eo):34} {t:12} {self.pos_str()}")
-
-                    continue
+                else:
+                    logging.debug(f'(C1):   {eo.c1:20}  "{str(eo.text)}"')
+                continue
 
             if token == Ascii.CR:  # carriage return
                 self.set_pos(x=1)
                 logging.debug(
-                    f"(CR) Carriage Return                             {self.pos_str()}"
+                    f"(CR)    Carriage Return                             {self.pos_str()}"
                 )
                 continue
 
             if token == Ascii.BS:  # backspace
                 self.set_pos(x=(self.cursor.column - 1))
                 logging.debug(
-                    f"(BS) Backspace                                   {self.pos_str()}"
+                    f"(BS)    Backspace                                   {self.pos_str()}"
                 )
                 continue
 
@@ -1456,7 +1476,7 @@ class TerminalState(TerminalAttributeState):
                 self.set_pos(x=1, y=(self.cursor.row + 1))
 
                 logging.debug(
-                    f"(NL) Newline                                     {self.pos_str()}"
+                    f"(NL)    Newline                                     {self.pos_str()}"
                 )
                 continue
 

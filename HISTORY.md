@@ -10,7 +10,9 @@
 - Added Ctrl-D shortcut
 - Fixed hex-ascii printout
 - More refactoring
-
+- Added CSI 39, 49 set default fg/bg color
+- Added C1.DECSC, C1.DECRC
+ 
 # Version 0.40
 - Major refactoring of terminal widget
 - Added support for selectable newline
