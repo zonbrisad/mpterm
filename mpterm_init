@@ -260,7 +260,7 @@ bpRmModule() { ##I Remove module
 BP_SELF_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 ##V Name of script
-BP_SELF_NAME=bp_init
+BP_SELF_NAME=mpterm_init
 
 ##V Settings directory
 BP_CONFIG_DIR=~/.config/bashplates
