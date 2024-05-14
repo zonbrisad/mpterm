@@ -114,7 +114,6 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 
 [HISTORY.md](/HISTORY.md)
 
-
 ## ToDo
 
 - Terminal functions
@@ -179,6 +178,7 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 
 ### Plugin system
 Enable user to add extra features like protocol analyzers
+
 
 ### Bluetooth 
 Support for Bluetooth serialports
