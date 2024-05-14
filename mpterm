@@ -865,7 +865,7 @@ class MainForm(QMainWindow):
         # Timers
         self.timer = QTimer()
         self.timer.setInterval(1000)
-        self.timer.timeout.connect(self.timerEvent)
+        self.timer.timeout.connect(self.timer_event)
         self.timer.start()
 
         self.timer_5 = QTimer()
@@ -1047,7 +1047,7 @@ class MainForm(QMainWindow):
         for name in portNames:
             self.cbPort.addItem(name)
 
-    def timerEvent(self) -> None:
+    def timer_event(self) -> None:
         self.port_handler()
 
     def update_ui(self) -> None:
@@ -1121,7 +1121,7 @@ class MainForm(QMainWindow):
             self.cbRTS.setChecked(False)
             self.serialPort.setRequestToSend(False)
 
-    def syncChanged(self) -> None:
+    def sync_changed(self) -> None:
         try:
             self.sync = int(self.leSyncString.text(), 16)
 
@@ -1389,7 +1389,7 @@ def main() -> None:
     app.setAttribute(Qt.AA_UseHighDpiPixmaps)
 
     mainForm = MainForm(args)
-    # mainForm.args = args
+    mainForm.args = args
     mainForm.show()
     sys.exit(app.exec_())
 
