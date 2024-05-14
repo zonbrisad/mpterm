@@ -1,7 +1,12 @@
 {
     "alias": "default",
+<<<<<<< HEAD
     "port": "ttyUSB0",
     "bitrate": "115200",
+=======
+    "port": "",
+    "bitrate": "57600",
+>>>>>>> 7655b9a3e9854cb558ed011d9a7aca3c64308d0a
     "databits": "8",
     "parity": "None",
     "stopbits": "1",
