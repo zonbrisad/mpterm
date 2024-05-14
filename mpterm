@@ -299,14 +299,14 @@ class HexFormater:
         self.end = "<br>"
         self.set_mode(MpTerm.Ascii)
 
-    def set_mode(self, mode):
+    def set_mode(self, mode: MpTerm) -> None:
         self.mode = mode
         self.index = 0
 
-    def clear(self):
+    def clear(self) -> None:
         self.index = 0
 
-    def _format_ascii_hex(self, data) -> str:
+    def _format_ascii_hex(self, data: bytearray) -> str:
         s = "<pre>"
         for i in range(0, data.count()):
             if self.index >= self.max:
@@ -323,7 +323,7 @@ class HexFormater:
         s += "</pre>"
         return s
 
-    def _format_hex(self, data) -> str:
+    def _format_hex(self, data: bytearray) -> str:
         s = ""
         for i in range(0, data.count()):
             ch = data.at(i)
@@ -335,7 +335,7 @@ class HexFormater:
                 self.index = 0
         return s
 
-    def update(self, data) -> str:
+    def update(self, data: bytearray) -> str:
         if self.mode == MpTerm.Hex:
             return self._format_hex(data)
 
