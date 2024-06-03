@@ -2,21 +2,22 @@
 # shellcheck disable=2034
 #---------------------------------------------------------------------
 # mpterm init script
-#    
+#
 #---------------------------------------------------------------------
 #
-
-
 #---------------------------------------------------------------------
 
 InitSettings() {
+
+  BP_SELF_NAME=mpterm_init
+
   MODULE="${BP_SELF_DIR}/${BP_SELF_NAME}"
 }
 
 direct_exec() {
   if bpModuleIsInstalled "$MODULE"; then
     if [ -n "$BP_QUIET" ] || bpReadBoolDY "Do you want to remove init module?"; then
-      bpRmModule "$(basename ${MODULE})"
+      bpRmModule "$(basename "${MODULE}")"
     fi
   else
     if [ -n "$BP_QUIET" ] || bpReadBoolDY "Do you want to install init module?"; then
@@ -26,8 +27,9 @@ direct_exec() {
 }
 
 source_exec() {
-    # Add script path to global path
-    export PATH=${PATH}:${BP_SELF_DIR}
+
+  # Add script path to global path
+  bpAddToPath "${BP_SELF_DIR}"
 }
 
 #---------------------------------------------------------------------
@@ -252,15 +254,23 @@ bpRmModule() { ##I Remove module
   bpRm "${BP_CONFIG_MODULES}/${1}"
 }
 
+#
+# $1 directory to add to PATH
+#
+bpAddToPath() { ##I Add directory to global PATH
+  NEW_PATH="$1"
+  if [[ ! $PATH == *"$NEW_PATH"* ]]; then
+    export PATH=${PATH}:${NEW_PATH}
+    #bpInfo "Adding path $NEW_PATH"
+  fi
+}
+
 #---------------------------------------------------------------------
 # Internal variables
 #---------------------------------------------------------------------
 
-# Directory where script is located
+##V Directory where script is located
 BP_SELF_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-
-##V Name of script
-BP_SELF_NAME=mpterm_init
 
 ##V Settings directory
 BP_CONFIG_DIR=~/.config/bashplates
