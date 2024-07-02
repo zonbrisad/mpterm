@@ -10,6 +10,8 @@
     "suspend_timeout": 8,
     "ext_program": "ls",
     "newline": "LF",
+    "win_x": 808,
+    "win_y": 781,
     "macros": [
         {
             "name": "M1",

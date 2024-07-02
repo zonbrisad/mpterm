@@ -224,6 +224,8 @@ class mpProfile:
     suspend_timeout: int = 8
     ext_program: str = ""
     newline: str = "\n"
+    win_x: int = 850
+    win_y: int = 500
     macros: list[Macro] = field(default_factory=list)
     key_list = [
         "alias",
@@ -237,6 +239,8 @@ class mpProfile:
         "suspend_timeout",
         "ext_program",
         "newline",
+        "win_x",
+        "win_y",
     ]
     filename: str = ""
 
@@ -393,8 +397,6 @@ class StyleS:
     color:Red;
     """
     win = "border:0"
-    # normal = "background-color:#3F84CB; color:#F7F9FC; border:0"
-    # error = "background-color:#CC6633; color:#F7F9FC; border:0"
 
 
 class QNumberEdit(QLineEdit):
@@ -406,7 +408,6 @@ class QNumberEdit(QLineEdit):
         self.setStyle
 
     def changed(self, a0: str) -> None:
-        print("Edit changed")
         if self.text().strip().isnumeric():
             self.setStyleSheet(StyleS.normal)
         else:
@@ -562,7 +563,8 @@ class MainForm(QMainWindow):
         self.verticalLayout.setContentsMargins(2, 2, 2, 2)
         self.verticalLayout.setSpacing(2)
 
-        self.resize(850, 500)
+        self.resize(self.prof.win_x, self.prof.win_y)
+        # self.resize(850, 500)
         self.setWindowIcon(QIcon(App.ICON))
         self.setCentralWidget(self.centralwidget)
 
@@ -761,6 +763,7 @@ class MainForm(QMainWindow):
         self.txLabel = QLabel("")
         self.statusbar.addPermanentWidget(self.txLabel, stretch=0)
         self.dimensionsLabel = QLabel("")
+        # self.dimensionsLabel.setToolTip("Terminal size")
         self.statusbar.addPermanentWidget(self.dimensionsLabel, stretch=0)
         # self.yyy = QComboBox(self.centralwidget)
         # self.yyy.addItem("80x24", Mode.Normal)
@@ -1332,6 +1335,8 @@ class MainForm(QMainWindow):
         self.prof.flowcontrol = self.cbFlowControl.currentText()
         self.prof.mode = self.cbDisplay.currentData().name
         self.prof.newline = self.cbNewlineMode.currentText()
+        self.prof.win_x = self.width()
+        self.prof.win_y = self.height()
         self.prof.write()
 
     def load_cb_setting(self, cb, setting) -> None:
@@ -1462,9 +1467,6 @@ def main() -> None:
         "Fusion"
     )  # 'cleanlooks', 'gtk2', 'cde', 'motif', 'plastique', 'qt5ct-style', 'Windows', 'Fusion'
     app.setAttribute(Qt.AA_UseHighDpiPixmaps)
-    # print(app.styleSheet())
-    st = app.style()
-    print(repr(st))
 
     mainForm = MainForm(args)
     mainForm.args = args
