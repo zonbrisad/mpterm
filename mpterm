@@ -292,27 +292,50 @@ class mpProfile:
         self.from_json(jsd)
 
 
+class HexMode(enum.Enum):
+    Length = 1
+    SynchAfter = 2
+    SynchBefore = 3
+
+
 class HexFormater:
     def __init__(self) -> None:
-        self.index = 0
-        self.max = 10
+        # self.index = 0
+        # self.max = 12
         self.end = "<br>"
+        self.sync_byte = "0xff"
+        self.mode = HexMode.Length
         self.set_mode(MpTerm.Ascii)
+        self.set_columns(12)
+        self.clear()
 
     def set_mode(self, mode: MpTerm) -> None:
         self.mode = mode
-        self.index = 0
+        self.index = 1
 
     def clear(self) -> None:
-        self.index = 0
+        self.index = 1
+        # self.chars = []
+
+    def append(self, chr: str) -> None:
+        self.chars.append(chr)
+
+    def set_columns(self, cols):
+        self.max = cols
+
+    def get_char(self, byte) -> str:
+        if self.mode == MpTerm.Hex:
+            return f"{chd:02x}"
+
+        if self.mode == MpTerm.AsciiHex:
+            return f"{chd:02x}"
 
     def _format_ascii_hex(self, data: bytearray) -> str:
         s = "<pre>"
         for i in range(0, data.count()):
             if self.index >= self.max:
-                # s += "\n"  # self.end
                 s += "<br>"  # self.end
-                self.index = 0
+                self.clear()
             byte = data.at(i)
             ch = int.from_bytes(byte, "big")
             cs = hex2str(ch)
@@ -324,18 +347,35 @@ class HexFormater:
         return s
 
     def _format_hex(self, data: bytearray) -> str:
-        s = ""
         for i in range(0, data.count()):
             ch = data.at(i)
             chd = int.from_bytes(ch, "big")
-            s += f"{chd:02x} "
+            if chd == 0xFF:
+                print(f"Synch line {self.index}")
+                self.clear()
+                self.append(f"<br>{chd:02x} ")
+                continue
+
+            if self.index == (self.max - 1):
+                # if len(self.chars) == (self.max):
+                self.clear()
+                self.append(f"{chd:02x}<br>")
+                print("Long line")
+                continue
+
+            # s += f"{chd:02x} "
+            # self.index += 1
+
+            # self.append_char(f"{chd:02x} ")
+
+            # x = f"{chd:02x} "
+            self.append(f"{chd:02x} ")
             self.index += 1
-            if self.index == self.max:
-                s += self.end
-                self.index = 0
-        return s
+        return "".join(self.chars)
 
     def update(self, data: bytearray) -> str:
+        self.chars = []
+        print(f"Data: {len(data)}")
         if self.mode == MpTerm.Hex:
             return self._format_hex(data)
 
@@ -346,11 +386,37 @@ class HexFormater:
 
 
 class StyleS:
-    normal = "color:Black; border:0"
-    error = "color:Red; border:0"
+    normal = """
+    color:Black;
+    """
+    error = """
+    color:Red;
+    """
     win = "border:0"
     # normal = "background-color:#3F84CB; color:#F7F9FC; border:0"
     # error = "background-color:#CC6633; color:#F7F9FC; border:0"
+
+
+class QNumberEdit(QLineEdit):
+    def __init__(self, parent=None):
+        super().__init__()
+        self.setText("36")
+        self.textChanged.connect(self.changed)
+        self.setMaximumWidth(80)
+        self.setStyle
+
+    def changed(self, a0: str) -> None:
+        print("Edit changed")
+        if self.text().strip().isnumeric():
+            self.setStyleSheet(StyleS.normal)
+        else:
+            self.setStyleSheet(StyleS.error)
+
+    def get_value(self) -> int:
+        if self.text().strip().isnumeric():
+            return int(self.text().strip())
+
+        return 10
 
 
 class QMacroButton(QWidget):
@@ -580,6 +646,9 @@ class MainForm(QMainWindow):
         self.cbNewlineMode.addItem("CR", "\r")
         self.cbNewlineMode.addItem("CRLF", "\r\n")
         self.buttonLayout.addWidget(self.cbNewlineMode)
+
+        self.nrEdit = QNumberEdit(self.centralWidget)
+        self.buttonLayout.addWidget(self.nrEdit)
 
         # self.pbTermSet = QPushButton("Find\nTerm", self.centralwidget)
         # self.pbTermSet.pressed.connect(self.openPort)
@@ -1085,6 +1154,8 @@ class MainForm(QMainWindow):
         else:
             self.pbPause.setText("Pause")
 
+        self.formater.set_columns(self.nrEdit.get_value())
+
         # if self.serialPort.isDataTerminalReady():
         #     self.dtrLabel.setText("\u26AA  DTR")
         # else:
@@ -1174,7 +1245,11 @@ class MainForm(QMainWindow):
 
     def read(self) -> None:
         data = self.serialPort.read()
-        data_str = str(data, "utf-8")
+        try:
+            data_str = str(data, "utf-8")
+        except UnicodeDecodeError:
+            data_str = ""
+            pass
 
         db = Escape.to_str(data_str)
 
@@ -1387,6 +1462,9 @@ def main() -> None:
         "Fusion"
     )  # 'cleanlooks', 'gtk2', 'cde', 'motif', 'plastique', 'qt5ct-style', 'Windows', 'Fusion'
     app.setAttribute(Qt.AA_UseHighDpiPixmaps)
+    # print(app.styleSheet())
+    st = app.style()
+    print(repr(st))
 
     mainForm = MainForm(args)
     mainForm.args = args
