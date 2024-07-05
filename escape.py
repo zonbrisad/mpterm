@@ -59,7 +59,7 @@ class Ascii:
 
 
 ascii = {
-    0x00: "NULL",
+    0x00: "NUL",
     0x01: "SOH",
     0x02: "STX",
     0x03: "ETX",
@@ -93,6 +93,44 @@ ascii = {
     0x1F: "US",
     0x20: "Spc",  # Space
 }
+
+
+def ascii_table() -> str:
+
+    chars = []
+    for i in range(128):
+        if i <= 0x20:
+            char = f"{i:02x} {ascii[i]:3}   "
+        else:
+            ch = f"'{chr(i)}'"
+            char = f"{i:02x} {ch:3}   "
+        chars.append(char)
+
+    # for i, ch in enumerate(chars):
+    #     print(f"idx: {i:3}  {ch}")
+
+    rows = []
+    for i in range(32):
+        row = []
+        rows.append(row)
+
+    i = 0
+    for char in chars:
+        print(char)
+        try:
+            rows[i].append(char)
+            i = i + 1
+        except IndexError:
+            rows[0].append(char)
+            i = 1
+
+    lines = []
+    for row in rows:
+        line = f"{''.join(row)}\n"
+        lines.append(line)
+        # print(line)
+
+    return "".join(lines)
 
 
 def getc(c: str) -> str:
@@ -1647,9 +1685,11 @@ def main() -> None:
     # for x in dec6:
     #     pass
 
-    et = TerminalState()
-    et.update(escape_attribute_test)
-    print("Buf:\n" + et.html_buf)
+    # et = TerminalState()
+    # et.update(escape_attribute_test)
+    # print("Buf:\n" + et.html_buf)
+
+    print(ascii_table())
 
 
 if __name__ == "__main__":

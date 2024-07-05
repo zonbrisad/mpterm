@@ -10,8 +10,10 @@
     "suspend_timeout": 8,
     "ext_program": "ls",
     "newline": "LF",
-    "win_x": 808,
-    "win_y": 781,
+    "win_x": 1198,
+    "win_y": 744,
+    "sync_string": "0xff 0x55",
+    "columns": 40,
     "macros": [
         {
             "name": "M1",

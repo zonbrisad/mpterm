@@ -157,6 +157,7 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 - [ ] Escape sequence monitor
 - [ ] Reorganize "Send" menu
 - [ ] Add support for different protocols in "Send" menu
+- [ ] Add support for 8 bit characters in Hex + Ascii printout
 
 ## Known Issues
 - [x] Rendering: Error when <> characters are included
@@ -171,6 +172,7 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 - [x] Fail when pressing arrow upp/down on Raspberry Pi Pico, CSI.CURSOR_BACK "\e[12D" needs support
 - [x] Bug causing terminal to go green during "apt install" 
 - [x] Cursor movement during "apt install" fail 
+- [ ] <Alt Gr + 5> <Alt Gr + l> causes line distance to increase???
 - [ ] Line not completely erased during   "sudo apt install rolldice" results in "Processing triggers for man-db (2.9.4-2) ...####################............]"
 -                                                                    should be   "Processing triggers for man-db (2.9.4-2) ..."
 

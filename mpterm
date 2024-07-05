@@ -70,6 +70,8 @@ from dataclasses import dataclass, field
 from escape import (
     Escape,
     Ascii,
+    ascii,
+    ascii_table,
     TerminalState,
     flag,
     escape_attribute_test,
@@ -89,7 +91,7 @@ self_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
 
 class App:
     NAME = "mpterm"
-    VERSION = "0.41"
+    VERSION = "0.50"
     DESCRIPTION = "MpTerm is a simple serial terminal program, aimed at embedded systems development"
     LICENSE = ""
     AUTHOR = "Peter Malmberg"
@@ -184,16 +186,24 @@ class Macro:
 
     @staticmethod
     def is_hex_string(data: str) -> Boolean:
-        tokens = data.strip().split(" ")
         try:
-            for token in tokens:
-                val = int(token, 16)
-                if val < 0 or val > 255:
-                    raise ValueError
+            Macro.hexstring_to_list(data)
         except ValueError:
             return False
 
         return True
+
+    @staticmethod
+    def hexstring_to_list(data: str) -> list[int]:
+        tokens = data.strip().split(" ")
+        lst = []
+        for token in tokens:
+            val = int(token, 16)
+            if val < 0 or val > 255:
+                raise ValueError
+            lst.append(val)
+
+        return lst
 
     def data(self) -> bytearray:
         if self.hex is True:
@@ -226,6 +236,8 @@ class mpProfile:
     newline: str = "\n"
     win_x: int = 850
     win_y: int = 500
+    sync_string: str = ""
+    columns: int = 10
     macros: list[Macro] = field(default_factory=list)
     key_list = [
         "alias",
@@ -241,6 +253,8 @@ class mpProfile:
         "newline",
         "win_x",
         "win_y",
+        "sync_string",
+        "columns",
     ]
     filename: str = ""
 
@@ -304,10 +318,9 @@ class HexMode(enum.Enum):
 
 class HexFormater:
     def __init__(self) -> None:
-        # self.index = 0
-        # self.max = 12
         self.end = "<br>"
-        self.sync_byte = "0xff"
+        # self.sync_byte = "0xff"
+        self.sync_string = []
         self.mode = HexMode.Length
         self.set_mode(MpTerm.Ascii)
         self.set_columns(12)
@@ -319,74 +332,78 @@ class HexFormater:
 
     def clear(self) -> None:
         self.index = 1
-        # self.chars = []
+        self.sync_index = 0
+        self.sync_list = []
 
     def append(self, chr: str) -> None:
         self.chars.append(chr)
 
-    def set_columns(self, cols):
+    def append_byte(self, chd) -> None:
+        if self.index >= self.max:
+            self.clear()
+            self.append(f"{self.get_char(chd)}<br>")
+            return
+
+        self.append(f"{self.get_char(chd)} ")
+        self.index += 1
+
+    def set_columns(self, cols: int) -> None:
         self.max = cols
 
-    def get_char(self, byte) -> str:
+    def set_sync_string(self, sync: list[int]) -> None:
+        self.sync_string = sync
+
+    def get(self, byte: int) -> str:
+
+        if byte == 0x3C:  # Less than '<'
+            return "'&lt;'"
+
+        try:
+            return ascii[byte]
+        except KeyError:
+            if byte < 128:
+                return f"'{chr(byte)}'"
+            else:
+                return "---"
+
+    def get_char(self, byte: int) -> str:
         if self.mode == MpTerm.Hex:
-            return f"{chd:02x}"
+            return f"{byte:02x}"
 
         if self.mode == MpTerm.AsciiHex:
-            return f"{chd:02x}"
+            ch = self.get(byte)
+            return f"<b>{byte:02x}</b> {ch:3}"
 
-    def _format_ascii_hex(self, data: bytearray) -> str:
-        s = "<pre>"
-        for i in range(0, data.count()):
-            if self.index >= self.max:
-                s += "<br>"  # self.end
-                self.clear()
-            byte = data.at(i)
-            ch = int.from_bytes(byte, "big")
-            cs = hex2str(ch)
-            if len(cs) == 1:
-                cs = f'"{cs}"'
-            s += f"""<b>{ch:02x}</b> {cs:3} """
-            self.index += 1
-        s += "</pre>"
-        return s
-
-    def _format_hex(self, data: bytearray) -> str:
-        for i in range(0, data.count()):
-            ch = data.at(i)
-            chd = int.from_bytes(ch, "big")
-            if chd == 0xFF:
-                print(f"Synch line {self.index}")
-                self.clear()
-                self.append(f"<br>{chd:02x} ")
-                continue
-
-            if self.index == (self.max - 1):
-                # if len(self.chars) == (self.max):
-                self.clear()
-                self.append(f"{chd:02x}<br>")
-                print("Long line")
-                continue
-
-            # s += f"{chd:02x} "
-            # self.index += 1
-
-            # self.append_char(f"{chd:02x} ")
-
-            # x = f"{chd:02x} "
-            self.append(f"{chd:02x} ")
-            self.index += 1
-        return "".join(self.chars)
-
-    def update(self, data: bytearray) -> str:
+    def format(self, data: bytearray) -> str:
         self.chars = []
-        print(f"Data: {len(data)}")
-        if self.mode == MpTerm.Hex:
-            return self._format_hex(data)
+        for i in range(0, data.count()):
+            byte = int.from_bytes(data.at(i), "big")
 
-        if self.mode == MpTerm.AsciiHex:
-            return self._format_ascii_hex(data)
+            # if syncstring empty just printout
+            if len(self.sync_string) == 0:
+                self.append_byte(byte)
+                self.sync_index = 0
+                continue
 
-        return ""
+            if byte == self.sync_string[self.sync_index]:
+                self.sync_index += 1
+            else:
+                if self.sync_index > 0:
+                    for i in range(self.sync_index):
+                        print(i)
+                        self.append_byte(self.sync_string[i])
+                self.append_byte(byte)
+                self.sync_index = 0
+
+            # sync is complete, append newline
+            if self.sync_index == len(self.sync_string):
+                self.sync_index = 0
+                self.append("<br>")
+                self.clear()
+                for sbyte in self.sync_string:
+                    self.append_byte(sbyte)
+
+        return f"<pre>{''.join(self.chars)}</pre>"
 
 
 class StyleS:
@@ -402,10 +419,9 @@ class StyleS:
 class QNumberEdit(QLineEdit):
     def __init__(self, parent=None):
         super().__init__()
-        self.setText("36")
         self.textChanged.connect(self.changed)
-        self.setMaximumWidth(80)
-        self.setStyle
+        # self.setMaximumWidth(80)
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
 
     def changed(self, a0: str) -> None:
         if self.text().strip().isnumeric():
@@ -413,11 +429,38 @@ class QNumberEdit(QLineEdit):
         else:
             self.setStyleSheet(StyleS.error)
 
+    def set_value(self, val: int) -> None:
+        self.setText(str(val))
+
     def get_value(self) -> int:
         if self.text().strip().isnumeric():
             return int(self.text().strip())
 
-        return 10
+        return 0
+
+
+class QHexEdit(QLineEdit):
+    def __init__(self, parent=None):
+        super().__init__()
+        self.textChanged.connect(self.changed)
+        # self.setMaximumWidth(80)
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+
+    def changed(self, a0: str) -> None:
+        if Macro.is_hex_string(self.text()) is True:
+            self.setStyleSheet(StyleS.normal)
+        else:
+            self.setStyleSheet(StyleS.error)
+
+    def get_value(self) -> list[int]:
+        lst = []
+
+        try:
+            lst = Macro.hexstring_to_list(self.text().strip())
+        except ValueError:
+            return []
+
+        return lst
 
 
 class QMacroButton(QWidget):
@@ -425,7 +468,6 @@ class QMacroButton(QWidget):
         super().__init__()
         self.macro = macro
         self.layout = QHBoxLayout()
-        # self.layout.setContentsMargins(2, 2, 2, 2)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(2)
         self.setLayout(self.layout)
@@ -436,7 +478,6 @@ class QMacroButton(QWidget):
         self.macroButton.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self.layout.addWidget(self.macroButton)
         self.repeatButton = QPushButton("R")
-        # self.repeatButton.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self.repeatButton.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
 
         self.layout.addWidget(self.repeatButton)
@@ -650,7 +691,12 @@ class MainForm(QMainWindow):
         self.buttonLayout.addWidget(self.cbNewlineMode)
 
         self.nrEdit = QNumberEdit(self.centralWidget)
+        self.nrEdit.set_value(self.prof.columns)
         self.buttonLayout.addWidget(self.nrEdit)
+
+        self.syncEdit = QHexEdit(self.centralWidget)
+        self.syncEdit.setText(self.prof.sync_string)
+        self.buttonLayout.addWidget(self.syncEdit)
 
         # self.pbTermSet = QPushButton("Find\nTerm", self.centralwidget)
         # self.pbTermSet.pressed.connect(self.openPort)
@@ -832,6 +878,10 @@ class MainForm(QMainWindow):
 
         self.testMenu = self.menuSend.addMenu("Tests")
 
+        sendAsciiTableAction = QAction("Ascii table", self)
+        sendAsciiTableAction.triggered.connect(lambda: self.send_string(ascii_table()))
+        self.testMenu.addAction(sendAsciiTableAction)
+
         sendTestAction = QAction("Escape test", self)
         sendTestAction.triggered.connect(
             lambda: self.send_string(escape_attribute_test)
@@ -974,7 +1024,6 @@ class MainForm(QMainWindow):
 
     def set_ext_program(self) -> None:
         dlg = QInputDialog()
-        # val, ok = dlg.getText(self, "External program", "Commandline", text=self.prof.ext_program)
         dlg.setInputMode(QInputDialog.TextInput)
         dlg.setWindowTitle("External program")
         dlg.setLabelText("Commandline:")
@@ -983,8 +1032,6 @@ class MainForm(QMainWindow):
         ok = dlg.exec_()
         # if ok is True:
         self.prof.ext_program = dlg.textValue()
-
-        # val = dlg.getText(self, "External program", "Commandline", text=self.prof.ext_program)
 
     def keyPressEvent(self, e: QKeyEvent) -> None:
         super().keyPressEvent(e)
@@ -1158,6 +1205,7 @@ class MainForm(QMainWindow):
             self.pbPause.setText("Pause")
 
         self.formater.set_columns(self.nrEdit.get_value())
+        self.formater.set_sync_string(self.syncEdit.get_value())
 
         # if self.serialPort.isDataTerminalReady():
         #     self.dtrLabel.setText("\u26AA  DTR")
@@ -1267,9 +1315,11 @@ class MainForm(QMainWindow):
         if DisplayMode == MpTerm.Ascii:  # Standard ascii display mode
             self.terminal.append_terminal_text(data_str)
 
-        if DisplayMode != MpTerm.Ascii:  # Hexadecimal display mode
-            # self.terminal.append_terminal_text(self.formater.update(data))
-            self.terminal.append_html(self.formater.update(data))
+        if DisplayMode != MpTerm.AsciiHex:  # Ascii + Hex display mode
+            self.terminal.append_html(self.formater.format(data))
+
+        if DisplayMode != MpTerm.Hex:  # Hexadecimal display mode
+            self.terminal.append_html(self.formater.format(data))
 
         self.terminal.scroll_down()
         self.update_ui()
@@ -1337,6 +1387,8 @@ class MainForm(QMainWindow):
         self.prof.newline = self.cbNewlineMode.currentText()
         self.prof.win_x = self.width()
         self.prof.win_y = self.height()
+        self.prof.sync_string = self.syncEdit.text()
+        self.prof.columns = self.nrEdit.get_value()
         self.prof.write()
 
     def load_cb_setting(self, cb, setting) -> None:

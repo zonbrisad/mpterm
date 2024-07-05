@@ -1,17 +1,22 @@
-# Version 0.4x
-- Fixed unsupported CSI fail
+# Version 0.50
 - Added support for cursor next line (CSI n E)
 - Added support for cursor previous line (CSI n F)
 - Added support for insert line (CSI n L)
 - Added support for delete line (CSI n M)
 - Added support for delete char (CSI n P)
-- Minor refactoring of SGR class to fix no argument bug
-- Improved printouts
-- Added Ctrl-D shortcut
-- Fixed hex-ascii printout
-- More refactoring
 - Added CSI 39, 49 set default fg/bg color
 - Added C1.DECSC, C1.DECRC
+- Added Ctrl-D shortcut
+- Added Ascii table send 
+- Added keyword sync formating
+- Added changable nr of columns in Hex output
+- Added windows size saved to config file
+- Fixed unsupported CSI fail
+- Fixed hex-ascii printout
+- Fixed stylesheets for Custom widgets
+- Minor refactoring of SGR class to fix no argument bug
+- Improved printouts
+- More refactoring
  
 # Version 0.40
 - Major refactoring of terminal widget
