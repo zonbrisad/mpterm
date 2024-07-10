@@ -1,3 +1,6 @@
+# Version 0.51
+- Removed debug printout
+
 # Version 0.50
 - Added support for cursor next line (CSI n E)
 - Added support for cursor previous line (CSI n F)

@@ -19,17 +19,18 @@
 
 # Imports --------------------------------------------------------------------
 
-from re import ASCII
 import sys
 import os
 import subprocess
-from tkinter import NO
 import traceback
 import logging
 import argparse
 import signal
 import enum
 import json
+import importlib
+
+# from mpplugin import MpPluginData
 from datetime import datetime, date, time
 from xmlrpc.client import Boolean
 
@@ -390,7 +391,6 @@ class HexFormater:
             else:
                 if self.sync_index > 0:
                     for i in range(self.sync_index):
-                        print(i)
                         self.append_byte(self.sync_string[i])
                 self.append_byte(byte)
                 self.sync_index = 0
@@ -598,6 +598,8 @@ class MainForm(QMainWindow):
         self.prof = mpProfile(filename=App.SETTINGS_FILE)
         self.prof.load()
 
+        self.load_plugins()
+
         self.centralwidget = QWidget(self)
 
         self.verticalLayout = QVBoxLayout(self.centralwidget)
@@ -697,6 +699,15 @@ class MainForm(QMainWindow):
         self.syncEdit = QHexEdit(self.centralWidget)
         self.syncEdit.setText(self.prof.sync_string)
         self.buttonLayout.addWidget(self.syncEdit)
+
+        self.cbPlugins = QComboBox(self.centralwidget)
+        self.cbPlugins.addItem("None", None)
+        for plugin in self.plugins:
+            pgi = plugin.get_info()
+            self.cbPlugins.addItem(pgi.name, plugin)
+        self.cbPlugins.currentIndexChanged.connect(self.plugin_change)
+        # self.cbPlugins.activated.connect(self.set_sp)
+        self.buttonLayout.addWidget(self.cbPlugins)
 
         # self.pbTermSet = QPushButton("Find\nTerm", self.centralwidget)
         # self.pbTermSet.pressed.connect(self.openPort)
@@ -1010,6 +1021,31 @@ class MainForm(QMainWindow):
         self.update_ui()
         self.init_port()
 
+    def load_plugins(self) -> None:
+        # Find plugins in directory
+        plugin_files = []
+        for file_name in os.listdir("plugins"):
+            if (
+                os.path.isfile(f"plugins/{file_name}")
+                and file_name.startswith("__") is not True
+                and file_name != "mpplugin.py"
+            ):
+                plugin_files.append(os.path.splitext(file_name)[0])
+        print(plugin_files)
+        # Load plugins
+        self.plugins = [
+            importlib.import_module(f"plugins.{file_name}").MpTermPlugin()
+            for file_name in plugin_files
+        ]
+
+        # run plugins
+        for plugin in self.plugins:
+            pgi = plugin.get_info()
+            print(pgi)
+
+    def plugin_change(self) -> None:
+        print(self.cbPlugins.currentData())
+
     def edit_macro_dialog(self) -> None:
         # self.macro_dialog.exec(self.macro_list)
         self.macro_dialog.exec(self.prof.macros)
@@ -1302,30 +1338,31 @@ class MainForm(QMainWindow):
             data_str = ""
             pass
 
-        db = Escape.to_str(data_str)
-
-        logging.debug(f'Data received: {len(data)} "{db}"')
+        logging.debug(f'Data received: {len(data)} "{Escape.to_str(data_str)}"')
 
         if self.isPaused:
             self.update_ui()
             return
 
-        DisplayMode = self.cbDisplay.currentData()
+        plugin = self.cbPlugins.currentData()
+        if plugin is not None:
+            self.terminal.append_html(plugin.data(data))
+        else:
+            DisplayMode = self.cbDisplay.currentData()
+            if DisplayMode == MpTerm.Ascii:  # Standard ascii display mode
+                self.terminal.append_terminal_text(data_str)
 
-        if DisplayMode == MpTerm.Ascii:  # Standard ascii display mode
-            self.terminal.append_terminal_text(data_str)
+            if DisplayMode != MpTerm.AsciiHex:  # Ascii + Hex display mode
+                self.terminal.append_html(self.formater.format(data))
 
-        if DisplayMode != MpTerm.AsciiHex:  # Ascii + Hex display mode
-            self.terminal.append_html(self.formater.format(data))
-
-        if DisplayMode != MpTerm.Hex:  # Hexadecimal display mode
-            self.terminal.append_html(self.formater.format(data))
-
-        self.terminal.scroll_down()
-        self.update_ui()
+            if DisplayMode != MpTerm.Hex:  # Hexadecimal display mode
+                self.terminal.append_html(self.formater.format(data))
 
         if self.cbMode.currentData() == Mode.Echo:
             self.serialPort.send(data)
+
+        self.terminal.scroll_down()
+        self.update_ui()
 
     def send(self, data: bytearray) -> None:
         if self.serialPort.isOpen():
@@ -1523,6 +1560,7 @@ def main() -> None:
     mainForm = MainForm(args)
     mainForm.args = args
     mainForm.show()
+
     sys.exit(app.exec_())
 
 

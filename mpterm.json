@@ -10,35 +10,35 @@
     "suspend_timeout": 8,
     "ext_program": "ls",
     "newline": "LF",
-    "win_x": 1198,
-    "win_y": 744,
+    "win_x": 1416,
+    "win_y": 826,
     "sync_string": "0xff 0x55",
-    "columns": 40,
+    "columns": 37,
     "macros": [
         {
             "name": "M1",
-            "hex": false,
-            "text": "erase\\n"
+            "hex": true,
+            "text": "0xff 0x55 0x11 0x02 0x03 0x00 0x00 0x00 0x00 0x52"
         },
         {
             "name": "M2",
-            "hex": false,
-            "text": "c16\\n"
+            "hex": true,
+            "text": "0xff 0x55 0x0b 0x02 0x00 0x00 0x00 0x01 0x4A"
         },
         {
             "name": "M3",
-            "hex": false,
-            "text": "c256\\n"
+            "hex": true,
+            "text": "0xff 0x55 0x11 0x02 0x01 0x00 0x00 0x00 0x00 0x50"
         },
         {
             "name": "M4",
-            "hex": false,
-            "text": "r1000\\n"
+            "hex": true,
+            "text": "0xff 0x55 0x0b 0x02 0x01 0x00 0x00 0x00 0x00 0x4A"
         },
         {
             "name": "M5",
             "hex": true,
-            "text": "63 31 36 0a"
+            "text": "0xff 0x55 0x11 0x02 0x21 0x00 0x00 0x00 0x02 0x72"
         }
     ]
 }
