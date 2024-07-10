@@ -20,11 +20,17 @@
 # Imports --------------------------------------------------------------------
 
 from enum import Enum
-from mpplugin import MpPluginData
+from mpplugin import MpPluginInfo, MpPlugin
 from mpframe import MpFrame
 
 # Variables ------------------------------------------------------------------
 
+plugin_info = MpPluginInfo(
+    name="Dl24",
+    description="Dl24 electronic load",
+    date="2024-07-05",
+    author="Peter Malmberg <peter.malmberg@gmail.com>",
+)
 
 # Code -----------------------------------------------------------------------
 
@@ -283,16 +289,10 @@ class AtorchFrame(MpFrame):
         self.append_checksum()
 
 
-class MpTermPlugin:
+class MpTermPlugin(MpPlugin):
     def __init__(self) -> None:
-        self.info = MpPluginData(
-            name="Dl24", description="Dl24 electronic load", date="2024-07-05"
-        )
+        self.plugin_info = plugin_info
         self.frame = AtorchFrame(AtorchDeviceType.DC_Meter)
-        self.frm = []
-
-    def get_info(self) -> MpPluginData:
-        return self.info
 
     def data(self, data: bytearray) -> str:
         ret = ""
@@ -303,9 +303,6 @@ class MpTermPlugin:
                 self.frame.clear()
 
         return ret
-
-    def process(self) -> None:
-        print("Dl24 plugin")
 
 
 def main() -> None:

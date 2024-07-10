@@ -30,7 +30,7 @@ import enum
 import json
 import importlib
 
-# from mpplugin import MpPluginData
+from mpplugin import MpPluginInfo, MpPlugin
 from datetime import datetime, date, time
 from xmlrpc.client import Boolean
 
@@ -703,7 +703,7 @@ class MainForm(QMainWindow):
         self.cbPlugins = QComboBox(self.centralwidget)
         self.cbPlugins.addItem("None", None)
         for plugin in self.plugins:
-            pgi = plugin.get_info()
+            pgi = plugin.info()
             self.cbPlugins.addItem(pgi.name, plugin)
         self.cbPlugins.currentIndexChanged.connect(self.plugin_change)
         # self.cbPlugins.activated.connect(self.set_sp)
@@ -1023,15 +1023,16 @@ class MainForm(QMainWindow):
 
     def load_plugins(self) -> None:
         # Find plugins in directory
+        no_list = ["mpplugin.py", "mpframe.py"]
         plugin_files = []
         for file_name in os.listdir("plugins"):
             if (
                 os.path.isfile(f"plugins/{file_name}")
                 and file_name.startswith("__") is not True
-                and file_name != "mpplugin.py"
+                and file_name not in no_list
             ):
                 plugin_files.append(os.path.splitext(file_name)[0])
-        print(plugin_files)
+
         # Load plugins
         self.plugins = [
             importlib.import_module(f"plugins.{file_name}").MpTermPlugin()
@@ -1040,14 +1041,13 @@ class MainForm(QMainWindow):
 
         # run plugins
         for plugin in self.plugins:
-            pgi = plugin.get_info()
-            print(pgi)
+            plugin_info = plugin.info()
+            # print(pgi)
 
     def plugin_change(self) -> None:
         print(self.cbPlugins.currentData())
 
     def edit_macro_dialog(self) -> None:
-        # self.macro_dialog.exec(self.macro_list)
         self.macro_dialog.exec(self.prof.macros)
 
     def set_suspend_timeout(self) -> None:

@@ -17,10 +17,19 @@ from dataclasses import dataclass
 
 
 @dataclass
-class MpPluginData:
+class MpPluginInfo:
     name: str = ""
     description: str = ""
     date: str = ""
+    author: str = ""
+
+
+class MpPlugin:
+    def __init__(self) -> None:
+        self.plugin_info = None
+
+    def info(self) -> MpPluginInfo:
+        return self.plugin_info
 
 
 def main() -> None:
