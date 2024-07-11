@@ -1,4 +1,5 @@
-# Version 0.51
+# Version 0.5x
+- Added experimental plugin support
 - Removed debug printout
 
 # Version 0.50

@@ -180,6 +180,10 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 
 ### Plugin system
 Enable user to add extra features like protocol analyzers
+- [ ] Protocol parsing
+- [ ] Macro/send message buttons for commands
+- [ ] Allow settings in GUI
+- [ ] Multiple view/parse modes
 
 
 ### Bluetooth 

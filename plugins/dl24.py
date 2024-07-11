@@ -20,7 +20,7 @@
 # Imports --------------------------------------------------------------------
 
 from enum import Enum
-from mpplugin import MpPluginInfo, MpPlugin
+from mpplugin import MpPluginInfo, MpPlugin, MpPluginWidget, MpPluginWidgetType
 from mpframe import MpFrame
 
 # Variables ------------------------------------------------------------------
@@ -291,7 +291,19 @@ class AtorchFrame(MpFrame):
 
 class MpTermPlugin(MpPlugin):
     def __init__(self) -> None:
+        super().__init__()
         self.plugin_info = plugin_info
+        self.plugin_info.add_widget(
+            MpPluginWidget(
+                MpPluginWidgetType.Button, "Reset All", "", self.cmd_clear_all
+            )
+        )
+        self.plugin_info.add_widget(
+            MpPluginWidget(MpPluginWidgetType.Button, "Reset Time", "", None)
+        )
+        self.plugin_info.add_widget(
+            MpPluginWidget(MpPluginWidgetType.Button, "Reset Ah", "", None)
+        )
         self.frame = AtorchFrame(AtorchDeviceType.DC_Meter)
 
     def data(self, data: bytearray) -> str:
@@ -303,6 +315,11 @@ class MpTermPlugin(MpPlugin):
                 self.frame.clear()
 
         return ret
+
+    def cmd_clear_all(self) -> None:
+        data = self.frame.command(AtorchCommandType.Reset_All)
+        self.send(bytearray(data))
+        print("Reset all")
 
 
 def main() -> None:
