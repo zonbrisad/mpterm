@@ -13,6 +13,7 @@
 #
 # ----------------------------------------------------------------------------
 
+
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -49,11 +50,11 @@ class MpPluginInfo:
 class MpPlugin:
 
     def __init__(self) -> None:
-        self.plugin_info = None
+        self.info: MpPluginInfo = None
         self.serial_port: SerialPort = None
 
-    def info(self) -> MpPluginInfo:
-        return self.plugin_info
+    # def info(self) -> MpPluginInfo:
+    #     return self.info
 
     def send(self, data: bytearray) -> None:
         self.serial_port.send(data)

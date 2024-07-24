@@ -53,10 +53,14 @@ class AtorchCommandType(Enum):
     Reset_Wh = 0x01
     Reset_Ah = 0x02
     Reset_Duration = 0x03
-    Reset_All = 0x04
-    Plus = 0x11
-    Minus = 0x12
+    Reset_All = 0x05
+    Plus = 0x33
+    Minus = 0x34
+    # Plus = 0x11
+    # Minus = 0x12
     Backlight = 0x21
+    Setup = 0x31
+    Enter = 0x32
     NoCmd = 0xFF
 
 
@@ -172,91 +176,108 @@ class AtorchFrame(MpFrame):
         return self.hex_to_value(0x1D, 1)
 
     def add_row(self, data, value, desc) -> None:
-        self.frm.append(f"{data:12} | {value:12} | {desc}<br>")
+        self.frm.append(f"{data:12} | {value:16} | {desc}<br>")
+
+    def add_segment(self, index: int, length: int, value: str, desc: str) -> None:
+        self.frm.append(
+            f"{index:3} | {self.hex_to_str(index, length):12} | {value:16} | {desc}<br>"
+        )
 
     def to_html(self) -> str:
         self.frm = []
         self.frm.append("<pre>")
         self.frm.append(self.frame_to_str())
         self.frm.append("<br>")
-        self.add_row(
-            self.hex_to_str(0x00, 2),
-            "",
-            "Magic header",
-        )
 
-        self.add_row(
-            self.hex_to_str(0x02, 1),
-            self.message_type().name,
-            "Message type",
-        )
+        self.add_segment(0x00, 2, "", "Magic header")
+        self.add_segment(0x02, 1, self.message_type().name, "Message type")
 
         if self.message_type() == AtorchMessageType.Command:
-            ...
+            self.add_segment(
+                0x04,
+                1,
+                self.command_type().name,
+                "Command type",
+            )
+            self.add_segment(
+                0x05,
+                4,
+                "",
+                "Value",
+            )
 
         if self.message_type() == AtorchMessageType.Reply:
-            self.add_row(
-                self.hex_to_str(0x03, 2),
+            self.add_segment(
+                0x03,
+                2,
                 self.reply_type().name,
                 "Reply",
             )
 
         if self.message_type() == AtorchMessageType.Report:
 
-            self.add_row(
-                self.hex_to_str(0x03, 1), self.device_type().name, "Device type"
-            )
+            self.add_segment(0x03, 1, self.device_type().name, "Device type")
 
-            self.add_row(
-                self.hex_to_str(0x04, 3),
+            self.add_segment(
+                0x04,
+                3,
                 self.voltage(),
                 "Voltage",
             )
 
-            self.add_row(
-                self.hex_to_str(0x07, 3),
+            self.add_segment(
+                0x07,
+                3,
                 self.current(),
                 "Current",
             )
 
-            self.add_row(
-                self.hex_to_str(0x0A, 3),
+            self.add_segment(
+                0x0A,
+                3,
                 self.energy_mah(),
                 "Energy mAh",
             )
 
-            self.add_row(
-                self.hex_to_str(0x0D, 3),
+            self.add_segment(
+                0x0D,
+                3,
                 self.energy_wh(),
                 "Energy Wh",
             )
 
-            self.add_row(
-                self.hex_to_str(0x18, 2),
+            self.add_segment(
+                0x18,
+                2,
                 self.temperature(),
                 "Temperature",
             )
-            self.add_row(
-                self.hex_to_str(0x1A, 2),
+            self.add_segment(
+                0x1A,
+                2,
                 self.hour(),
                 "Hour",
             )
-            self.add_row(
-                self.hex_to_str(0x1C, 1),
+            self.add_segment(
+                0x1C,
+                1,
                 self.minute(),
                 "Minute",
             )
-            self.add_row(
-                self.hex_to_str(0x1D, 1),
+            self.add_segment(
+                0x1D,
+                1,
                 self.second(),
                 "Second",
             )
 
-        self.add_row(
-            self.hex_to_str(self.nr_of_bytes() - 1, 1),
-            f"{self.checksum():02x}",
+        self.add_segment(
+            self.nr_of_bytes() - 1,
+            1,
+            f"{self.calc_checksum():02x}",
             "Checksum",
         )
+
         self.frm.append("<br></pre>")
         return "".join(self.frm)
 
@@ -278,7 +299,7 @@ class AtorchFrame(MpFrame):
         cs = self.calc_checksum()
         self.frame[-1] = cs
 
-    def command(self, command: AtorchCommandType, value=0x00):
+    def command(self, command: AtorchCommandType, value=0x00) -> bytearray:
         self.append_header(AtorchMessageType.Command)
         self.append_byte(self.dev_type.value)
         self.append_byte(command.value)
@@ -287,22 +308,59 @@ class AtorchFrame(MpFrame):
         self.append_byte(0x00)
         self.append_byte(value & 0xFF)
         self.append_checksum()
+        return bytearray(self.frame)
 
 
 class MpTermPlugin(MpPlugin):
     def __init__(self) -> None:
         super().__init__()
-        self.plugin_info = plugin_info
-        self.plugin_info.add_widget(
+        self.info = plugin_info
+        self.info.add_widget(
             MpPluginWidget(
-                MpPluginWidgetType.Button, "Reset All", "", self.cmd_clear_all
+                MpPluginWidgetType.Button,
+                "Reset All",
+                "Command 0x05",
+                # self.cmd_clear_all,
+                lambda: self.send(self.frame.command(AtorchCommandType.Reset_All)),
             )
         )
-        self.plugin_info.add_widget(
-            MpPluginWidget(MpPluginWidgetType.Button, "Reset Time", "", None)
+        self.info.add_widget(
+            MpPluginWidget(
+                MpPluginWidgetType.Button,
+                "Reset Duration",
+                "Command 0x03",
+                self.cmd_clear_duration,
+            )
         )
-        self.plugin_info.add_widget(
-            MpPluginWidget(MpPluginWidgetType.Button, "Reset Ah", "", None)
+        self.info.add_widget(
+            MpPluginWidget(
+                MpPluginWidgetType.Button, "Reset Ah", "Command 0x02", self.cmd_clear_ah
+            )
+        )
+        self.info.add_widget(
+            MpPluginWidget(
+                MpPluginWidgetType.Button, "Reset Wh", "Command 0x01", self.cmd_clear_wh
+            )
+        )
+        self.info.add_widget(
+            MpPluginWidget(
+                MpPluginWidgetType.Button, "Plus", "Command 0x33", self.cmd_plus
+            )
+        )
+        self.info.add_widget(
+            MpPluginWidget(
+                MpPluginWidgetType.Button, "Minus", "Command 0x34", self.cmd_minus
+            )
+        )
+        self.info.add_widget(
+            MpPluginWidget(
+                MpPluginWidgetType.Button, "Setup", "Command 0x31", self.cmd_setup
+            )
+        )
+        self.info.add_widget(
+            MpPluginWidget(
+                MpPluginWidgetType.Button, "Enter", "Command 0x32", self.cmd_enter
+            )
         )
         self.frame = AtorchFrame(AtorchDeviceType.DC_Meter)
 
@@ -317,9 +375,36 @@ class MpTermPlugin(MpPlugin):
         return ret
 
     def cmd_clear_all(self) -> None:
-        data = self.frame.command(AtorchCommandType.Reset_All)
-        self.send(bytearray(data))
-        print("Reset all")
+        # data = self.frame.command(AtorchCommandType.Reset_All)
+        self.send(self.frame.command(AtorchCommandType.Reset_All))
+
+    def cmd_clear_duration(self) -> None:
+        data = self.frame.command(AtorchCommandType.Reset_Duration)
+        self.send(data)
+
+    def cmd_clear_ah(self) -> None:
+        data = self.frame.command(AtorchCommandType.Reset_Ah)
+        self.send(data)
+
+    def cmd_clear_wh(self) -> None:
+        data = self.frame.command(AtorchCommandType.Reset_Wh)
+        self.send(data)
+
+    def cmd_setup(self) -> None:
+        data = self.frame.command(AtorchCommandType.Setup)
+        self.send(data)
+
+    def cmd_enter(self) -> None:
+        data = self.frame.command(AtorchCommandType.Enter)
+        self.send(data)
+
+    def cmd_plus(self) -> None:
+        data = self.frame.command(AtorchCommandType.Plus, 1)
+        self.send(data)
+
+    def cmd_minus(self) -> None:
+        data = self.frame.command(AtorchCommandType.Minus, 1)
+        self.send(data)
 
 
 def main() -> None:

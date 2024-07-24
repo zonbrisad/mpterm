@@ -18,7 +18,14 @@
 import logging
 import sys
 
-from escape import Escape, Ascii, TerminalState, TerminalLine, escape_attribute_test
+from escape import (
+    Escape,
+    Ascii,
+    TerminalState,
+    TerminalLine,
+    color_256_test,
+    escape_attribute_test,
+)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QTextCursor, QFont, QKeyEvent, QKeyEvent, QCloseEvent
 from PyQt5.QtWidgets import (
@@ -97,11 +104,13 @@ def get_key(key: QKeyEvent) -> str:
 
 
 class QTerminalWidget(QPlainTextEdit):
-    def __init__(self, parent=None, init=""):
+    """QTerminalWidget implements a partial ANSI terminal into a QPlainTextEdit."""
+
+    def __init__(self, parent=None, init="") -> None:
         super().__init__(parent)
 
         self.cur = QTextCursor(self.document())
-        self.ts = TerminalState()
+        self.terminal_state = TerminalState()
         self.setCursorWidth(2)
         self.ensureCursorVisible()
         self.setReadOnly(True)
@@ -116,22 +125,28 @@ class QTerminalWidget(QPlainTextEdit):
 
         # self.setFocusPolicy(Qt.NoFocus)
         self.setStyleSheet(
-            "background-color: rgb(0, 0, 0); color : White; font-family:Monospace; font-size:10pt; line-height:1.5;"
+            """
+            color : White;
+            background-color: rgb(0, 0, 0);
+            font-family:Monospace;
+            font-size:10pt;
+            line-height:1.5;
+            """
         )
         # self.setStyleSheet("background-color: rgb(0, 0, 0); color : White; line-height:20pt; font-family:Monospace")
 
-        self.overwrite = False
-        self.idx = 0
+        # self.overwrite = False
+        # self.idx = 0
+        # self.cr = False
         self.maxLines = 100
-        self.cr = False
         self.last_id = 0
 
-    def setMaxLines(self, maxLines):
+    def setMaxLines(self, maxLines) -> None:
         self.maxLines = maxLines
 
-    def clear(self):
+    def clear(self) -> None:
         super().clear()
-        self.ts.reset()
+        self.terminal_state.reset()
         self.moveCursor(QTextCursor.End)
 
     # def update(self, s: str) -> str:
@@ -144,7 +159,7 @@ class QTerminalWidget(QPlainTextEdit):
         bpos = self.cur.positionInBlock()
         logging.debug(f"Cursor moved: abs:{pos}  block:{bpos}  newpos: {newPos}")
 
-    def insert(self, html):
+    def insert(self, html) -> None:
         self.cur.insertHtml(html)
 
     def move(self, direction: QTextCursor, anchor: QTextCursor, steps: int = 1) -> None:
@@ -153,7 +168,7 @@ class QTerminalWidget(QPlainTextEdit):
         #     f"Cursor back: direction: {direction:2}  lines: {self.document().lineCount():3}  col: {self.cur.columnNumber():2}  steps: {steps:3}"
         # )
 
-    def remove_rows_alt(self, lines):
+    def remove_rows_alt(self, lines) -> None:
         logging.debug(f"Removing {lines} lines")
         cursor = self.textCursor()  # QTextCursor(self.document())
 
@@ -165,49 +180,49 @@ class QTerminalWidget(QPlainTextEdit):
 
         self.setTextCursor(cursor)
 
-    def limit_lines(self):
+    def limit_lines(self) -> None:
         lines = self.document().lineCount()
         logging.debug(f"Lines: {lines}  Maxlines: {self.maxLines}")
         if lines > self.maxLines:
             self.remove_rows_alt(lines - self.maxLines)
 
-    def append_html(self, html):
+    def append_html(self, html) -> None:
         self.move(QTextCursor.End, QTextCursor.MoveAnchor)
         self.insert(html)
         self.limit_lines()
 
-    def insertHtml(self, html):
+    def insert_html(self, html: str) -> None:
         self.cur.insertHtml(html)
         self.cur.movePosition(QTextCursor.Right, len(html))
 
-    def append_terminal_text(self, s: str) -> None:
-        tokens = self.ts.update(s)
+    def append_terminal_text(self, data: str) -> None:
+        lines = self.terminal_state.update(data)
 
-        for token in tokens:
-            if type(token) is TerminalLine:
-                if token.id > self.last_id:  # a new line detected
-                    self.last_id = token.id
+        for line in lines:
+            print(f"X {line}")
+            if type(line) is TerminalLine:
+                if line.id > self.last_id:  # a new line detected
+                    self.last_id = line.id
                     self.move(QTextCursor.End, QTextCursor.MoveAnchor)
                     self.cur.insertHtml("<br>")
 
-                if token.id == self.last_id:  # last row
+                if line.id == self.last_id:  # last row
                     self.move(QTextCursor.End, QTextCursor.MoveAnchor)
                     self.move(QTextCursor.StartOfLine, QTextCursor.KeepAnchor)
 
-                if token.id < self.last_id:
+                if line.id < self.last_id:
                     self.move(QTextCursor.End, QTextCursor.MoveAnchor)
                     self.move(
-                        QTextCursor.Up, QTextCursor.MoveAnchor, self.last_id - token.id
+                        QTextCursor.Up, QTextCursor.MoveAnchor, self.last_id - line.id
                     )
                     self.move(QTextCursor.StartOfLine, QTextCursor.MoveAnchor)
                     self.move(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
 
-                html = token.line_to_html()
-                self.cur.insertHtml(html)
+                self.cur.insertHtml(line.line_to_html())
 
         self.limit_lines()
 
-    def scroll_down(self):
+    def scroll_down(self) -> None:
         vsb = self.verticalScrollBar()
         vsb.setValue(vsb.maximum())
 
@@ -217,47 +232,53 @@ class MainForm(QMainWindow):
     def closeEvent(self, a0: QCloseEvent) -> None:
         return super().closeEvent(a0)
 
-    def exitProgram(self, e):
+    def exitProgram(self, e) -> None:
         self.close()
 
-    def add_button(self, label, text):
+    def add_button(self, label, text) -> None:
         pb = QPushButton(label, self.centralwidget)
         pb.pressed.connect(lambda: self.terminal.append_terminal_text(text))
-        self.buttonLayout.addWidget(pb)
+        self.button_layout.addWidget(pb)
 
-    def __init__(self, args, parent=None):
+    def add_func_button(self, label, func) -> None:
+        pb = QPushButton(label, self.centralwidget)
+        pb.pressed.connect(func)
+        self.button_layout.addWidget(pb)
+
+    def __init__(self, args, parent=None) -> None:
         super(MainForm, self).__init__(parent)
 
         self.centralwidget = QWidget(self)
+        self.setCentralWidget(self.centralwidget)
         self.resize(850, 500)
 
         # Layouts
-        self.verticalLayout = QVBoxLayout(self.centralwidget)
-        self.verticalLayout.setContentsMargins(2, 2, 2, 2)
-        self.verticalLayout.setSpacing(2)
+        self.vertical_layout = QVBoxLayout(self.centralwidget)
+        self.vertical_layout.setContentsMargins(2, 2, 2, 2)
+        self.vertical_layout.setSpacing(2)
 
-        self.setCentralWidget(self.centralwidget)
-
-        self.main_layout = QHBoxLayout()
-        self.buttonLayout = QVBoxLayout()
-        self.buttonLayout.addSpacing(10)
-        self.main_layout.addLayout(self.buttonLayout)
-        self.rightVLayout = QVBoxLayout()
-        self.main_layout.addLayout(self.rightVLayout)
-        self.verticalLayout.addLayout(self.main_layout)
+        self.main_layout = QHBoxLayout(self.centralwidget)
+        self.button_layout = QVBoxLayout(self.centralwidget)
+        self.button_layout.addSpacing(10)
+        self.main_layout.addLayout(self.button_layout)
+        self.right_layout = QVBoxLayout(self.centralwidget)
+        self.main_layout.addLayout(self.right_layout)
+        self.vertical_layout.addLayout(self.main_layout)
 
         self.terminal = QTerminalWidget(self.centralwidget)
         self.terminal.setMaxLines(500)
-        self.rightVLayout.addWidget(self.terminal)
+        self.right_layout.addWidget(self.terminal)
 
-        self.add_button("Attributes", escape_attribute_test)
+        self.add_func_button("Clear terminal", lambda: self.terminal.clear())
+        self.add_button("Font Attributes", escape_attribute_test)
+        self.add_button("Colors 256", color_256_test())
         self.add_button("Cursor up", Escape.UP)
         self.add_button("Cursor down", Escape.DOWN)
         self.add_button("Cursor back", Escape.BACK)
         self.add_button("Cursor forward", Escape.FORWARD)
         self.add_button("Erase in line", "\x1b[K")
 
-        self.buttonLayout.addStretch()
+        self.button_layout.addStretch()
 
         # Menu bar
         self.menubar = QMenuBar(self)

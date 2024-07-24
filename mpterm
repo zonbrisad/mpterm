@@ -67,18 +67,18 @@ from dataclasses import dataclass, field
 from escape import (
     Escape,
     Ascii,
-    ascii,
-    ascii_table,
     TerminalState,
+    ascii,
     flag,
     escape_attribute_test,
+    ascii_table,
     color_256_test,
-    hex2str,
 )
 from qterminalwidget import QTerminalWidget, get_key
 from serialport import SerialPort, State
-from mppluginframe import MpPluginFrame
 from aboutdialog import AboutDialog
+
+from mppluginframe import MpPluginFrame
 
 # Settings ------------------------------------------------------------------
 
@@ -255,8 +255,6 @@ class mpProfile:
 
     def __post_init__(self):
         for nm in range(App.MACROS):
-            # for nm in ["M1", "M2", "M3", "M4", "M5"]:
-            # m = Macro(name=nm)
             m = Macro(name=f"M{nm}")
             self.macros.append(m)
 
@@ -314,7 +312,6 @@ class HexMode(enum.Enum):
 class HexFormater:
     def __init__(self) -> None:
         self.end = "<br>"
-        # self.sync_byte = "0xff"
         self.sync_string = []
         self.mode = HexMode.Length
         self.set_mode(MpTerm.Ascii)
@@ -408,6 +405,16 @@ class StyleS:
     color:Red;
     """
     win = "border:0"
+
+
+qt_style_sheet = """
+QToolTip{
+    color: black;
+    background-color: LightYellow;
+    padding: 1px;
+    border: 0px solid black;
+}
+"""
 
 
 class QNumberEdit(QLineEdit):
@@ -536,13 +543,14 @@ class MacroEditWidget(QWidget):
 
 
 class MacroDialog(QDialog):
-    def __init__(self, macros) -> None:
-        super().__init__()
+    def __init__(self, parent, macros) -> None:
+        super().__init__(parent=parent)
         self.setWindowTitle("Userdefined Macros")
+        # self.setWindowIcon(QIcon(App.ICON))
         self.setMinimumWidth(600)
         self.macros = macros
         self.main_layout = QVBoxLayout()
-        self.main_layout.setSpacing(2)
+        # self.main_layout.setSpacing(2)
         self.setLayout(self.main_layout)
 
         self.macro_edits = []
@@ -596,114 +604,128 @@ class MainForm(QMainWindow):
         self.serial_port.setReadBufferSize(256)
         self.serial_port.readyRead.connect(self.read)
 
-        # self.load_plugins()
-
         self.resize(self.prof.win_x, self.prof.win_y)
         self.setWindowIcon(QIcon(App.ICON))
+        self.setContentsMargins(2, 2, 2, 2)
+        self.setStyleSheet(qt_style_sheet)
 
         self.central_widget = QWidget(self)
         self.setCentralWidget(self.central_widget)
 
-        self.vertical_layout = QVBoxLayout(self.central_widget)
-        self.vertical_layout.setContentsMargins(2, 2, 2, 2)
-        self.vertical_layout.setSpacing(2)
+        # Layouts
+        self.main_layout = QVBoxLayout(self.central_widget)
+        self.main_layout.setSpacing(2)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Serial port settings above terminal widget
-        self.port_layout = QHBoxLayout()
-        self.port_layout.setSpacing(5)
-        # self.port_layout.addSpacing(90)
+        self.middle_layout = QHBoxLayout(self.central_widget)
+
+        # Port settings layout (above)
+        self.port_layout = QHBoxLayout(self.central_widget)
+        self.port_layout.setSpacing(10)
         self.port_layout.addStretch()
 
-        self.cbPort = self.add_label_combobox("Port")
-
-        self.cbBitrate = self.add_label_combobox("Bitrate")
-        self.cbBitrate.addItem("300", 300)
-        self.cbBitrate.addItem("600", 600)
-        self.cbBitrate.addItem("1200", 1200)
-        self.cbBitrate.addItem("2400", 2400)
-        self.cbBitrate.addItem("4800", 4800)
-        self.cbBitrate.addItem("9600", 9600)
-        self.cbBitrate.addItem("19200", 19200)
-        self.cbBitrate.addItem("28400", 28400)
-        self.cbBitrate.addItem("57600", 57600)
-        self.cbBitrate.addItem("115200", 115200)
-        self.cbBitrate.setCurrentIndex(5)
-        self.cbBitrate.activated.connect(self.set_sp)
-
-        self.cbBits = self.add_label_combobox("Bits")
-        self.cbBits.addItem("5", QSerialPort.Data5)
-        self.cbBits.addItem("6", QSerialPort.Data6)
-        self.cbBits.addItem("7", QSerialPort.Data7)
-        self.cbBits.addItem("8", QSerialPort.Data8)
-        self.cbBits.setCurrentIndex(3)
-        self.cbBits.activated.connect(self.set_sp)
-
-        self.cbStopBits = self.add_label_combobox("StopBit")
-        self.cbStopBits.addItem("1", QSerialPort.OneStop)
-        self.cbStopBits.addItem("1.5", QSerialPort.OneAndHalfStop)
-        self.cbStopBits.addItem("2", QSerialPort.TwoStop)
-        self.cbStopBits.setCurrentIndex(0)
-        self.cbStopBits.activated.connect(self.set_sp)
-
-        self.cbParity = self.add_label_combobox("Parity")
-        self.cbParity.addItem("None", QSerialPort.NoParity)
-        self.cbParity.addItem("Odd", QSerialPort.OddParity)
-        self.cbParity.addItem("Even", QSerialPort.EvenParity)
-        self.cbParity.setCurrentIndex(0)
-        self.cbParity.activated.connect(self.set_sp)
-
-        self.cbFlowControl = self.add_label_combobox("HwFlow")
-        self.cbFlowControl.addItem("None", QSerialPort.NoFlowControl)
-        self.cbFlowControl.addItem("Hardware", QSerialPort.HardwareControl)
-        self.cbFlowControl.addItem("Software", QSerialPort.SoftwareControl)
-        self.cbFlowControl.setCurrentIndex(0)
-        self.cbFlowControl.activated.connect(self.set_sp)
-        self.port_layout.addStretch()
-
-        # "Buttons" layout, to the left
-        self.button_layout = QVBoxLayout()
+        # "Buttons" layout (to the left)
+        self.button_layout = QVBoxLayout(self.central_widget)
         self.button_layout.addSpacing(10)
 
-        self.pbOpen = QPushButton("Open", self.central_widget)
-        self.pbOpen.setFixedHeight(50)
-        self.pbOpen.pressed.connect(self.openPort)
-        self.button_layout.addWidget(self.pbOpen)
+        # Terminal layout (middle)
+        self.terminal_layout = QVBoxLayout(self.central_widget)
 
-        self.cbMode = QComboBox(self.central_widget)
-        self.cbMode.addItem(Mode.Normal.name, Mode.Normal)
-        self.cbMode.addItem(Mode.Echo.name, Mode.Echo)
-        self.button_layout.addWidget(self.cbMode)
+        # Macro layout (to the right)
+        self.macro_layout = QVBoxLayout(self.central_widget)
+        self.macro_layout.addSpacing(20)
 
-        self.cbDisplay = QComboBox(self.central_widget)
-        self.cbDisplay.addItem("Ascii", MpTerm.Ascii)
-        self.cbDisplay.addItem("Hex", MpTerm.Hex)
-        self.cbDisplay.addItem("Hex + Ascii", MpTerm.AsciiHex)
-        self.cbDisplay.currentIndexChanged.connect(self.mode_change)
-        self.cbDisplay.activated.connect(self.set_sp)
-        self.button_layout.addWidget(self.cbDisplay)
+        self.middle_layout.addLayout(self.button_layout)
+        self.middle_layout.addLayout(self.terminal_layout)
+        self.middle_layout.addLayout(self.macro_layout)
 
-        self.cbNewlineMode = QComboBox(self.central_widget)
-        self.cbNewlineMode.addItem("LF", "\n")
-        self.cbNewlineMode.addItem("CR", "\r")
-        self.cbNewlineMode.addItem("CRLF", "\r\n")
-        self.button_layout.addWidget(self.cbNewlineMode)
+        self.main_layout.addLayout(self.port_layout)
+        self.main_layout.addLayout(self.middle_layout)
 
-        self.nrEdit = QNumberEdit(self.centralWidget)
-        self.nrEdit.set_value(self.prof.columns)
-        self.button_layout.addWidget(self.nrEdit)
+        # Port layout widgets
+        self.cb_port = self.add_label_combobox("Port")
+        self.cb_bitrate = self.add_label_combobox("Bitrate")
+        self.cb_bitrate.addItem("300", 300)
+        self.cb_bitrate.addItem("600", 600)
+        self.cb_bitrate.addItem("1200", 1200)
+        self.cb_bitrate.addItem("2400", 2400)
+        self.cb_bitrate.addItem("4800", 4800)
+        self.cb_bitrate.addItem("9600", 9600)
+        self.cb_bitrate.addItem("19200", 19200)
+        self.cb_bitrate.addItem("28400", 28400)
+        self.cb_bitrate.addItem("57600", 57600)
+        self.cb_bitrate.addItem("115200", 115200)
+        self.cb_bitrate.setCurrentIndex(5)
+        self.cb_bitrate.activated.connect(self.set_sp)
 
-        self.syncEdit = QHexEdit(self.centralWidget)
-        self.syncEdit.setText(self.prof.sync_string)
-        self.button_layout.addWidget(self.syncEdit)
+        self.cb_bits = self.add_label_combobox("Bits")
+        self.cb_bits.addItem("5", QSerialPort.Data5)
+        self.cb_bits.addItem("6", QSerialPort.Data6)
+        self.cb_bits.addItem("7", QSerialPort.Data7)
+        self.cb_bits.addItem("8", QSerialPort.Data8)
+        self.cb_bits.setCurrentIndex(3)
+        self.cb_bits.activated.connect(self.set_sp)
 
-        self.plugin_widget = MpPluginFrame(self.serial_port)
+        self.cb_stop_bits = self.add_label_combobox("StopBit")
+        self.cb_stop_bits.addItem("1", QSerialPort.OneStop)
+        self.cb_stop_bits.addItem("1.5", QSerialPort.OneAndHalfStop)
+        self.cb_stop_bits.addItem("2", QSerialPort.TwoStop)
+        self.cb_stop_bits.setCurrentIndex(0)
+        self.cb_stop_bits.activated.connect(self.set_sp)
+
+        self.cb_parity = self.add_label_combobox("Parity")
+        self.cb_parity.addItem("None", QSerialPort.NoParity)
+        self.cb_parity.addItem("Odd", QSerialPort.OddParity)
+        self.cb_parity.addItem("Even", QSerialPort.EvenParity)
+        self.cb_parity.setCurrentIndex(0)
+        self.cb_parity.activated.connect(self.set_sp)
+
+        self.cb_flow_control = self.add_label_combobox("HwFlow")
+        self.cb_flow_control.addItem("None", QSerialPort.NoFlowControl)
+        self.cb_flow_control.addItem("Hardware", QSerialPort.HardwareControl)
+        self.cb_flow_control.addItem("Software", QSerialPort.SoftwareControl)
+        self.cb_flow_control.setCurrentIndex(0)
+        self.cb_flow_control.activated.connect(self.set_sp)
+        self.port_layout.addStretch()
+
+        # Button layout widgets
+        #
+        self.bp_open = QPushButton("Open", self.central_widget)
+        self.bp_open.setFixedHeight(50)
+        self.bp_open.pressed.connect(self.openPort)
+        self.bp_open.setToolTip("Open/Close current serial port")
+        self.button_layout.addWidget(self.bp_open)
+
+        self.cb_echo_mode = QComboBox(self.central_widget)
+        self.cb_echo_mode.addItem(Mode.Normal.name, Mode.Normal)
+        self.cb_echo_mode.addItem(Mode.Echo.name, Mode.Echo)
+        self.button_layout.addWidget(self.cb_echo_mode)
+
+        self.cb_display_mode = QComboBox(self.central_widget)
+        self.cb_display_mode.addItem("Ascii", MpTerm.Ascii)
+        self.cb_display_mode.addItem("Hex", MpTerm.Hex)
+        self.cb_display_mode.addItem("Hex + Ascii", MpTerm.AsciiHex)
+        self.cb_display_mode.currentIndexChanged.connect(self.mode_change)
+        self.cb_display_mode.activated.connect(self.set_sp)
+        self.button_layout.addWidget(self.cb_display_mode)
+
+        self.cb_line_mode = QComboBox(self.central_widget)
+        self.cb_line_mode.addItem("LF", "\n")
+        self.cb_line_mode.addItem("CR", "\r")
+        self.cb_line_mode.addItem("CRLF", "\r\n")
+        self.button_layout.addWidget(self.cb_line_mode)
+
+        self.ed_line_length = QNumberEdit(self.centralWidget)
+        self.ed_line_length.set_value(self.prof.columns)
+        self.button_layout.addWidget(self.ed_line_length)
+
+        self.ed_synch_string = QHexEdit(self.centralWidget)
+        self.ed_synch_string.setText(self.prof.sync_string)
+        self.button_layout.addWidget(self.ed_synch_string)
+
+        self.plugin_widget = MpPluginFrame(self.central_widget, self.serial_port)
         self.button_layout.addWidget(self.plugin_widget)
         self.button_layout.addStretch()
-
-        # self.cbNewline = QComboBox(self.central_widget)
-        # self.cbNewline.addItem("nl", 0)
-        # self.cbNewline.addItem("cr", 1)
-        # self.cbNewline.addItem("cr+nl", 2)
 
         # self.dtrLabel = QLabel("\u26D4 DTR")
         # self.rtsLabel = QLabel("\u26D4 RTS")
@@ -719,13 +741,13 @@ class MainForm(QMainWindow):
         # self.cbDTR.setTristate(False)
         # self.cbDTR.clicked.connect(self.handle_dtr)
 
-        self.pbProgram = QPushButton("Program", self.central_widget)
-        self.pbProgram.pressed.connect(self.run_ext_program)
-        self.button_layout.addWidget(self.pbProgram)
+        self.pb_program = QPushButton("Program", self.central_widget)
+        self.pb_program.pressed.connect(self.run_ext_program)
+        self.button_layout.addWidget(self.pb_program)
 
-        self.pbSuspend = QPushButton("Suspend", self.central_widget)
-        self.pbSuspend.pressed.connect(self.suspend)
-        self.button_layout.addWidget(self.pbSuspend)
+        self.bp_suspend = QPushButton("Suspend", self.central_widget)
+        self.bp_suspend.pressed.connect(self.suspend)
+        self.button_layout.addWidget(self.bp_suspend)
 
         # self.leSyncString = QLineEdit(self.central_widget)
         # self.button_layout.addWidget(self.leSyncString)
@@ -742,52 +764,36 @@ class MainForm(QMainWindow):
         # self.button_layout.addWidget(self.dtrLabel)
         # self.button_layout.addWidget(self.rtsLabel)
 
+        # Middle layout widgets
+        #
         self.terminal = QTerminalWidget(self.central_widget)
-        # self.terminal = QTerminalWidget(self.central_widget, serial_port=self.serial_port)
         self.terminal.setMaxLines(App.MAX_LINES)
+        self.terminal_layout.addWidget(self.terminal)
 
-        # Layouts
-        self.right_layout = QVBoxLayout()
-        self.right_layout.addWidget(self.terminal)
-
-        self.main_layout = QHBoxLayout()
-        self.main_layout.addLayout(self.button_layout)
-        self.main_layout.addLayout(self.right_layout)
-
-        self.vertical_layout.addLayout(self.port_layout)
-        self.vertical_layout.addLayout(self.main_layout)
-
-        # Macro layout (to the right)
-        self.macroLayout = QVBoxLayout()
-        self.macroLayout.setContentsMargins(2, 2, 2, 2)
-        self.macroLayout.setSpacing(2)
-        self.macroLayout.addSpacing(20)
-
+        # Macro layout widgets
+        #
         for macro in self.prof.macros:
             macro_button = QPushButton(
                 macro.name,
                 self.central_widget,
                 pressed=lambda m=macro: self.serial_port.send(m.data()),
             )
-            self.macroLayout.addWidget(macro_button)
+            self.macro_layout.addWidget(macro_button)
 
             # macro_button = QMacroButton(macro=macro)
-            # self.macroLayout.addWidget(macro_button)
+            # self.macro_layout.addWidget(macro_button)
 
-        self.macro_dialog = MacroDialog(self.prof.macros)
+        self.macro_dialog = MacroDialog(self, self.prof.macros)
         self.macro_set = QPushButton("Edit macro's", self.central_widget)
         self.macro_set.pressed.connect(self.edit_macro_dialog)
 
-        self.macroLayout.addSpacing(20)
-        self.macroLayout.addWidget(self.macro_set)
+        self.macro_layout.addSpacing(20)
+        self.macro_layout.addWidget(self.macro_set)
+        self.macro_layout.addStretch()
 
-        self.macroLayout.addStretch()
-
-        self.pbPause = QPushButton("Pause", self.central_widget)
-        self.pbPause.pressed.connect(self.pause)
-        self.macroLayout.addWidget(self.pbPause)
-
-        self.main_layout.addLayout(self.macroLayout)
+        self.bp_pause = QPushButton("Pause", self.central_widget)
+        self.bp_pause.pressed.connect(self.pause)
+        self.macro_layout.addWidget(self.bp_pause)
 
         # Status bar
         self.statusbar = QStatusBar(self)
@@ -796,15 +802,15 @@ class MainForm(QMainWindow):
         self.setStatusBar(self.statusbar)
 
         # Status bar elements
-        self.stateLabel = QLabel("")
-        self.statusbar.addPermanentWidget(self.stateLabel, stretch=0)
-        self.rxLabel = QLabel("")
-        self.statusbar.addPermanentWidget(self.rxLabel, stretch=0)
-        self.txLabel = QLabel("")
-        self.statusbar.addPermanentWidget(self.txLabel, stretch=0)
-        self.dimensionsLabel = QLabel("")
+        self.label_state = QLabel("")
+        self.statusbar.addPermanentWidget(self.label_state, stretch=0)
+        self.label_rx = QLabel("")
+        self.statusbar.addPermanentWidget(self.label_rx, stretch=0)
+        self.label_tx = QLabel("")
+        self.statusbar.addPermanentWidget(self.label_tx, stretch=0)
+        self.label_dimensions = QLabel("")
         # self.dimensionsLabel.setToolTip("Terminal size")
-        self.statusbar.addPermanentWidget(self.dimensionsLabel, stretch=0)
+        self.statusbar.addPermanentWidget(self.label_dimensions, stretch=0)
         # self.yyy = QComboBox(self.central_widget)
         # self.yyy.addItem("80x24", Mode.Normal)
         # self.yyy.addItem("132x24", Mode.Normal)
@@ -815,14 +821,14 @@ class MainForm(QMainWindow):
         self.setMenuBar(self.menubar)
 
         # File menu
-        self.menuFile = QMenu(self.menubar, title="&File")
-        self.menubar.addAction(self.menuFile.menuAction())
-        self.actionNew = QAction("New", self, triggered=self.new_terminal)
-        self.menuFile.addAction(self.actionNew)
-        self.actionExit = QAction("Quit", self, triggered=self.exit_program)
-        self.actionExit.setToolTip("Quit")
-        self.actionExit.setShortcutContext(Qt.WidgetShortcut)
-        self.menuFile.addAction(self.actionExit)
+        self.menu_file = QMenu(self.menubar, title="&File")
+        self.menubar.addAction(self.menu_file.menuAction())
+        self.action_new = QAction("New", self, triggered=self.new_terminal)
+        self.menu_file.addAction(self.action_new)
+        self.action_exit = QAction("Quit", self, triggered=self.exit_program)
+        self.action_exit.setToolTip("Quit")
+        self.action_exit.setShortcutContext(Qt.WidgetShortcut)
+        self.menu_file.addAction(self.action_exit)
 
         # self.actionEcho = QAction(
         #     "Echo", self, triggered=None, checkable=True
@@ -830,138 +836,153 @@ class MainForm(QMainWindow):
         # self.menuSettings.addAction(self.actionEcho)
 
         # Settings menu
-        self.menuSettings = QMenu(self.menubar, title="Settings")
-        self.menubar.addAction(self.menuSettings.menuAction())
-        self.actionSetProgram = QAction(
+        self.menu_settings = QMenu(self.menubar, title="Settings")
+        self.menubar.addAction(self.menu_settings.menuAction())
+        self.action_set_program = QAction(
             "Ext. Program", self, triggered=self.set_ext_program
         )
-        self.menuSettings.addAction(self.actionSetProgram)
-        self.actionSetTimeout = QAction(
+        self.menu_settings.addAction(self.action_set_program)
+        self.action_set_timeout = QAction(
             "Suspend timeout", self, triggered=self.set_suspend_timeout
         )
-        self.menuSettings.addAction(self.actionSetTimeout)
+        self.menu_settings.addAction(self.action_set_timeout)
 
         # Action menu
-        self.menuAction = QMenu(self.menubar, title="&Action")
-        self.menubar.addAction(self.menuAction.menuAction())
-        self.actionClear = QAction(self, text="Clear")
-        self.actionClear.triggered.connect(self.terminal_clear)
-        self.menuAction.addAction(self.actionClear)
+        self.menu_action = QMenu(self.menubar, title="&Action")
+        self.menubar.addAction(self.menu_action.menuAction())
+        self.action_clear = QAction(self, text="Clear")
+        self.action_clear.triggered.connect(self.terminal_clear)
+        self.menu_action.addAction(self.action_clear)
 
-        self.actionReset_port = QAction(self, text="Reset port")
-        self.actionPortInfo = QAction(self, text="Port info", triggered=self.port_info)
-        self.menuAction.addAction(self.actionPortInfo)
+        self.action_reset_port = QAction(self, text="Reset port")
+        self.action_port_info = QAction(
+            self, text="Port info", triggered=self.port_info
+        )
+        self.menu_action.addAction(self.action_port_info)
 
         # Send menu
-        self.menuSend = QMenu(self.menubar, title="Send")
-        self.menubar.addAction(self.menuSend.menuAction())
+        self.menu_send = QMenu(self.menubar, title="Send")
+        self.menubar.addAction(self.menu_send.menuAction())
         self.add_action(
-            "Break [0x00]", self.menuSend, lambda: self.send_string(Ascii.NULL)
+            "Break [0x00]", self.menu_send, lambda: self.send_string(Ascii.NULL)
         )
         self.add_action(
-            "ETX [0x03] (Ctrl-C)", self.menuSend, lambda: self.send_string(Ascii.ETX)
+            "ETX [0x03] (Ctrl-C)", self.menu_send, lambda: self.send_string(Ascii.ETX)
         )
         self.add_action(
-            "EOT [0x04] (Ctrl-D)", self.menuSend, lambda: self.send_string(Ascii.ETX)
+            "EOT [0x04] (Ctrl-D)", self.menu_send, lambda: self.send_string(Ascii.ETX)
         )
         self.add_action(
-            "Tab [0x09]", self.menuSend, lambda: self.send_string(Ascii.TAB)
+            "Tab [0x09]", self.menu_send, lambda: self.send_string(Ascii.TAB)
         )
-        self.add_action("LF [0x0a]", self.menuSend, lambda: self.send_string(Ascii.NL))
-        self.add_action("CR [0x0d]", self.menuSend, lambda: self.send_string(Ascii.CR))
+        self.add_action("LF [0x0a]", self.menu_send, lambda: self.send_string(Ascii.NL))
+        self.add_action("CR [0x0d]", self.menu_send, lambda: self.send_string(Ascii.CR))
 
-        self.testMenu = self.menuSend.addMenu("Tests")
+        self.menu_tests = self.menu_send.addMenu("Tests")
 
         sendAsciiTableAction = QAction("Ascii table", self)
         sendAsciiTableAction.triggered.connect(lambda: self.send_string(ascii_table()))
-        self.testMenu.addAction(sendAsciiTableAction)
+        self.menu_tests.addAction(sendAsciiTableAction)
 
         sendTestAction = QAction("Escape test", self)
         sendTestAction.triggered.connect(
             lambda: self.send_string(escape_attribute_test)
         )
-        self.testMenu.addAction(sendTestAction)
+        self.menu_tests.addAction(sendTestAction)
 
         sendFlagAction = QAction("Flag SE", self)
         sendFlagAction.triggered.connect(lambda: self.send_string(flag))
-        self.testMenu.addAction(sendFlagAction)
+        self.menu_tests.addAction(sendFlagAction)
 
         colorAction = QAction("Color test", self)
         colorAction.triggered.connect(lambda: self.send_string(color_256_test()))
-        self.testMenu.addAction(colorAction)
+        self.menu_tests.addAction(colorAction)
 
-        self.colorMenu = self.menuSend.addMenu("Colors")
-        self.add_action("Red", self.colorMenu, lambda: self.send_string(Escape.RED))
-        self.add_action("Green", self.colorMenu, lambda: self.send_string(Escape.GREEN))
+        self.menu_color = self.menu_send.addMenu("Colors")
+        self.add_action("Red", self.menu_color, lambda: self.send_string(Escape.RED))
         self.add_action(
-            "Yellow", self.colorMenu, lambda: self.send_string(Escape.YELLOW)
-        )
-        self.add_action("Blue", self.colorMenu, lambda: self.send_string(Escape.BLUE))
-        self.add_action(
-            "Magenta", self.colorMenu, lambda: self.send_string(Escape.MAGENTA)
-        )
-        self.add_action("Cyan", self.colorMenu, lambda: self.send_string(Escape.CYAN))
-        self.add_action("White", self.colorMenu, lambda: self.send_string(Escape.WHITE))
-
-        self.add_action(
-            "Bg Red", self.colorMenu, lambda: self.send_string(Escape.BG_RED)
+            "Green", self.menu_color, lambda: self.send_string(Escape.GREEN)
         )
         self.add_action(
-            "Bg Green", self.colorMenu, lambda: self.send_string(Escape.BG_GREEN)
+            "Yellow", self.menu_color, lambda: self.send_string(Escape.YELLOW)
         )
+        self.add_action("Blue", self.menu_color, lambda: self.send_string(Escape.BLUE))
         self.add_action(
-            "Bg Yellow", self.colorMenu, lambda: self.send_string(Escape.BG_YELLOW)
+            "Magenta", self.menu_color, lambda: self.send_string(Escape.MAGENTA)
         )
+        self.add_action("Cyan", self.menu_color, lambda: self.send_string(Escape.CYAN))
         self.add_action(
-            "Bg Blue", self.colorMenu, lambda: self.send_string(Escape.BG_BLUE)
-        )
-        self.add_action(
-            "Bg Magenta", self.colorMenu, lambda: self.send_string(Escape.BG_MAGENTA)
-        )
-        self.add_action(
-            "Bg Cyan", self.colorMenu, lambda: self.send_string(Escape.BG_CYAN)
-        )
-        self.add_action(
-            "Bg White", self.colorMenu, lambda: self.send_string(Escape.BG_WHITE)
+            "White", self.menu_color, lambda: self.send_string(Escape.WHITE)
         )
 
-        self.attrMenu = self.menuSend.addMenu("Attributes")
-        self.add_action("Reset", self.attrMenu, lambda: self.send_string(Escape.RESET))
-        self.add_action("Bold", self.attrMenu, lambda: self.send_string(Escape.BOLD))
         self.add_action(
-            "Italic", self.attrMenu, lambda: self.send_string(Escape.ITALIC)
-        )
-        self.add_action("Dim", self.attrMenu, lambda: self.send_string(Escape.DIM))
-        self.add_action(
-            "Reverse", self.attrMenu, lambda: self.send_string(Escape.REVERSE)
+            "Bg Red", self.menu_color, lambda: self.send_string(Escape.BG_RED)
         )
         self.add_action(
-            "Underline", self.attrMenu, lambda: self.send_string(Escape.UNDERLINE)
+            "Bg Green", self.menu_color, lambda: self.send_string(Escape.BG_GREEN)
         )
         self.add_action(
-            "Crossed", self.attrMenu, lambda: self.send_string(Escape.CROSSED)
+            "Bg Yellow", self.menu_color, lambda: self.send_string(Escape.BG_YELLOW)
+        )
+        self.add_action(
+            "Bg Blue", self.menu_color, lambda: self.send_string(Escape.BG_BLUE)
+        )
+        self.add_action(
+            "Bg Magenta", self.menu_color, lambda: self.send_string(Escape.BG_MAGENTA)
+        )
+        self.add_action(
+            "Bg Cyan", self.menu_color, lambda: self.send_string(Escape.BG_CYAN)
+        )
+        self.add_action(
+            "Bg White", self.menu_color, lambda: self.send_string(Escape.BG_WHITE)
         )
 
-        self.attrMenu = self.menuSend.addMenu("Cursor")
-        self.add_action("Up", self.attrMenu, lambda: self.send_string(Escape.UP))
-        self.add_action("Down", self.attrMenu, lambda: self.send_string(Escape.DOWN))
+        self.menu_attr = self.menu_send.addMenu("Attributes")
+        self.add_action("Reset", self.menu_attr, lambda: self.send_string(Escape.RESET))
+        self.add_action("Bold", self.menu_attr, lambda: self.send_string(Escape.BOLD))
         self.add_action(
-            "Forward", self.attrMenu, lambda: self.send_string(Escape.FORWARD)
+            "Italic", self.menu_attr, lambda: self.send_string(Escape.ITALIC)
+        )
+        self.add_action("Dim", self.menu_attr, lambda: self.send_string(Escape.DIM))
+        self.add_action(
+            "Reverse", self.menu_attr, lambda: self.send_string(Escape.REVERSE)
+        )
+        self.add_action(
+            "Underline", self.menu_attr, lambda: self.send_string(Escape.UNDERLINE)
+        )
+        self.add_action(
+            "Crossed", self.menu_attr, lambda: self.send_string(Escape.CROSSED)
+        )
+
+        self.menu_attr = self.menu_send.addMenu("Cursor")
+        self.add_action("Up", self.menu_attr, lambda: self.send_string(Escape.UP))
+        self.add_action("Down", self.menu_attr, lambda: self.send_string(Escape.DOWN))
+        self.add_action(
+            "Forward", self.menu_attr, lambda: self.send_string(Escape.FORWARD)
         )
         self.add_action(
             "Backward",
-            self.attrMenu,
+            self.menu_attr,
             lambda: self.send_string(Escape.BACK),
         )
 
+        # Plugin menu
+        self.menu_plugins = QMenu(self.menubar, title="Plugins")
+        self.menubar.addAction(self.menu_plugins.menuAction())
+        self.action_list_plugins = QAction(self, text="List plugins")
+        self.action_list_plugins.triggered.connect(
+            lambda: self.append_html(self.plugin_widget.plugins_to_str())
+        )
+        self.menu_plugins.addAction(self.action_list_plugins)
+
         # Help menu
-        self.menuHelp = QMenu(self.menubar, title="&Help")
-        self.menubar.addAction(self.menuHelp.menuAction())
-        self.actionAbout = QAction(self, text="About")
-        self.actionAbout.triggered.connect(
+        self.menu_help = QMenu(self.menubar, title="&Help")
+        self.menubar.addAction(self.menu_help.menuAction())
+        self.action_about = QAction(self, text="About")
+        self.action_about.triggered.connect(
             lambda: AboutDialog.about(App.NAME, about_html)
         )
-        self.menuHelp.addAction(self.actionAbout)
+        self.menu_help.addAction(self.action_about)
 
         # Scan for serialports
         self.update_ports()
@@ -1004,70 +1025,28 @@ class MainForm(QMainWindow):
         self.update_ui()
         self.init_port()
 
-    # def load_plugins(self) -> None:
-
-    #     # Find plugin files in directory
-    #     no_list = ["mpplugin.py", "mpframe.py"]
-    #     plugin_files = []
-    #     for file_name in os.listdir("plugins"):
-    #         if (
-    #             os.path.isfile(f"plugins/{file_name}")
-    #             and file_name.startswith("__") is not True
-    #             and file_name not in no_list
-    #         ):
-    #             plugin_files.append(os.path.splitext(file_name)[0])
-
-    #     # Load plugins
-    #     self.plugins = []
-    #     for file_name in plugin_files:
-    #         plugin: MpPlugin = importlib.import_module(
-    #             f"plugins.{file_name}"
-    #         ).MpTermPlugin()
-    #         self.plugins.append(plugin)
-
-    #     # Initiate plugins
-    #     for plugin in self.plugins:
-    #         plugin.set_serial_port(self.serial_port)
-    #         plugin_info = plugin.info()
-    #         logging.debug(plugin_info)
-
-    # def plugin_change(self) -> None:
-    #     plugin: MpPlugin = self.cbPlugins.currentData()
-    #     if plugin is None:
-    #         self.pwidget.clear_widgets()
-    #         return
-    #     plugin_info = plugin.info()
-
-    #     self.pwidget.clear_widgets()
-    #     for widget in plugin_info.widgets:
-    #         print(widget)
-    #         but = QPushButton(self.central_widget)
-    #         but.setText(widget.name)
-    #         if widget.action is not None:
-    #             but.pressed.connect(widget.action)
-    #         self.pwidget.add_widget(but)
-
     def edit_macro_dialog(self) -> None:
         self.macro_dialog.exec(self.prof.macros)
 
     def set_suspend_timeout(self) -> None:
         dlg = QInputDialog()
-        val, name = dlg.getInt(
+        val, ok = dlg.getInt(
             self, "Suspend timeout", "Timeout (s)", value=self.prof.suspend_timeout
         )
-        if name is True:
+
+        if ok is True:
             self.prof.suspend_timeout = val
 
     def set_ext_program(self) -> None:
         dlg = QInputDialog()
-        dlg.setInputMode(QInputDialog.TextInput)
-        dlg.setWindowTitle("External program")
-        dlg.setLabelText("Commandline:")
-        dlg.setTextValue(self.prof.ext_program)
-        dlg.resize(700, 200)
-        ok = dlg.exec_()
-        # if ok is True:
-        self.prof.ext_program = dlg.textValue()
+        val, ok = dlg.getText(
+            self,
+            "External program",
+            "Commandline:",
+            text=self.prof.ext_program,
+        )
+
+        self.prof.ext_program = val
 
     def keyPressEvent(self, e: QKeyEvent) -> None:
         super().keyPressEvent(e)
@@ -1091,7 +1070,7 @@ class MainForm(QMainWindow):
         if event.type() == QEvent.KeyPress:
             keyEvent = QKeyEvent(event)
             if keyEvent.key() in [Qt.Key_Enter, Qt.Key_Return]:
-                self.serial_port.send_string(self.cbNewlineMode.currentData())
+                self.serial_port.send_string(self.cb_line_mode.currentData())
                 return True
 
             if keyEvent.key() in key2key:
@@ -1193,14 +1172,14 @@ class MainForm(QMainWindow):
                 )
 
         # Update list of serialports in combobox
-        for name in range(self.cbPort.count()):
-            if self.cbPort.itemText(name) not in portNames:
-                self.cbPort.removeItem(name)
+        for name in range(self.cb_port.count()):
+            if self.cb_port.itemText(name) not in portNames:
+                self.cb_port.removeItem(name)
             else:
-                portNames.remove(self.cbPort.itemText(name))
+                portNames.remove(self.cb_port.itemText(name))
 
         for name in portNames:
-            self.cbPort.addItem(name)
+            self.cb_port.addItem(name)
 
     def timer_event(self) -> None:
         self.port_handler()
@@ -1208,23 +1187,23 @@ class MainForm(QMainWindow):
     def update_ui(self) -> None:
         if self.serial_port.state == State.DISCONNECTED:
             self.setWindowTitle("MpTerm")
-            self.pbOpen.setText("Open")
-            self.cbPort.setEnabled(True)
+            self.bp_open.setText("Open")
+            self.cb_port.setEnabled(True)
         else:
             self.setWindowTitle(
-                f"MpTerm  /dev/{self.cbPort.currentText()} {self.cbBitrate.currentText()}"
+                f"MpTerm  /dev/{self.cb_port.currentText()} {self.cb_bitrate.currentText()}"
             )
-            self.pbOpen.setText("Close")
-            self.cbPort.setEnabled(False)
+            self.bp_open.setText("Close")
+            self.cb_port.setEnabled(False)
 
-        self.rxLabel.setText(
+        self.label_rx.setText(
             f'<span style="color:Black">RX:</span> <span style="color:Purple">{self.serial_port.rxCnt:06d}</span> '
         )
-        self.txLabel.setText(
+        self.label_tx.setText(
             f'<span style="color:Black">TX:</span> <span style="color:Purple">{self.serial_port.txCnt:06d}</span> '
         )
-        self.dimensionsLabel.setText(
-            f'<span style="color:Black">{self.terminal.ts.max.column:3d}x{self.terminal.ts.max.row:2d}</span> '
+        self.label_dimensions.setText(
+            f'<span style="color:Black">{self.terminal.terminal_state.max.column:3d}x{self.terminal.terminal_state.max.row:2d}</span> '
         )
 
         states = {
@@ -1233,15 +1212,28 @@ class MainForm(QMainWindow):
             State.SUSPENDED: f"""<span style="color:Red">Suspended {self.serial_port.suspend_timer.remainingTime()/1000:.0f}</span>""",
             State.RECONNECTING: f"""<span style="color:Magenta">Reconnecting {self.serial_port.cntReconnect}</span>""",
         }
-        self.stateLabel.setText(f"{states[self.serial_port.state]}")
+        self.label_state.setText(f"{states[self.serial_port.state]}")
 
         if self.isPaused is True:
-            self.pbPause.setText("Paused")
+            self.bp_pause.setText("Paused")
         else:
-            self.pbPause.setText("Pause")
+            self.bp_pause.setText("Pause")
 
-        self.formater.set_columns(self.nrEdit.get_value())
-        self.formater.set_sync_string(self.syncEdit.get_value())
+        self.formater.set_columns(self.ed_line_length.get_value())
+        self.formater.set_sync_string(self.ed_synch_string.get_value())
+
+        if self.plugin_widget.current_plugin() is None:
+            self.cb_echo_mode.setEnabled(True)
+            self.cb_display_mode.setEnabled(True)
+            self.cb_line_mode.setEnabled(True)
+            self.ed_line_length.setEnabled(True)
+            self.ed_synch_string.setEnabled(True)
+        else:
+            self.cb_echo_mode.setEnabled(False)
+            self.cb_display_mode.setEnabled(False)
+            self.cb_line_mode.setEnabled(False)
+            self.ed_line_length.setEnabled(False)
+            self.ed_synch_string.setEnabled(False)
 
         # if self.serial_port.isDataTerminalReady():
         #     self.dtrLabel.setText("\u26AA  DTR")
@@ -1258,7 +1250,7 @@ class MainForm(QMainWindow):
     def update_ports(self) -> None:
         ports = QSerialPortInfo.availablePorts()
         for port in ports:
-            self.cbPort.addItem(port.portName())
+            self.cb_port.addItem(port.portName())
 
     def handle_dtr(self) -> None:
         # self.ui.cbDTR.clicked.connect(self.handle_dtr)
@@ -1278,26 +1270,6 @@ class MainForm(QMainWindow):
         else:
             self.cbRTS.setChecked(False)
             self.serial_port.setRequestToSend(False)
-
-    def sync_changed(self) -> None:
-        try:
-            self.sync = int(self.leSyncString.text(), 16)
-
-            if self.sync > 255 or self.sync < 0:
-                self.sync = -1
-                self.lSync.setText('<font color="Red">Sync string')
-            else:
-                self.lSync.setText('<font color="Black">Sync string')
-
-        except ValueError:
-            self.sync = -1
-            text = self.leSyncString.text()
-            #            print(len(text), 'Text: '+text)
-            if len(text) > 0:
-                self.lSync.setText('<font color="Red">Sync string')
-            else:
-                self.lSync.setText('<font color="Black">Sync string')
-        return
 
     def terminal_clear(self) -> None:
         self.terminal.clear()
@@ -1323,8 +1295,8 @@ class MainForm(QMainWindow):
 
     def mode_change(self) -> None:
         self.terminal.clear()
-        self.formater.set_mode(self.cbDisplay.currentData())
-        logging.debug(f"Setting display mode {self.cbDisplay.currentData()}")
+        self.formater.set_mode(self.cb_display_mode.currentData())
+        logging.debug(f"Setting display mode {self.cb_display_mode.currentData()}")
 
     def append_html(self, str) -> None:
         self.terminal.moveCursor(QTextCursor.End)
@@ -1344,22 +1316,21 @@ class MainForm(QMainWindow):
             self.update_ui()
             return
 
-        # plugin = self.cbPlugins.currentData()
         plugin = self.plugin_widget.current_plugin()
         if plugin is not None:
             self.terminal.append_html(plugin.data(data))
         else:
-            DisplayMode = self.cbDisplay.currentData()
+            DisplayMode = self.cb_display_mode.currentData()
             if DisplayMode == MpTerm.Ascii:  # Standard ascii display mode
                 self.terminal.append_terminal_text(data_str)
 
-            if DisplayMode != MpTerm.AsciiHex:  # Ascii + Hex display mode
+            if DisplayMode == MpTerm.AsciiHex:  # Ascii + Hex display mode
                 self.terminal.append_html(self.formater.format(data))
 
-            if DisplayMode != MpTerm.Hex:  # Hexadecimal display mode
+            if DisplayMode == MpTerm.Hex:  # Hexadecimal display mode
                 self.terminal.append_html(self.formater.format(data))
 
-        if self.cbMode.currentData() == Mode.Echo:
+        if self.cb_echo_mode.currentData() == Mode.Echo:
             self.serial_port.send(data)
 
         self.terminal.scroll_down()
@@ -1367,7 +1338,6 @@ class MainForm(QMainWindow):
 
     def send(self, data: bytearray) -> None:
         if self.serial_port.isOpen():
-            # res = self.serial_port.serial_port.write(data)
             res = self.serial_port.write(data)
             if res > 0:
                 self.serial_port.txCnt += res
@@ -1403,30 +1373,30 @@ class MainForm(QMainWindow):
         self.set_sp()
 
     def set_port(self) -> None:
-        self.serial_port.setPortName(f"/dev/{self.cbPort.currentText()}")
+        self.serial_port.setPortName(f"/dev/{self.cb_port.currentText()}")
 
     def set_sp(self) -> None:
-        br = self.cbBitrate.currentData()
-        self.serial_port.setBaudRate(self.cbBitrate.currentData())
-        self.serial_port.setStopBits(self.cbStopBits.currentData())
-        self.serial_port.setDataBits(self.cbBits.currentData())
-        self.serial_port.setParity(self.cbParity.currentData())
-        self.serial_port.setFlowControl(self.cbFlowControl.currentData())
-        logging.debug(self.cbBitrate.currentData())
+        br = self.cb_bitrate.currentData()
+        self.serial_port.setBaudRate(self.cb_bitrate.currentData())
+        self.serial_port.setStopBits(self.cb_stop_bits.currentData())
+        self.serial_port.setDataBits(self.cb_bits.currentData())
+        self.serial_port.setParity(self.cb_parity.currentData())
+        self.serial_port.setFlowControl(self.cb_flow_control.currentData())
+        logging.debug(self.cb_bitrate.currentData())
 
     def save_settings(self) -> None:
-        self.prof.port = self.cbPort.currentText()
-        self.prof.bitrate = self.cbBitrate.currentText()
-        self.prof.databits = self.cbBits.currentText()
-        self.prof.stopbits = self.cbStopBits.currentText()
-        self.prof.parity = self.cbParity.currentText()
-        self.prof.flowcontrol = self.cbFlowControl.currentText()
-        self.prof.mode = self.cbDisplay.currentData().name
-        self.prof.newline = self.cbNewlineMode.currentText()
+        self.prof.port = self.cb_port.currentText()
+        self.prof.bitrate = self.cb_bitrate.currentText()
+        self.prof.databits = self.cb_bits.currentText()
+        self.prof.stopbits = self.cb_stop_bits.currentText()
+        self.prof.parity = self.cb_parity.currentText()
+        self.prof.flowcontrol = self.cb_flow_control.currentText()
+        self.prof.mode = self.cb_display_mode.currentData().name
+        self.prof.newline = self.cb_line_mode.currentText()
         self.prof.win_x = self.width()
         self.prof.win_y = self.height()
-        self.prof.sync_string = self.syncEdit.text()
-        self.prof.columns = self.nrEdit.get_value()
+        self.prof.sync_string = self.ed_synch_string.text()
+        self.prof.columns = self.ed_line_length.get_value()
         self.prof.write()
 
     def load_cb_setting(self, cb, setting) -> None:
@@ -1435,17 +1405,17 @@ class MainForm(QMainWindow):
             cb.setCurrentIndex(idx)
 
     def load_settings(self) -> None:
-        self.load_cb_setting(self.cbBitrate, self.prof.bitrate)
-        self.load_cb_setting(self.cbBitrate, self.prof.bitrate)
-        self.load_cb_setting(self.cbPort, self.prof.port)
-        self.load_cb_setting(self.cbStopBits, self.prof.stopbits)
-        self.load_cb_setting(self.cbBits, self.prof.databits)
-        self.load_cb_setting(self.cbParity, self.prof.parity)
-        self.load_cb_setting(self.cbFlowControl, self.prof.flowcontrol)
-        self.load_cb_setting(self.cbNewlineMode, self.prof.newline)
+        self.load_cb_setting(self.cb_bitrate, self.prof.bitrate)
+        self.load_cb_setting(self.cb_bitrate, self.prof.bitrate)
+        self.load_cb_setting(self.cb_port, self.prof.port)
+        self.load_cb_setting(self.cb_stop_bits, self.prof.stopbits)
+        self.load_cb_setting(self.cb_bits, self.prof.databits)
+        self.load_cb_setting(self.cb_parity, self.prof.parity)
+        self.load_cb_setting(self.cb_flow_control, self.prof.flowcontrol)
+        self.load_cb_setting(self.cb_line_mode, self.prof.newline)
 
-        idx = self.cbDisplay.findData(MpTerm(self.prof.mode))
-        self.cbDisplay.setCurrentIndex(idx)
+        idx = self.cb_display_mode.findData(MpTerm(self.prof.mode))
+        self.cb_display_mode.setCurrentIndex(idx)
 
     def exit_program(self, e) -> None:
         self.serial_port.close()

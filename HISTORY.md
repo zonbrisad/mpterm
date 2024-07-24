@@ -1,6 +1,7 @@
 # Version 0.5x
 - Added experimental plugin support
 - Removed debug printout
+- Fixed dialog parent settings
 
 # Version 0.50
 - Added support for cursor next line (CSI n E)

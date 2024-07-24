@@ -31,10 +31,9 @@
 
 from __future__ import annotations
 from copy import copy
-from curses import is_term_resized
+from enum import Enum
 from dataclasses import dataclass
 import logging
-from enum import Enum
 
 
 class Ascii:
@@ -105,9 +104,6 @@ def ascii_table() -> str:
             ch = f"'{chr(i)}'"
             char = f"{i:02x} {ch:3}   "
         chars.append(char)
-
-    # for i, ch in enumerate(chars):
-    #     print(f"idx: {i:3}  {ch}")
 
     rows = []
     for i in range(32):
@@ -603,11 +599,11 @@ class EscapeTokenizer:
         self.seq = ""
         self.lbuf = []
 
-    def append_string(self, s: str) -> None:
-        self.lbuf.extend(list(s))
+    def append_string(self, data: str) -> None:
+        self.lbuf.extend(list(data))
 
-    def append_bytearray(self, ba: bytearray) -> None:
-        utf = ba.decode("utf-8")
+    def append_bytearray(self, data: bytearray) -> None:
+        utf = data.decode("utf-8")
         self.lbuf.extend(list(utf))
 
     def is_csi(self) -> bool:
@@ -656,8 +652,6 @@ class EscapeTokenizer:
 
         if seq_len == 3 and self.seq[1] == "(":
             return True
-
-        # return False
 
         if self.is_csi() is True:
             return True
@@ -1067,6 +1061,32 @@ class TerminalAttributeState:
         # self.BG_COLOR = TColor.BLACK
         self.CURSOR = False
 
+    def __str__(self) -> str:
+        state: int = 0
+        if self.BOLD is True:
+            state += 1
+        if self.DIM is True:
+            state += 2
+        if self.ITALIC is True:
+            state += 4
+        if self.CROSSED is True:
+            state += 8
+        if self.UNDERLINE is True:
+            state += 16
+        if self.SUPERSCRIPT is True:
+            state += 32
+        if self.SUBSCRIPT is True:
+            state += 64
+        if self.REVERSE is True:
+            state += 128
+        if self.OVERLINE is True:
+            state += 256
+        if self.CURSOR is True:
+            state += 512
+        # if self.FG_COLOR is True:
+        # if self.BG_COLOR is True:
+        return f"{state:010b}"
+
 
 class TerminalCharacter:
     def __init__(self, ch: str, tas: TerminalAttributeState):
@@ -1075,27 +1095,30 @@ class TerminalCharacter:
         self.ch = ch
         self.cursor: bool = False
 
+    def __str__(self) -> str:
+        return f"{self.tas} {self.ch}"
+
 
 class TerminalLine:
     def __init__(
         self, tas: TerminalAttributeState, id: int = 0, columns: int = 80
     ) -> None:
-        self.line = []
+        self.line: list[TerminalCharacter] = []
         # for i in range(0, columns):
         #     self.line.append(TerminalCharacter(" ", tas))
         self.id = id
         self.text = ""
-        self.changed = False
+        self.changed: bool = False
         self.cursor = None
 
     def __str__(self) -> str:
-        text = ""
+        tchars = []
         for tc in self.line:
-            text += tc.ch
+            tchars.append(str(tc))
 
-        return text
+        return " ".join(tchars)
 
-    def clear(self, tas):
+    def clear(self, tas: TerminalAttributeState):
         for ch in self.line:
             ch.tas = tas
             ch.ch = " "
@@ -1115,7 +1138,7 @@ class TerminalLine:
         return tas.REVERSE
 
     def attr_html(self, data: str, tas: TerminalAttributeState) -> str:
-        # if tas.REVERSE:
+
         if self.is_reversed(tas):
             bg_color = tas.FG_COLOR
             fg_color = tas.BG_COLOR
@@ -1138,7 +1161,7 @@ class TerminalLine:
             b += "text-decoration:overline;"
 
         b += '">'
-        b += data.replace(" ", "&nbsp;").replace("<", "&lt;").replace("<", "&gt;")
+        b += data.replace(" ", "&nbsp;").replace("<", "&lt;").replace(">", "&gt;")
         b += "</span>"
         return b
 
@@ -1150,7 +1173,6 @@ class TerminalLine:
                 tas = tc.tas
 
             if self.cursor is not None:
-                # print("XXXX")
                 if idx == (self.cursor.column - 1):
                     tas.CURSOR = True
                 else:

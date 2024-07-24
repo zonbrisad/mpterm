@@ -16,6 +16,7 @@
 import os
 import importlib
 import logging
+from mpplugin import MpPlugin
 
 from PyQt5.QtWidgets import (
     QVBoxLayout,
@@ -24,15 +25,14 @@ from PyQt5.QtWidgets import (
     QComboBox,
     QWidget,
 )
-from mpplugin import MpPlugin
 
 
 class MpPluginFrame(QWidget):
-    def __init__(self, serial_port):
-        super().__init__()
+    def __init__(self, parent, serial_port):
+        super().__init__(parent=parent)
         self.serial_port = serial_port
 
-        self.layout = QVBoxLayout()
+        self.layout = QVBoxLayout(parent)
         self.layout.setContentsMargins(2, 2, 2, 2)
         self.layout.setSpacing(2)
         # self.setMaxLength(4)
@@ -46,7 +46,7 @@ class MpPluginFrame(QWidget):
 
         self.load_plugins()
         for plugin in self.plugins:
-            pgi = plugin.info()
+            pgi = plugin.info
             self.cbPlugins.addItem(pgi.name, plugin)
         self.cbPlugins.currentIndexChanged.connect(self.plugin_change)
 
@@ -67,13 +67,14 @@ class MpPluginFrame(QWidget):
         if plugin is None:
             self.clear_widgets()
             return
-        plugin_info = plugin.info()
+        plugin_info = plugin.info
 
         self.clear_widgets()
         for widget in plugin_info.widgets:
             print(widget)
-            but = QPushButton()
+            but = QPushButton(parent=self.parent())
             but.setText(widget.name)
+            but.setToolTip(widget.description)
             if widget.action is not None:
                 but.pressed.connect(widget.action)
             self.add_widget(but)
@@ -92,7 +93,7 @@ class MpPluginFrame(QWidget):
                 plugin_files.append(os.path.splitext(file_name)[0])
 
         # Load plugins
-        self.plugins = []
+        self.plugins: list[MpPlugin] = []
         for file_name in plugin_files:
             plugin: MpPlugin = importlib.import_module(
                 f"plugins.{file_name}"
@@ -102,11 +103,20 @@ class MpPluginFrame(QWidget):
         # Initiate plugins
         for plugin in self.plugins:
             plugin.set_serial_port(self.serial_port)
-            plugin_info = plugin.info()
+            plugin_info = plugin.info
             logging.debug(plugin_info)
 
     def current_plugin(self) -> MpPlugin:
         return self.cbPlugins.currentData()
+
+    def plugins_to_str(self) -> str:
+        pgs = ["<pre><br><br>"]
+        for plugin in self.plugins:
+            pgi = plugin.info
+            pgs.append(f"{pgi.name:14} {pgi.date:12} {pgi.description}<br>")
+
+        pgs.append("</pre>")
+        return "".join(pgs)
 
 
 def main() -> None:
