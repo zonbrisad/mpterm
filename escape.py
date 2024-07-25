@@ -1166,7 +1166,8 @@ class TerminalLine:
         return b
 
     def line_to_html(self) -> str:
-        html = ""
+        html = []
+        html.append('<div style="line-height:30px;">')
         text = ""
         for idx, tc in enumerate(self.line):
             if idx == 0:
@@ -1184,14 +1185,44 @@ class TerminalLine:
             if tas == tc.tas:
                 text += tc.ch
             else:
-                html += self.attr_html(text, tas)
+                html.append(self.attr_html(text, tas))
                 text = tc.ch
                 tas = tc.tas
 
         if len(text) > 0:
-            html += self.attr_html(text, tas)
+            html.append(self.attr_html(text, tas))
 
-        return html
+        html.append("</div>")
+        print(" ".join(html))
+        return " ".join(html)
+
+    # def line_to_html(self) -> str:
+    #     html = ""
+    #     text = ""
+    #     for idx, tc in enumerate(self.line):
+    #         if idx == 0:
+    #             tas = tc.tas
+
+    #         if self.cursor is not None:
+    #             if idx == (self.cursor.column - 1):
+    #                 tas.CURSOR = True
+    #             else:
+    #                 tas.CURSOR = False
+
+    #         else:
+    #             tas.CURSOR = False
+
+    #         if tas == tc.tas:
+    #             text += tc.ch
+    #         else:
+    #             html += self.attr_html(text, tas)
+    #             text = tc.ch
+    #             tas = tc.tas
+
+    #     if len(text) > 0:
+    #         html += self.attr_html(text, tas)
+
+    #     return html
 
     def append(self, text: str, tas: TerminalAttributeState, pos: int) -> int:
         i = pos - 1

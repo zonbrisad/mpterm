@@ -16,14 +16,17 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, Callable
 from serialport import SerialPort
+from qterminalwidget import QTerminalWidget
 
 
 class MpPluginWidgetType(Enum):
     NoWidget = 0
     Label = 1
     Button = 2
+    ComboBox = 3
+    CheckBox = 4
 
 
 @dataclass
@@ -31,7 +34,8 @@ class MpPluginWidget:
     type: MpPluginWidgetType = MpPluginWidgetType.NoWidget
     name: str = ""
     description: str = ""
-    action: Any = None
+    action: Callable = None
+    combo_data: Any = None
 
 
 @dataclass
@@ -52,15 +56,22 @@ class MpPlugin:
     def __init__(self) -> None:
         self.info: MpPluginInfo = None
         self.serial_port: SerialPort = None
+        self.terminal: QTerminalWidget = None
 
-    # def info(self) -> MpPluginInfo:
-    #     return self.info
+    def _set_serial_port(self, serial_port: SerialPort) -> None:
+        self.serial_port = serial_port
+
+    def _set_terminal_widget(self, terminal: QTerminalWidget) -> None:
+        self.terminal = terminal
 
     def send(self, data: bytearray) -> None:
         self.serial_port.send(data)
 
-    def set_serial_port(self, serial_port: SerialPort) -> None:
-        self.serial_port = serial_port
+    def append_html_text(self, html: str) -> None:
+        self.terminal.append_html_text(html)
+
+    def append_ansi_text(self, ansi: str) -> None:
+        self.terminal.append_ansi_text(ansi)
 
 
 def main() -> None:

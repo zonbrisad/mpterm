@@ -17,6 +17,7 @@
 
 import logging
 import sys
+from typing import Callable
 
 from escape import (
     Escape,
@@ -27,7 +28,15 @@ from escape import (
     escape_attribute_test,
 )
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QTextCursor, QFont, QKeyEvent, QKeyEvent, QCloseEvent
+from PyQt5.QtGui import (
+    QTextCursor,
+    QFont,
+    QKeyEvent,
+    QKeyEvent,
+    QCloseEvent,
+    QFontDatabase,
+    QTextBlockFormat,
+)
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -116,57 +125,88 @@ class QTerminalWidget(QPlainTextEdit):
         self.setReadOnly(True)
         self.clear()
 
-        font = QFont()
-        font.setFamily("Monospace")
-        font.setPointSize(10)
-        self.setFont(font)
+        # font = QFont()
+        # font.setFamily("Monospace")
+        # font.setPointSize(10)
+        # self.setFont(font)
+
         # self.maximumBlockCount = 100
         # self.setMaximumBlockCount(10)
 
+        #
+        # https://stackoverflow.com/questions/10250533/set-line-spacing-in-qtextedit
+        #
+        # bf = self.cur.blockFormat()
+        # bf.setLineHeight(10, QTextBlockFormat.LineHeightTypes.SingleHeight)
+        # bf.setLineHeight(30, QTextBlockFormat.LineHeightTypes.FixedHeight)
+        # bf.setLineHeight(50, QTextBlockFormat.LineHeightTypes.LineDistanceHeight)
+        # self.cur.setBlockFormat(bf)
+
         # self.setFocusPolicy(Qt.NoFocus)
-        self.setStyleSheet(
+        # https://developer.mozilla.org/en-US/docs/Web/CSS/line-height
+
+        # self.setStyleSheet(  # No overlapping lines, but line distance to large
+        #     """
+        #     color : White;
+        #     background-color: rgb(0, 0, 0);
+        #     font-family:Monospace;
+        #     font-size:12pt;
+        #     line-height:1.2;
+        #     """
+        # )
+        # self.setStyleSheet(  #
+        #     """
+        #     color : White;
+        #     background-color: rgb(0, 0, 0);
+        #     font-family:Monospace;
+        #     font-size:10px;
+        #     font-style:normal;
+        #     """
+        # )
+
+        self.setStyleSheet(  # Good line distance, but with line overlapping
             """
-            color : White;
-            background-color: rgb(0, 0, 0);
-            font-family:Monospace;
-            font-size:10pt;
-            line-height:1.5;
-            """
+        color : White;
+        background-color: rgb(0, 0, 0);
+        font-family:Monospace;
+        font-size:10pt;
+        line-height:1.2;
+        """
         )
-        # self.setStyleSheet("background-color: rgb(0, 0, 0); color : White; line-height:20pt; font-family:Monospace")
+        # self.setStyleSheet(  # Test of font other than "Monospace"
+        #     """
+        #     color : White;
+        #     background-color: rgb(0, 0, 0);
+        #     font-family:UbuntuMono;
+        #     font-size:12pt;
+        #     line-height:normal;
+        #     """
+        # )
 
         # self.overwrite = False
         # self.idx = 0
         # self.cr = False
-        self.maxLines = 100
+        self.max_lines = 100
         self.last_id = 0
 
-    def setMaxLines(self, maxLines) -> None:
-        self.maxLines = maxLines
+    def setMaxLines(self, max_lines) -> None:
+        self.max_lines = max_lines
 
     def clear(self) -> None:
         super().clear()
         self.terminal_state.reset()
         self.moveCursor(QTextCursor.End)
 
-    # def update(self, s: str) -> str:
-    #     self.ts.update(s)
-    #     self.buf += b
-    #     logging.debug(b)
-
     def printpos(self, newPos: QTextCursor.MoveOperation) -> None:
         pos = self.cur.position()
         bpos = self.cur.positionInBlock()
         logging.debug(f"Cursor moved: abs:{pos}  block:{bpos}  newpos: {newPos}")
 
-    def insert(self, html) -> None:
+    def insert(self, html: str) -> None:
         self.cur.insertHtml(html)
 
     def move(self, direction: QTextCursor, anchor: QTextCursor, steps: int = 1) -> None:
         self.cur.movePosition(direction, anchor, n=steps)
-        # print(
-        #     f"Cursor back: direction: {direction:2}  lines: {self.document().lineCount():3}  col: {self.cur.columnNumber():2}  steps: {steps:3}"
-        # )
 
     def remove_rows_alt(self, lines) -> None:
         logging.debug(f"Removing {lines} lines")
@@ -182,24 +222,24 @@ class QTerminalWidget(QPlainTextEdit):
 
     def limit_lines(self) -> None:
         lines = self.document().lineCount()
-        logging.debug(f"Lines: {lines}  Maxlines: {self.maxLines}")
-        if lines > self.maxLines:
-            self.remove_rows_alt(lines - self.maxLines)
-
-    def append_html(self, html) -> None:
-        self.move(QTextCursor.End, QTextCursor.MoveAnchor)
-        self.insert(html)
-        self.limit_lines()
+        logging.debug(f"Lines: {lines}  Maxlines: {self.max_lines}")
+        if lines > self.max_lines:
+            self.remove_rows_alt(lines - self.max_lines)
 
     def insert_html(self, html: str) -> None:
         self.cur.insertHtml(html)
         self.cur.movePosition(QTextCursor.Right, len(html))
 
-    def append_terminal_text(self, data: str) -> None:
+    def append_html_text(self, html: str) -> None:
+        self.move(QTextCursor.End, QTextCursor.MoveAnchor)
+        self.insert(html)
+        self.limit_lines()
+
+    def append_ansi_text(self, data: str) -> None:
         lines = self.terminal_state.update(data)
 
         for line in lines:
-            print(f"X {line}")
+            # print(f"X {line}")
             if type(line) is TerminalLine:
                 if line.id > self.last_id:  # a new line detected
                     self.last_id = line.id
@@ -235,12 +275,12 @@ class MainForm(QMainWindow):
     def exitProgram(self, e) -> None:
         self.close()
 
-    def add_button(self, label, text) -> None:
+    def add_button(self, label: str, text: str) -> None:
         pb = QPushButton(label, self.centralwidget)
-        pb.pressed.connect(lambda: self.terminal.append_terminal_text(text))
+        pb.pressed.connect(lambda: self.terminal.append_ansi_text(text))
         self.button_layout.addWidget(pb)
 
-    def add_func_button(self, label, func) -> None:
+    def add_func_button(self, label: str, func: Callable) -> None:
         pb = QPushButton(label, self.centralwidget)
         pb.pressed.connect(func)
         self.button_layout.addWidget(pb)
@@ -292,6 +332,20 @@ class MainForm(QMainWindow):
         self.actionExit.setToolTip("Quit")
         self.actionExit.setShortcutContext(Qt.WidgetShortcut)
         self.menuFile.addAction(self.actionExit)
+
+        # self.terminal.append_terminal_text(escape_attribute_test)
+        # print(escape_attribute_test)
+
+        self.terminal.append_html_text(
+            """<div style="font-size:20px;line-height:40px;color:green;">
+                Line 1 <br>
+                Line 2 <br>
+              </div>"""
+        )
+
+        # list fonts
+        # fonts = QFontDatabase()
+        # print(fonts.families())
 
 
 def main() -> None:

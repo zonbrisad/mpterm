@@ -1,18 +1,18 @@
 {
     "alias": "default",
-    "port": "ttyUSB3",
-    "bitrate": "115200",
+    "port": "ttyUSB0",
+    "bitrate": "9600",
     "databits": "8",
     "parity": "None",
     "stopbits": "1",
     "flowcontrol": "None",
-    "mode": "Ascii",
+    "mode": "Hex",
     "suspend_timeout": 8,
     "ext_program": "ls",
     "newline": "LF",
     "win_x": 1403,
-    "win_y": 820,
-    "sync_string": "",
+    "win_y": 803,
+    "sync_string": "0x2",
     "columns": 16,
     "macros": [
         {
