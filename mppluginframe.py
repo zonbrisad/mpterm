@@ -16,16 +16,16 @@
 import os
 import importlib
 import logging
+
 from mpplugin import MpPlugin, MpPluginWidget, MpPluginWidgetType
 
 from PyQt5.QtWidgets import (
     QVBoxLayout,
     QLabel,
-    QPushButton,
     QComboBox,
     QWidget,
-    QCheckBox,
 )
+from qedit import QHexEdit, QNumberEdit
 
 
 class MpPluginFrame(QWidget):
@@ -42,17 +42,17 @@ class MpPluginFrame(QWidget):
         self.setLayout(self.layout)
 
         self.layout.addWidget(QLabel("Plugin"))
-        self.cbPlugins = QComboBox()
-        self.cbPlugins.addItem("None", None)
-        self.layout.addWidget(self.cbPlugins)
+        self.cb_plugins = QComboBox()
+        self.cb_plugins.addItem("None", None)
+        self.layout.addWidget(self.cb_plugins)
         self.layout.addSpacing(10)
 
         self.load_plugins()
         for plugin in self.plugins:
-            pgi = plugin.info
-            self.cbPlugins.addItem(pgi.name, plugin)
-        self.cbPlugins.currentIndexChanged.connect(self.plugin_change)
+            self.cb_plugins.addItem(plugin.name, plugin)
 
+        self.cb_plugins.currentIndexChanged.connect(self.plugin_change)
+        self.cur_plugin: MpPlugin = None
         self.widgets = []
 
     def add_widget(self, widget) -> MpPluginWidget:
@@ -67,45 +67,21 @@ class MpPluginFrame(QWidget):
         self.widgets = []
 
     def plugin_change(self):
-        plugin: MpPlugin = self.cbPlugins.currentData()
-        if plugin is None:
-            self.clear_widgets()
-            return
+        plugin: MpPlugin = self.cb_plugins.currentData()
+        logging.debug(f"Plugin change: {plugin}")
 
-        plugin_info = plugin.info
+        if plugin is not None:
+            for widget in plugin.list_qt_widgets():
+                widget.setParent(self.layout.parent())
+                self.layout.addWidget(widget)
+                widget.setVisible(True)
 
-        self.clear_widgets()
-        for widget in plugin_info.widgets:
-            logging.debug(widget)
+        if self.cur_plugin is not None:
+            for widget in self.cur_plugin.list_qt_widgets():
+                # widget.setParent(None)
+                widget.setVisible(False)
 
-            if widget.type == MpPluginWidgetType.Label:
-                mpw = QLabel(parent=self.parent())
-                mpw.setText(widget.name)
-
-            if widget.type == MpPluginWidgetType.Button:
-                mpw = QPushButton(parent=self.parent())
-                mpw.setText(widget.name)
-                if widget.action is not None:
-                    mpw.pressed.connect(widget.action)
-
-            if widget.type == MpPluginWidgetType.ComboBox:
-                mpw = QComboBox(parent=self.parent())
-                if widget.action is not None:
-                    mpw.activated.connect(widget.action)
-
-                for key, value in widget.combo_data.items():
-                    print(f"{key} -> {value}")
-                    mpw.addItem(key, value)
-
-            if widget.type == MpPluginWidgetType.CheckBox:
-                mpw = QCheckBox(parent=self.parent())
-                mpw.setText(widget.name)
-
-                if widget.action is not None:
-                    mpw.pressed.connect(widget.action)
-
-            mpw.setToolTip(widget.description)
-            self.add_widget(mpw)
+        self.cur_plugin = plugin
 
     def load_plugins(self) -> None:
 
@@ -132,17 +108,26 @@ class MpPluginFrame(QWidget):
         for plugin in self.plugins:
             plugin._set_serial_port(self.serial_port)
             plugin._set_terminal_widget(self.terminal)
-            plugin_info = plugin.info
-            logging.debug(plugin_info)
+            logging.debug(str(plugin))
 
     def current_plugin(self) -> MpPlugin:
-        return self.cbPlugins.currentData()
+        return self.cb_plugins.currentData()
+
+    def current_plugin_name(self) -> str:
+        return self.cb_plugins.currentText()
+
+    def set_plugin(self, plugin_name: str) -> None:
+        idx = self.cb_plugins.findText(plugin_name)
+        if idx >= 0:
+            self.cb_plugins.setCurrentIndex(idx)
+            return
+
+        self.cb_plugins.setCurrentIndex(0)
 
     def plugins_to_str(self) -> str:
         pgs = ["<pre><br><br>"]
         for plugin in self.plugins:
-            pgi = plugin.info
-            pgs.append(f"{pgi.name:14} {pgi.date:12} {pgi.description}<br>")
+            pgs.append(f"{str(plugin)}<br>")
 
         pgs.append("<br></pre>")
         return "".join(pgs)

@@ -18,27 +18,89 @@
 # Imports --------------------------------------------------------------------
 
 from enum import Enum
-from mpplugin import MpPluginInfo, MpPlugin, MpPluginWidget, MpPluginWidgetType
+from tkinter import NO
+from mpplugin import MpPlugin, MpPluginWidget, MpPluginWidgetType
 from mpframe import MpFrame
 
 # Variables ------------------------------------------------------------------
+plugin_name = "FY3200S"
+plugin_description = "FeelTech FY3200S Dual channel function generator"
+plugin_date = "2024-07-25"
+plugin_author = "Peter Malmberg <peter.malmberg@gmail.com>"
 
-plugin_info = MpPluginInfo(
-    name="FY3200S",
-    description="FeelTech FY3200S Dual channel function generator",
-    date="2024-07-25",
-    author="Peter Malmberg <peter.malmberg@gmail.com>",
-)
+# plugin_info = MpPluginInfo(
+#     name="FY3200S",
+#     description="FeelTech FY3200S Dual channel function generator",
+#     date="2024-07-25",
+#     author="Peter Malmberg <peter.malmberg@gmail.com>",
+# )
+
 
 # Code -----------------------------------------------------------------------
+
+
+class Fy3200Cmd(Enum):
+    SetMainWaveform = "bw"
+    SetMainFreq = "bf"
+
+
+class Fy3200Waveform(Enum):
+    Sine = 0
+    Square = 1
+    Pulse = 2
+    Triangle = 3
+    Sawtooth = 4
+    NSawtooth = 5
+    DC = 6
+    PRE1 = 7
+    PRE2 = 8
+    PRE3 = 9
+    PRE4 = 10
+    PRE5 = 11
+    PRE6 = 12
+    PRE7 = 13
+    PRE8 = 14
+    PRE9 = 15
+    PRE10 = 16
+    ARB1 = 17
+    ARB2 = 18
+    ARB3 = 19
+    ARB4 = 20
+
+
+class Fy3200:
+
+    # def __init__(self) -> None:
+    #     self.clear()
+
+    # def clear(self) -> None:
+    #     self.msg = []
+
+    @staticmethod
+    def msg_set_waveform(waveform: Fy3200Waveform) -> str:
+        return f"bw{waveform.value}\n"
+
+    @staticmethod
+    def _msg(cmd: Fy3200Cmd, data: str) -> str:
+        return f"{cmd.value}{data}\n"
+
+    @staticmethod
+    def msg_set_freq(freq: float) -> str:
+        return Fy3200._msg(Fy3200Cmd.SetMainFreq, f"{freq*100:09.0f}")
 
 
 class MpTermPlugin(MpPlugin):
     def __init__(self) -> None:
         super().__init__()
-        self.info = plugin_info
+        self.name = plugin_name
+        self.description = plugin_description
+        self.date = plugin_date
+        self.author = plugin_author
 
-        self.info.add_widget(
+        self.waveform = Fy3200Waveform.Sine
+        self.frequency = 1000
+
+        self.add_widget(
             MpPluginWidget(
                 MpPluginWidgetType.Button,
                 "Set waveform",
@@ -46,13 +108,33 @@ class MpTermPlugin(MpPlugin):
                 action=self.cmd_set_waveform,
             )
         )
-        self.info.add_widget(
+
+        self.add_widget(
             MpPluginWidget(
                 MpPluginWidgetType.ComboBox,
                 "",
                 "Selected waveform",
-                combo_data={"A": "AA", "B": "BB"},
+                combo_data={wf.name: wf for wf in Fy3200Waveform},
                 action=self.change_waveform,
+            )
+        )
+
+        self.add_widget(
+            MpPluginWidget(
+                MpPluginWidgetType.Button,
+                "Set Frequency",
+                "Set Frequency",
+                action=self.cmd_set_freq,
+            )
+        )
+
+        self.add_widget(
+            MpPluginWidget(
+                MpPluginWidgetType.LineEdit,
+                "",
+                "Select frequency",
+                value=self.frequency,
+                action=self.change_frequency,
             )
         )
 
@@ -67,12 +149,19 @@ class MpTermPlugin(MpPlugin):
         return ""
 
     def cmd_set_waveform(self) -> None:
-        # data = self.frame.command(AtorchCommandType.Reset_All)
-        # self.send(self.frame.command(AtorchCommandType.Reset_All))
-        ...
+        self.send_string(Fy3200.msg_set_waveform(self.waveform))
 
-    def change_waveform(self) -> None:
-        print("Changing waveform")
+    def cmd_set_freq(self) -> None:
+        self.send_string(Fy3200.msg_set_freq(self.frequency))
+
+    def change_waveform(self, waveform: Fy3200Waveform) -> None:
+        self.waveform = waveform
+
+    def change_frequency(self, freq) -> None:
+        if freq is None:
+            return
+
+        self.frequency = freq
 
 
 def main() -> None:

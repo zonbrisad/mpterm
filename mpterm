@@ -78,7 +78,7 @@ from escape import (
 from qterminalwidget import QTerminalWidget, get_key
 from serialport import SerialPort, State
 from aboutdialog import AboutDialog
-
+from qedit import QHexEdit, QNumberEdit
 from mppluginframe import MpPluginFrame
 
 # Settings ------------------------------------------------------------------
@@ -181,7 +181,7 @@ class Macro:
     intervallEdit: int = 1000
 
     @staticmethod
-    def is_hex_string(data: str) -> Boolean:
+    def is_hex_string(data: str) -> bool:
         try:
             Macro.hexstring_to_list(data)
         except ValueError:
@@ -235,6 +235,7 @@ class mpProfile:
     sync_string: str = ""
     columns: int = 10
     macros: list[Macro] = field(default_factory=list)
+    plugin: str = ""
     key_list = [
         "alias",
         "port",
@@ -251,6 +252,7 @@ class mpProfile:
         "win_y",
         "sync_string",
         "columns",
+        "plugin",
     ]
     filename: str = ""
 
@@ -426,53 +428,6 @@ QToolTip{
     border: 0px solid black;
 }
 """
-
-
-class QNumberEdit(QLineEdit):
-    def __init__(self, parent=None):
-        super().__init__()
-        self.textChanged.connect(self.changed)
-        # self.setMaximumWidth(80)
-        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-
-    def changed(self, a0: str) -> None:
-        if self.text().strip().isnumeric():
-            self.setStyleSheet(StyleS.normal)
-        else:
-            self.setStyleSheet(StyleS.error)
-
-    def set_value(self, val: int) -> None:
-        self.setText(str(val))
-
-    def get_value(self) -> int:
-        if self.text().strip().isnumeric():
-            return int(self.text().strip())
-
-        return 0
-
-
-class QHexEdit(QLineEdit):
-    def __init__(self, parent=None):
-        super().__init__()
-        self.textChanged.connect(self.changed)
-        # self.setMaximumWidth(80)
-        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-
-    def changed(self, a0: str) -> None:
-        if Macro.is_hex_string(self.text()) is True:
-            self.setStyleSheet(StyleS.normal)
-        else:
-            self.setStyleSheet(StyleS.error)
-
-    def get_value(self) -> list[int]:
-        lst = []
-
-        try:
-            lst = Macro.hexstring_to_list(self.text().strip())
-        except ValueError:
-            return []
-
-        return lst
 
 
 class QMacroButton(QWidget):
@@ -743,6 +698,9 @@ class MainForm(QMainWindow):
         self.plugin_widget = MpPluginFrame(
             self.central_widget, self.serial_port, self.terminal
         )
+        # self.plugin_widget = MpPluginFrame(
+        #     self.central_widget, self.serial_port, self.terminal
+        # )
         self.button_layout.addWidget(self.plugin_widget)
         self.button_layout.addStretch()
 
@@ -767,9 +725,6 @@ class MainForm(QMainWindow):
         self.bp_suspend = QPushButton("Suspend", self.central_widget)
         self.bp_suspend.pressed.connect(self.terminal_suspend)
         self.button_layout.addWidget(self.bp_suspend)
-
-        # self.leSyncString = QLineEdit(self.central_widget)
-        # self.button_layout.addWidget(self.leSyncString)
 
         # self.cbProfiles = QComboBox(self.central_widget)
         # self.cbProfiles.setObjectName("cbProfiles")
@@ -1210,10 +1165,10 @@ class MainForm(QMainWindow):
             self.cb_port.setEnabled(False)
 
         self.label_rx.setText(
-            f'<span style="color:Black">RX:</span> <span style="color:Purple">{self.serial_port.rxCnt:06d}</span> '
+            f'<span style="color:Black">RX:</span> <span style="color:Purple">{self.serial_port.cnt_rx:06d}</span> '
         )
         self.label_tx.setText(
-            f'<span style="color:Black">TX:</span> <span style="color:Purple">{self.serial_port.txCnt:06d}</span> '
+            f'<span style="color:Black">TX:</span> <span style="color:Purple">{self.serial_port.cnt_tx:06d}</span> '
         )
         self.label_dimensions.setText(
             f'<span style="color:Black">{self.terminal.terminal_state.max.column:3d}x{self.terminal.terminal_state.max.row:2d}</span> '
@@ -1409,6 +1364,7 @@ class MainForm(QMainWindow):
         self.prof.win_y = self.height()
         self.prof.sync_string = self.ed_synch_string.text()
         self.prof.columns = self.ed_line_length.get_value()
+        self.prof.plugin = self.plugin_widget.current_plugin_name()
         self.prof.write()
 
     def load_cb_setting(self, cb: QComboBox, setting: str) -> None:
@@ -1428,6 +1384,8 @@ class MainForm(QMainWindow):
 
         idx = self.cb_display_mode.findData(MpTerm(self.prof.mode))
         self.cb_display_mode.setCurrentIndex(idx)
+
+        self.plugin_widget.set_plugin(self.prof.plugin)
 
     def exit_program(self, e) -> None:
         self.serial_port.close()

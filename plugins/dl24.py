@@ -20,17 +20,15 @@
 # Imports --------------------------------------------------------------------
 
 from enum import Enum
-from mpplugin import MpPluginInfo, MpPlugin, MpPluginWidget, MpPluginWidgetType
+from mpplugin import MpPlugin, MpPluginWidget, MpPluginWidgetType
 from mpframe import MpFrame
 
 # Variables ------------------------------------------------------------------
 
-plugin_info = MpPluginInfo(
-    name="Dl24",
-    description="Dl24 electronic load",
-    date="2024-07-05",
-    author="Peter Malmberg <peter.malmberg@gmail.com>",
-)
+plugin_name = "Dl24"
+plugin_description = "Dl24 electronic load"
+plugin_date = "2024-07-05"
+plugin_author = "Peter Malmberg <peter.malmberg@gmail.com>"
 
 # Code -----------------------------------------------------------------------
 
@@ -314,8 +312,11 @@ class AtorchFrame(MpFrame):
 class MpTermPlugin(MpPlugin):
     def __init__(self) -> None:
         super().__init__()
-        self.info = plugin_info
-        self.info.add_widget(
+        self.name = plugin_name
+        self.description = plugin_description
+        self.date = plugin_date
+        self.author = plugin_author
+        self.add_widget(
             MpPluginWidget(
                 MpPluginWidgetType.Button,
                 "Reset All",
@@ -324,7 +325,7 @@ class MpTermPlugin(MpPlugin):
                 lambda: self.send(self.frame.command(AtorchCommandType.Reset_All)),
             )
         )
-        self.info.add_widget(
+        self.add_widget(
             MpPluginWidget(
                 MpPluginWidgetType.Button,
                 "Reset Duration",
@@ -332,32 +333,32 @@ class MpTermPlugin(MpPlugin):
                 self.cmd_clear_duration,
             )
         )
-        self.info.add_widget(
+        self.add_widget(
             MpPluginWidget(
                 MpPluginWidgetType.Button, "Reset Ah", "Command 0x02", self.cmd_clear_ah
             )
         )
-        self.info.add_widget(
+        self.add_widget(
             MpPluginWidget(
                 MpPluginWidgetType.Button, "Reset Wh", "Command 0x01", self.cmd_clear_wh
             )
         )
-        self.info.add_widget(
+        self.add_widget(
             MpPluginWidget(
                 MpPluginWidgetType.Button, "Plus", "Command 0x33", self.cmd_plus
             )
         )
-        self.info.add_widget(
+        self.add_widget(
             MpPluginWidget(
                 MpPluginWidgetType.Button, "Minus", "Command 0x34", self.cmd_minus
             )
         )
-        self.info.add_widget(
+        self.add_widget(
             MpPluginWidget(
                 MpPluginWidgetType.Button, "Setup", "Command 0x31", self.cmd_setup
             )
         )
-        self.info.add_widget(
+        self.add_widget(
             MpPluginWidget(
                 MpPluginWidgetType.Button, "Enter", "Command 0x32", self.cmd_enter
             )

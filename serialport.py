@@ -65,7 +65,7 @@ class SerialPort(QSerialPort):
 
     def read(self):
         data = self.readAll()
-        self.rxCnt += data.count()
+        self.cnt_rx += data.count()
         return data
 
     def print(self) -> None:
@@ -98,8 +98,8 @@ class SerialPort(QSerialPort):
             self.clear()
 
     def clear_counters(self):
-        self.rxCnt = 0
-        self.txCnt = 0
+        self.cnt_rx = 0
+        self.cnt_tx = 0
 
     def send_string(self, data: str):
         self.send(bytearray(data, "utf-8"))
@@ -108,7 +108,7 @@ class SerialPort(QSerialPort):
         if self.isOpen():
             res = self.write(data)
             if res > 0:
-                self.txCnt += res
+                self.cnt_tx += res
             else:
                 logging.error("Could not write data.")
 

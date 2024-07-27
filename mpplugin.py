@@ -14,11 +14,19 @@
 # ----------------------------------------------------------------------------
 
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable
 from serialport import SerialPort
 from qterminalwidget import QTerminalWidget
+from PyQt5.QtWidgets import (
+    QLabel,
+    QPushButton,
+    QCheckBox,
+    QComboBox,
+    QWidget,
+)
+from qedit import QHexEdit, QNumberEdit
 
 
 class MpPluginWidgetType(Enum):
@@ -27,6 +35,7 @@ class MpPluginWidgetType(Enum):
     Button = 2
     ComboBox = 3
     CheckBox = 4
+    LineEdit = 5
 
 
 @dataclass
@@ -36,25 +45,28 @@ class MpPluginWidget:
     description: str = ""
     action: Callable = None
     combo_data: Any = None
+    widget: Any = None
+    value: Any = None
+    min: int = None
+    max: int = None
 
+    def get_combo_value(self) -> Any:
+        self.action(self.widget.currentData())
 
-@dataclass
-class MpPluginInfo:
-    name: str = ""
-    description: str = ""
-    date: str = ""
-    author: str = ""
-    doc: str = ""
-    widgets: list[MpPluginWidget] = field(default_factory=list)
-
-    def add_widget(self, widget) -> None:
-        self.widgets.append(widget)
+    def get_numedit_value(self) -> Any:
+        self.action(self.widget.get_value())
 
 
 class MpPlugin:
 
     def __init__(self) -> None:
-        self.info: MpPluginInfo = None
+        self.name: str = ""
+        self.description: str = ""
+        self.date: str = ""
+        self.author: str = ""
+        self.doc: str = ""
+        self.widgets: list[MpPluginWidget] = []
+
         self.serial_port: SerialPort = None
         self.terminal: QTerminalWidget = None
 
@@ -67,11 +79,54 @@ class MpPlugin:
     def send(self, data: bytearray) -> None:
         self.serial_port.send(data)
 
+    def send_string(self, data: str) -> None:
+        self.serial_port.send_string(data)
+
     def append_html_text(self, html: str) -> None:
         self.terminal.append_html_text(html)
 
     def append_ansi_text(self, ansi: str) -> None:
         self.terminal.append_ansi_text(ansi)
+
+    def add_widget(self, widget) -> None:
+        self.widgets.append(widget)
+        self._create_widget(widget)
+
+    def _create_widget(self, widget: MpPluginWidget) -> None:
+        if widget.type == MpPluginWidgetType.Label:
+            mpw = QLabel()
+            mpw.setText(widget.name)
+        if widget.type == MpPluginWidgetType.Button:
+            mpw = QPushButton()
+            mpw.setText(widget.name)
+            if widget.action is not None:
+                mpw.pressed.connect(widget.action)
+        if widget.type == MpPluginWidgetType.ComboBox:
+            mpw = QComboBox()
+            if widget.action is not None:
+                mpw.activated.connect(widget.get_combo_value)
+            for key, value in widget.combo_data.items():
+                print(f"{key} -> {value}")
+                mpw.addItem(key, value)
+        if widget.type == MpPluginWidgetType.CheckBox:
+            mpw = QCheckBox()
+            mpw.setText(widget.name)
+            if widget.action is not None:
+                mpw.pressed.connect(widget.action)
+        if widget.type == MpPluginWidgetType.LineEdit:
+            mpw = QNumberEdit()
+            mpw.set_value(widget.value)
+            if widget.action is not None:
+                mpw.set_on_changed(widget.get_numedit_value)
+
+        widget.widget = mpw
+        mpw.setToolTip(widget.description)
+
+    def list_qt_widgets(self) -> list[QWidget]:
+        return [widget.widget for widget in self.widgets]
+
+    def __str__(self) -> str:
+        return f"{self.name:14} {self.date:12} {self.description}  <{self.description}>"
 
 
 def main() -> None:

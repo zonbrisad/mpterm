@@ -19,7 +19,7 @@
 
 # Imports --------------------------------------------------------------------
 
-from mpplugin import MpPluginInfo, MpPlugin, MpPluginWidget, MpPluginWidgetType
+from mpplugin import MpPlugin, MpPluginWidget, MpPluginWidgetType
 
 # Variables ------------------------------------------------------------------
 
@@ -29,12 +29,11 @@ doc = """
 <br>
 """
 
-plugin_info = MpPluginInfo(
-    name="Example",
-    description="Example plugin for MpTerm",
-    date="2024-07-25",
-    author="Peter Malmberg <peter.malmberg@gmail.com>",
-)
+plugin_name = "Example"
+plugin_description = "Example plugin for MpTerm"
+plugin_date = "2024-07-25"
+plugin_author = "Peter Malmberg <peter.malmberg@gmail.com>"
+
 
 # Code -----------------------------------------------------------------------
 
@@ -42,22 +41,26 @@ plugin_info = MpPluginInfo(
 class MpTermPlugin(MpPlugin):
     def __init__(self) -> None:
         super().__init__()
+        self.name = plugin_name
+        self.description = plugin_description
+        self.date = plugin_date
+        self.author = plugin_author
         self.cnt = 0
-        self.info = plugin_info
-        self.info.add_widget(
+
+        self.add_widget(
             MpPluginWidget(
                 MpPluginWidgetType.Label,
                 "Label widget",
             )
         )
-        self.info.add_widget(
+        self.add_widget(
             MpPluginWidget(
                 MpPluginWidgetType.Button,
                 "Button widget",
                 action=self.button_action,
             )
         )
-        self.info.add_widget(
+        self.add_widget(
             MpPluginWidget(
                 MpPluginWidgetType.ComboBox,
                 "",
@@ -66,7 +69,7 @@ class MpTermPlugin(MpPlugin):
                 action=self.combobox_action,
             )
         )
-        self.info.add_widget(
+        self.add_widget(
             MpPluginWidget(
                 MpPluginWidgetType.CheckBox,
                 "Check",
@@ -91,7 +94,7 @@ class MpTermPlugin(MpPlugin):
     def button_action(self) -> None:
         self.terminal.append_html_text("Button<br>")
 
-    def combobox_action(self) -> None:
+    def combobox_action(self, value) -> None:
         self.terminal.append_html_text("Combobox<br>")
 
     def checkbox_action(self) -> None:

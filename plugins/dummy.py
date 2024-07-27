@@ -19,7 +19,7 @@
 
 # Imports --------------------------------------------------------------------
 
-from mpplugin import MpPluginInfo, MpPlugin, MpPluginWidget, MpPluginWidgetType
+from mpplugin import MpPlugin, MpPluginWidget, MpPluginWidgetType
 
 # Variables ------------------------------------------------------------------
 
@@ -29,12 +29,11 @@ doc = """
 <br>
 """
 
-plugin_info = MpPluginInfo(
-    name="Dummy",
-    description="Dummy plugin for MpTerm",
-    date="2024-07-23",
-    author="Peter Malmberg <peter.malmberg@gmail.com>",
-)
+plugin_name = "Dummy"
+plugin_description = "Dummy plugin for MpTerm"
+plugin_date = "2024-07-23"
+plugin_author = "Peter Malmberg <peter.malmberg@gmail.com>"
+
 
 # Code -----------------------------------------------------------------------
 
@@ -42,7 +41,10 @@ plugin_info = MpPluginInfo(
 class MpTermPlugin(MpPlugin):
     def __init__(self) -> None:
         super().__init__()
-        self.info = plugin_info
+        self.name = plugin_name
+        self.description = plugin_description
+        self.date = plugin_date
+        self.author = plugin_author
         self.cnt = 0
 
     def data(self, data: bytearray) -> str:
