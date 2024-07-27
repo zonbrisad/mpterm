@@ -71,10 +71,13 @@ class MpPluginFrame(QWidget):
         logging.debug(f"Plugin change: {plugin}")
 
         if plugin is not None:
+            self.cb_plugins.setToolTip(plugin.description)
             for widget in plugin.list_qt_widgets():
                 widget.setParent(self.layout.parent())
                 self.layout.addWidget(widget)
                 widget.setVisible(True)
+        else:
+            self.cb_plugins.setToolTip("")
 
         if self.cur_plugin is not None:
             for widget in self.cur_plugin.list_qt_widgets():
