@@ -560,6 +560,21 @@ class MainForm(QMainWindow):
         self.port_layout.addWidget(combobox)
         return combobox
 
+    def add_action(
+        self,
+        name: str,
+        menu: QMenu,
+        trig: Callable = None,
+        tip: str = "",
+        shortcut: str = "",
+    ) -> QAction:
+        action = QAction(name, self)
+        action.triggered.connect(trig)
+        action.setStatusTip(tip)
+        action.setShortcut(shortcut)
+        menu.addAction(action)
+        return action
+
     def __init__(self, args, parent=None) -> None:
         super(MainForm, self).__init__(parent)
 
@@ -784,173 +799,112 @@ class MainForm(QMainWindow):
         # self.yyy.addItem("132x24", Mode.Normal)
         # self.statusbar.addPermanentWidget(self.yyy)
 
-        # Menu bar
-        self.menubar = QMenuBar(self)
-        self.setMenuBar(self.menubar)
+        # Menubar
+        menubar = QMenuBar(self)
+        self.setMenuBar(menubar)
 
         # File menu
-        self.menu_file = QMenu(self.menubar, title="&File")
-        self.menubar.addAction(self.menu_file.menuAction())
-        self.action_new = QAction("New", self, triggered=self.new_terminal)
-        self.menu_file.addAction(self.action_new)
-        self.action_exit = QAction("Quit", self, triggered=self.exit_program)
-        self.action_exit.setToolTip("Quit")
-        self.action_exit.setShortcutContext(Qt.WidgetShortcut)
-        self.menu_file.addAction(self.action_exit)
-
-        # self.actionEcho = QAction(
-        #     "Echo", self, triggered=None, checkable=True
-        # )
-        # self.menuSettings.addAction(self.actionEcho)
+        menu_file = menubar.addMenu("&File")
+        self.add_action("New", menu_file, self.new_terminal)
+        self.add_action("Quit", menu_file, self.exit_program).setShortcutContext(
+            Qt.WidgetShortcut
+        )
 
         # Settings menu
-        self.menu_settings = QMenu(self.menubar, title="Settings")
-        self.menubar.addAction(self.menu_settings.menuAction())
-        self.action_set_program = QAction(
-            "Ext. Program", self, triggered=self.set_ext_program
-        )
-        self.menu_settings.addAction(self.action_set_program)
-        self.action_set_timeout = QAction(
-            "Suspend timeout", self, triggered=self.set_suspend_timeout
-        )
-        self.menu_settings.addAction(self.action_set_timeout)
+        menu_settings = menubar.addMenu("Settings")
+        self.add_action("Ext. Program", menu_settings, self.set_ext_program)
+        self.add_action("Suspend timeout", menu_settings, self.set_suspend_timeout)
 
         # Action menu
-        self.menu_action = QMenu(self.menubar, title="&Action")
-        self.menubar.addAction(self.menu_action.menuAction())
-        self.action_clear = QAction(self, text="Clear")
-        self.action_clear.triggered.connect(self.terminal_clear)
-        self.menu_action.addAction(self.action_clear)
-
-        self.action_reset_port = QAction(self, text="Reset port")
-        self.action_port_info = QAction(
-            self, text="Port info", triggered=self.port_info
-        )
-        self.menu_action.addAction(self.action_port_info)
+        menu_action = menubar.addMenu("&Action")
+        self.add_action("Clear", menu_action, self.terminal_clear)
+        self.add_action("List ports", menu_action, self.port_info)
 
         # Send menu
-        self.menu_send = QMenu(self.menubar, title="Send")
-        self.menubar.addAction(self.menu_send.menuAction())
+        menu_send = menubar.addMenu("Send")
+        self.add_action("Break [0x00]", menu_send, lambda: self.send_string(Ascii.NULL))
         self.add_action(
-            "Break [0x00]", self.menu_send, lambda: self.send_string(Ascii.NULL)
+            "ETX [0x03] (Ctrl-C)", menu_send, lambda: self.send_string(Ascii.ETX)
         )
         self.add_action(
-            "ETX [0x03] (Ctrl-C)", self.menu_send, lambda: self.send_string(Ascii.ETX)
+            "EOT [0x04] (Ctrl-D)", menu_send, lambda: self.send_string(Ascii.ETX)
         )
-        self.add_action(
-            "EOT [0x04] (Ctrl-D)", self.menu_send, lambda: self.send_string(Ascii.ETX)
-        )
-        self.add_action(
-            "Tab [0x09]", self.menu_send, lambda: self.send_string(Ascii.TAB)
-        )
-        self.add_action("LF [0x0a]", self.menu_send, lambda: self.send_string(Ascii.NL))
-        self.add_action("CR [0x0d]", self.menu_send, lambda: self.send_string(Ascii.CR))
+        self.add_action("Tab [0x09]", menu_send, lambda: self.send_string(Ascii.TAB))
+        self.add_action("LF [0x0a]", menu_send, lambda: self.send_string(Ascii.NL))
+        self.add_action("CR [0x0d]", menu_send, lambda: self.send_string(Ascii.CR))
 
-        self.menu_tests = self.menu_send.addMenu("Tests")
-
-        sendAsciiTableAction = QAction("Ascii table", self)
-        sendAsciiTableAction.triggered.connect(lambda: self.send_string(ascii_table()))
-        self.menu_tests.addAction(sendAsciiTableAction)
-
-        sendTestAction = QAction("Escape test", self)
-        sendTestAction.triggered.connect(
-            lambda: self.send_string(escape_attribute_test)
-        )
-        self.menu_tests.addAction(sendTestAction)
-
-        sendFlagAction = QAction("Flag SE", self)
-        sendFlagAction.triggered.connect(lambda: self.send_string(flag))
-        self.menu_tests.addAction(sendFlagAction)
-
-        colorAction = QAction("Color test", self)
-        colorAction.triggered.connect(lambda: self.send_string(color_256_test()))
-        self.menu_tests.addAction(colorAction)
-
-        self.menu_color = self.menu_send.addMenu("Colors")
-        self.add_action("Red", self.menu_color, lambda: self.send_string(Escape.RED))
-        self.add_action(
-            "Green", self.menu_color, lambda: self.send_string(Escape.GREEN)
-        )
-        self.add_action(
-            "Yellow", self.menu_color, lambda: self.send_string(Escape.YELLOW)
-        )
-        self.add_action("Blue", self.menu_color, lambda: self.send_string(Escape.BLUE))
-        self.add_action(
-            "Magenta", self.menu_color, lambda: self.send_string(Escape.MAGENTA)
-        )
-        self.add_action("Cyan", self.menu_color, lambda: self.send_string(Escape.CYAN))
-        self.add_action(
-            "White", self.menu_color, lambda: self.send_string(Escape.WHITE)
-        )
+        menu_tests = menu_send.addMenu("Tests")
 
         self.add_action(
-            "Bg Red", self.menu_color, lambda: self.send_string(Escape.BG_RED)
+            "Ascii table", menu_tests, lambda: self.send_string(ascii_table())
         )
         self.add_action(
-            "Bg Green", self.menu_color, lambda: self.send_string(Escape.BG_GREEN)
+            "Escape test", menu_tests, lambda: self.send_string(escape_attribute_test)
         )
         self.add_action(
-            "Bg Yellow", self.menu_color, lambda: self.send_string(Escape.BG_YELLOW)
-        )
-        self.add_action(
-            "Bg Blue", self.menu_color, lambda: self.send_string(Escape.BG_BLUE)
-        )
-        self.add_action(
-            "Bg Magenta", self.menu_color, lambda: self.send_string(Escape.BG_MAGENTA)
-        )
-        self.add_action(
-            "Bg Cyan", self.menu_color, lambda: self.send_string(Escape.BG_CYAN)
-        )
-        self.add_action(
-            "Bg White", self.menu_color, lambda: self.send_string(Escape.BG_WHITE)
+            "Color test", menu_tests, lambda: self.send_string(color_256_test())
         )
 
-        self.menu_attr = self.menu_send.addMenu("Attributes")
-        self.add_action("Reset", self.menu_attr, lambda: self.send_string(Escape.RESET))
-        self.add_action("Bold", self.menu_attr, lambda: self.send_string(Escape.BOLD))
+        menu_terminal = menu_send.addMenu("Terminal")
+
+        menu_color = menu_terminal.addMenu("Colors")
+        self.add_action("Red", menu_color, lambda: self.send_string(Escape.RED))
+        self.add_action("Green", menu_color, lambda: self.send_string(Escape.GREEN))
+        self.add_action("Yellow", menu_color, lambda: self.send_string(Escape.YELLOW))
+        self.add_action("Blue", menu_color, lambda: self.send_string(Escape.BLUE))
+        self.add_action("Magenta", menu_color, lambda: self.send_string(Escape.MAGENTA))
+        self.add_action("Cyan", menu_color, lambda: self.send_string(Escape.CYAN))
+        self.add_action("White", menu_color, lambda: self.send_string(Escape.WHITE))
+        self.add_action("Bg Red", menu_color, lambda: self.send_string(Escape.BG_RED))
         self.add_action(
-            "Italic", self.menu_attr, lambda: self.send_string(Escape.ITALIC)
+            "Bg Green", menu_color, lambda: self.send_string(Escape.BG_GREEN)
         )
-        self.add_action("Dim", self.menu_attr, lambda: self.send_string(Escape.DIM))
         self.add_action(
-            "Reverse", self.menu_attr, lambda: self.send_string(Escape.REVERSE)
+            "Bg Yellow", menu_color, lambda: self.send_string(Escape.BG_YELLOW)
         )
+        self.add_action("Bg Blue", menu_color, lambda: self.send_string(Escape.BG_BLUE))
         self.add_action(
-            "Underline", self.menu_attr, lambda: self.send_string(Escape.UNDERLINE)
+            "Bg Magenta", menu_color, lambda: self.send_string(Escape.BG_MAGENTA)
         )
+        self.add_action("Bg Cyan", menu_color, lambda: self.send_string(Escape.BG_CYAN))
         self.add_action(
-            "Crossed", self.menu_attr, lambda: self.send_string(Escape.CROSSED)
+            "Bg White", menu_color, lambda: self.send_string(Escape.BG_WHITE)
         )
 
-        self.menu_attr = self.menu_send.addMenu("Cursor")
-        self.add_action("Up", self.menu_attr, lambda: self.send_string(Escape.UP))
-        self.add_action("Down", self.menu_attr, lambda: self.send_string(Escape.DOWN))
+        menu_attr = menu_terminal.addMenu("Attributes")
+        self.add_action("Reset", menu_attr, lambda: self.send_string(Escape.RESET))
+        self.add_action("Bold", menu_attr, lambda: self.send_string(Escape.BOLD))
+        self.add_action("Italic", menu_attr, lambda: self.send_string(Escape.ITALIC))
+        self.add_action("Dim", menu_attr, lambda: self.send_string(Escape.DIM))
+        self.add_action("Reverse", menu_attr, lambda: self.send_string(Escape.REVERSE))
         self.add_action(
-            "Forward", self.menu_attr, lambda: self.send_string(Escape.FORWARD)
+            "Underline", menu_attr, lambda: self.send_string(Escape.UNDERLINE)
         )
+        self.add_action("Crossed", menu_attr, lambda: self.send_string(Escape.CROSSED))
+
+        menu_attr = menu_terminal.addMenu("Cursor")
+        self.add_action("Up", menu_attr, lambda: self.send_string(Escape.UP))
+        self.add_action("Down", menu_attr, lambda: self.send_string(Escape.DOWN))
+        self.add_action("Forward", menu_attr, lambda: self.send_string(Escape.FORWARD))
         self.add_action(
             "Backward",
-            self.menu_attr,
+            menu_attr,
             lambda: self.send_string(Escape.BACK),
         )
 
         # Plugin menu
-        self.menu_plugins = QMenu(self.menubar, title="Plugins")
-        self.menubar.addAction(self.menu_plugins.menuAction())
-        self.action_list_plugins = QAction(self, text="List plugins")
-        self.action_list_plugins.triggered.connect(
-            lambda: self.append_html_text(self.plugin_widget.plugins_to_str())
+        menu_plugins = menubar.addMenu("Plugins")
+        self.add_action(
+            "List plugins",
+            menu_plugins,
+            lambda: self.append_html_text(self.plugin_widget.plugins_to_str()),
         )
-        self.menu_plugins.addAction(self.action_list_plugins)
 
         # Help menu
-        self.menu_help = QMenu(self.menubar, title="&Help")
-        self.menubar.addAction(self.menu_help.menuAction())
-        self.action_about = QAction(self, text="About")
-        self.action_about.triggered.connect(
-            lambda: AboutDialog.about(App.NAME, about_html)
+        menu_help = menubar.addMenu("&Help")
+        self.add_action(
+            "About", menu_help, lambda: AboutDialog.about(App.NAME, about_html)
         )
-        self.menu_help.addAction(self.action_about)
 
         # Scan for serialports
         self.update_ports()
@@ -1013,8 +967,8 @@ class MainForm(QMainWindow):
             "Commandline:",
             text=self.prof.ext_program,
         )
-
-        self.prof.ext_program = val
+        if ok is True:
+            self.prof.ext_program = val
 
     def keyPressEvent(self, e: QKeyEvent) -> None:
         super().keyPressEvent(e)
@@ -1059,8 +1013,8 @@ class MainForm(QMainWindow):
 
     def add_action(self, name: str, menu: QMenu, function: Callable) -> QAction:
         action = QAction(name, self)
-        menu.addAction(action)
         action.triggered.connect(function)
+        menu.addAction(action)
         return action
 
     def terminal_pause(self) -> None:

@@ -8,13 +8,13 @@
     "flowcontrol": "None",
     "mode": "Ascii",
     "suspend_timeout": 8,
-    "ext_program": "",
+    "ext_program": "ls",
     "newline": "LF",
     "win_x": 1203,
     "win_y": 740,
     "sync_string": "0x2",
     "columns": 16,
-    "plugin": "None",
+    "plugin": "FY3200S",
     "macros": [
         {
             "name": "M1",
