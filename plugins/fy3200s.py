@@ -42,6 +42,7 @@ plugin_author = "Peter Malmberg <peter.malmberg@gmail.com>"
 class Fy3200Cmd(Enum):
     SetMainWaveform = "bw"
     SetMainFreq = "bf"
+    GetMainFreq = "cf"
 
 
 class Fy3200Waveform(Enum):
@@ -88,6 +89,10 @@ class Fy3200:
     def msg_set_freq(freq: float) -> str:
         return Fy3200._msg(Fy3200Cmd.SetMainFreq, f"{freq*100:09.0f}")
 
+    @staticmethod
+    def msg_get_freq() -> str:
+        return Fy3200._msg(Fy3200Cmd.GetMainFreq, "")
+
 
 class MpTermPlugin(MpPlugin):
     def __init__(self) -> None:
@@ -100,31 +105,23 @@ class MpTermPlugin(MpPlugin):
         self.waveform = Fy3200Waveform.Sine
         self.frequency = 1000
 
-        self.add_widget(
-            MpPluginWidget(
-                MpPluginWidgetType.Button,
-                "Set waveform",
-                "Set waveform",
-                action=self.cmd_set_waveform,
-            )
-        )
+        self.timer.timeout.connect(self.timeout)
 
         self.add_widget(
             MpPluginWidget(
                 MpPluginWidgetType.ComboBox,
                 "",
-                "Selected waveform",
+                "Waveform",
                 combo_data={wf.name: wf for wf in Fy3200Waveform},
                 action=self.change_waveform,
             )
         )
-
         self.add_widget(
             MpPluginWidget(
                 MpPluginWidgetType.Button,
-                "Set Frequency",
-                "Set Frequency",
-                action=self.cmd_set_freq,
+                "Set waveform",
+                "",
+                action=self.cmd_set_waveform,
             )
         )
 
@@ -132,13 +129,35 @@ class MpTermPlugin(MpPlugin):
             MpPluginWidget(
                 MpPluginWidgetType.LineEdit,
                 "",
-                "Select frequency",
+                "Frequency",
                 value=self.frequency,
                 action=self.change_frequency,
             )
         )
 
+        self.add_widget(
+            MpPluginWidget(
+                MpPluginWidgetType.Button,
+                "Set Frequency",
+                "",
+                action=self.cmd_set_freq,
+            )
+        )
+        self.add_widget(
+            MpPluginWidget(
+                MpPluginWidgetType.Button,
+                "Get Frequency",
+                "",
+                action=self.cmd_get_freq,
+            )
+        )
+
     def data(self, data: bytearray) -> str:
+        # self.data.join(data)
+        self.data = bytearray(data)
+        # for d in data:
+        # self.append_ansi_text(str(data))
+        # self.append_ansi_text("\n")
         # ret = ""
         # for i in range(0, data.count()):
         #     byte = int.from_bytes(data.at(i), "big")
@@ -148,11 +167,23 @@ class MpTermPlugin(MpPlugin):
 
         return ""
 
+    def timeout(self) -> None:
+        print(self.data)
+
+    def send_command(self, cmd: str) -> None:
+        self.send_string(cmd)
+        self.append_ansi_text(f"Command: {cmd}")
+
     def cmd_set_waveform(self) -> None:
-        self.send_string(Fy3200.msg_set_waveform(self.waveform))
+        self.send_command(Fy3200.msg_set_waveform(self.waveform))
 
     def cmd_set_freq(self) -> None:
-        self.send_string(Fy3200.msg_set_freq(self.frequency))
+        self.send_command(Fy3200.msg_set_freq(self.frequency))
+
+    def cmd_get_freq(self) -> None:
+        # self.data = bytearray()
+        self.start_timer(1000)
+        self.send_command(Fy3200.msg_get_freq())
 
     def change_waveform(self, waveform: Fy3200Waveform) -> None:
         self.waveform = waveform

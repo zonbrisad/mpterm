@@ -10,11 +10,11 @@
     "suspend_timeout": 8,
     "ext_program": "ls",
     "newline": "LF",
-    "win_x": 1203,
-    "win_y": 740,
+    "win_x": 1440,
+    "win_y": 868,
     "sync_string": "0x2",
     "columns": 16,
-    "plugin": "FY3200S",
+    "plugin": "Example",
     "macros": [
         {
             "name": "M1",
@@ -38,8 +38,8 @@
         },
         {
             "name": "M5",
-            "hex": true,
-            "text": "0xff 0x55 0x11 0x02 0x21 0x00 0x00 0x00 0x02 0x72"
+            "hex": false,
+            "text": "cf\\n"
         }
     ]
 }

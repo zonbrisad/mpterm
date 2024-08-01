@@ -25,7 +25,10 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QComboBox,
     QWidget,
+    QSlider,
+    QSizePolicy,
 )
+from PyQt5.QtCore import QTimer, Qt, QSize
 from qedit import QHexEdit, QNumberEdit
 
 
@@ -36,6 +39,7 @@ class MpPluginWidgetType(Enum):
     ComboBox = 3
     CheckBox = 4
     LineEdit = 5
+    Slider = 6
 
 
 @dataclass
@@ -56,6 +60,9 @@ class MpPluginWidget:
     def get_numedit_value(self) -> Any:
         self.action(self.widget.get_value())
 
+    def get_slider_value(self, value) -> Any:
+        self.action(value)
+
 
 class MpPlugin:
 
@@ -70,11 +77,22 @@ class MpPlugin:
         self.serial_port: SerialPort = None
         self.terminal: QTerminalWidget = None
 
+        self.timer = QTimer()
+        self.timer.setSingleShot(True)
+        # self.timer.timeout.connect(self.timeout)
+        # self.timer.setInterval(1000)
+        # self.timer.start()
+
     def _set_serial_port(self, serial_port: SerialPort) -> None:
         self.serial_port = serial_port
 
     def _set_terminal_widget(self, terminal: QTerminalWidget) -> None:
         self.terminal = terminal
+
+    def start_timer(self, timeout: int) -> None:
+        # self.timer.timeout.connect(self.timeout)
+        self.timer.setInterval(timeout)
+        self.timer.start()
 
     def send(self, data: bytearray) -> None:
         self.serial_port.send(data)
@@ -84,9 +102,11 @@ class MpPlugin:
 
     def append_html_text(self, html: str) -> None:
         self.terminal.append_html_text(html)
+        self.terminal.scroll_down()
 
     def append_ansi_text(self, ansi: str) -> None:
         self.terminal.append_ansi_text(ansi)
+        self.terminal.scroll_down()
 
     def add_widget(self, widget) -> None:
         self.widgets.append(widget)
@@ -106,7 +126,7 @@ class MpPlugin:
             if widget.action is not None:
                 mpw.activated.connect(widget.get_combo_value)
             for key, value in widget.combo_data.items():
-                print(f"{key} -> {value}")
+                # print(f"{key} -> {value}")
                 mpw.addItem(key, value)
         if widget.type == MpPluginWidgetType.CheckBox:
             mpw = QCheckBox()
@@ -118,6 +138,18 @@ class MpPlugin:
             mpw.set_value(widget.value)
             if widget.action is not None:
                 mpw.set_on_changed(widget.get_numedit_value)
+
+        if widget.type == MpPluginWidgetType.Slider:
+            mpw = QSlider()
+            mpw.setOrientation(Qt.Orientation.Horizontal)
+            mpw.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+            mpw.setRange(widget.min, widget.max)
+            # mpw.set_value(widget.value)
+            # mpw.setValue(widget.value)
+
+            if widget.action is not None:
+                mpw.valueChanged.connect(widget.get_slider_value)
+                # mpw.valueChanged.connect(widget.action)
 
         widget.widget = mpw
         mpw.setToolTip(widget.description)

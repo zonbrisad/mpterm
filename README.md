@@ -117,22 +117,22 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 ## ToDo
 
 - Terminal functions
-- [x] Cursor basic movement
-- [ ] Cursor visual presentation
-- [x] Color encoding (8 colors)
-- [x] 256 color encoding
-- [ ] Dim text
-- [ ] Truecolor (RGB)
-- [ ] Underline style
-- [x] Reverse text
-- [x] backspace
-- [x] tab 
-- [x] arrow button support 
-- [ ] end 
-- [ ] home
-- [x] delete
-- [ ] FXX 
-- [ ] Fix color rendering for basic 16 colors
+- [x] Rendering: Cursor basic movement
+- [ ] Rendering: Cursor visual presentation
+- [x] Rendering: Color encoding (8 colors)
+- [x] Rendering: 256 color encoding
+- [ ] Rendering: Dim text
+- [ ] Rendering: Truecolor (RGB)
+- [ ] Rendering: Underline style (not supported by Qt QTextEdit/QPlainTextEdit yet)
+- [ ] Rendering: Fix color rendering for basic 16 colors
+- [x] Rendering: Reverse text
+- [x] Button: backspace
+- [x] Button: tab 
+- [x] Button: arrow button support 
+- [ ] Button: end 
+- [ ] Button: home
+- [x] Button: delete
+- [ ] Button: FXX 
 - Feature
 - [x] Userdefined quick access macros
 - [x] Hexadecimal macros
@@ -144,9 +144,9 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 - [x] Pause button 
 - [ ] Pause with history
 - [x] Programming button
-- [ ] Sync feature
+- [x] Sync string feature
 - [x] Hex mode
-- [ ] Setting for chars per row in hex mode
+- [x] Setting for chars per row in hex mode
 - [ ] Show pin status
 - [ ] Set pin status
 - [ ] Loopback port
@@ -154,8 +154,8 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 - [ ] copy/paste clipboard
 - [ ] Changeable color palets
 - [x] Changable newline mode
-- [ ] Escape sequence monitor
-- [ ] Reorganize "Send" menu
+- [ ] Escape sequence monitor in a sepparate widget/window
+- [x] Reorganize "Send" menu
 - [ ] Add support for different protocols in "Send" menu
 - [ ] Add support for 8 bit characters in Hex + Ascii printout
 
@@ -179,11 +179,20 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 ## Future ideas
 
 ### Plugin system
-Enable user to add extra features like protocol analyzers
-- [ ] Protocol parsing
-- [ ] Macro/send message buttons for commands
+Enable user to add custom features like:
+- protocol analyzers
+- Instrument control
+- Machine control
+- Device configurator
+
+- [x] Macro/send message buttons for commands
+- [ ] Checkbox widget
+- [ ] Slider widget
 - [ ] Allow settings in GUI
 - [ ] Multiple view/parse modes
+- [ ] Message timeout function
+- [ ] Commandline support for selecting and initiating plugin
+
 
 
 ### Bluetooth 
@@ -205,6 +214,12 @@ Define some sort of tag that indicates that data should be redirected to another
 ### Logging function
 
 ### Tcp stream function
+
+### Graphical plot funcion
+Ability to read value and present as a graphical plot
+
+### PySide
+Change from PyQt to PySide.
 
 ## License 
 

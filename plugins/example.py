@@ -77,6 +77,16 @@ class MpTermPlugin(MpPlugin):
                 action=self.checkbox_action,
             )
         )
+        self.add_widget(
+            MpPluginWidget(
+                MpPluginWidgetType.Slider,
+                "",
+                "Slider",
+                action=self.slider_action,
+                min=-100,
+                max=100,
+            )
+        )
 
     def data(self, data: bytearray) -> str:
         ret = ""
@@ -93,12 +103,19 @@ class MpTermPlugin(MpPlugin):
 
     def button_action(self) -> None:
         self.terminal.append_html_text("Button<br>")
+        self.terminal.scroll_down()
 
     def combobox_action(self, value) -> None:
-        self.terminal.append_html_text("Combobox<br>")
+        self.terminal.append_html_text(f"Combobox {value}<br>")
+        self.terminal.scroll_down()
 
     def checkbox_action(self) -> None:
         self.terminal.append_html_text("Checkbox<br>")
+        self.terminal.scroll_down()
+
+    def slider_action(self, value) -> None:
+        self.terminal.append_html_text(f"Slider {value}<br>")
+        self.terminal.scroll_down()
 
 
 def main() -> None: ...

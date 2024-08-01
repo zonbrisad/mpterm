@@ -91,9 +91,9 @@ class MpPluginFrame(QWidget):
         # Find plugin files in directory
         no_list = ["mpplugin.py", "mpframe.py"]
         plugin_files = []
-        for file_name in os.listdir("plugins"):
+        for file_name in os.listdir(f"{os.path.dirname(__file__)}/plugins"):
             if (
-                os.path.isfile(f"plugins/{file_name}")
+                os.path.isfile(f"{os.path.dirname(__file__)}/plugins/{file_name}")
                 and file_name.startswith("__") is not True
                 and file_name not in no_list
             ):
