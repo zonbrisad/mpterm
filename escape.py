@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
 #
-# A bashplate like python script
+# Ansi features
 #
 # File:    bpp.py
 # Author:  Peter Malmberg <peter.malmberg@gmail.com>
@@ -37,73 +37,63 @@ import logging
 
 
 class Ascii:
-    NULL = "\0"
-    ETX = "\x03"  # End of text(ETX), CTRL-C
-    BEL = "\a"
-    BS = "\b"
-    TAB = "\t"
-    NL = "\n"
-    VT = "\v"
-    FF = "\f"
-    CR = "\r"
-    ESC = "\e"
-
-    nls = ["\n", "\r\n", "\r"]
+    NUL = "\x00"  # Null character
+    SOH = "\x01"  # Start of heading
+    STX = "\x02"  # Start of text
+    ETX = "\x03"  # End of text (Ctrl-C)
+    EOT = "\x04"  # End of transmition (Ctrl-D)
+    ENQ = "\x05"  # Enquiry
+    ACK = "\x06"  # Acknowledge
+    BEL = "\x07"  # Bell, Alert
+    BS = "\x08"  # Backspace
+    TAB = "\x09"
+    LF = "\x0a"
+    VT = "\x0b"
+    FF = "\x0c"
+    CR = "\x0d"
+    SO = "\x0e"
+    SI = "\x0f"
+    DLE = "\x10"
+    DC1 = "\x11"
+    DC2 = "\x12"
+    DC3 = "\x13"
+    DC4 = "\x14"
+    NAK = "\x15"
+    SYN = "\x16"
+    ETB = "\x17"
+    CAN = "\x18"
+    EM = "\x19"
+    SUB = "\x1a"
+    ESC = "\x1b"
+    FS = "\x1c"
+    GS = "\x1d"
+    RS = "\x1e"
+    US = "\x1f"
 
     @staticmethod
-    def is_newline(s: str) -> bool:
-        if s in Ascii.nls:
+    def is_newline(ch: str) -> bool:
+        if ch in ("\n", "\r\n", "\r"):
             return True
         return False
 
+    @staticmethod
+    def symbol(ch: int) -> str:
+        if ch >= 0x20:
+            return chr(ch)
 
-ascii = {
-    0x00: "NUL",
-    0x01: "SOH",
-    0x02: "STX",
-    0x03: "ETX",
-    0x04: "EOT",
-    0x05: "ENQ",
-    0x06: "ACK",
-    0x07: "BEL",  # Bell
-    0x08: "BS",  # Backspace
-    0x09: "TAB",  # Horizontal tab
-    0x0A: "LF",  # Line feed
-    0x0B: "VT",  # Vertical tab
-    0x0C: "FF",  # Form feed
-    0x0D: "CR",  # Carriage return
-    0x0E: "SO",
-    0x0F: "SI",
-    0x10: "DLE",
-    0x11: "DC1",
-    0x12: "DC2",
-    0x13: "DC3",
-    0x14: "DC4",
-    0x15: "NAK",
-    0x16: "SYN",
-    0x17: "ETB",
-    0x18: "CAN",
-    0x19: "EM",
-    0x1A: "SUB",
-    0x1B: "ESC",  # Escape
-    0x1C: "FS",
-    0x1D: "GS",
-    0x1E: "RS",
-    0x1F: "US",
-    0x20: "Spc",  # Space
-}
+        for x in dir(Ascii):
+            if x.isupper():
+                if chr(ch) == getattr(Ascii, x):
+                    return x
 
 
 def ascii_table() -> str:
-
     chars = []
     for i in range(128):
-        if i <= 0x20:
-            char = f"{i:02x} {ascii[i]:3}   "
+        if i < 0x20:
+            chars.append(f"{i:02x} {Ascii.symbol(i):3}   ")
         else:
-            ch = f"'{chr(i)}'"
-            char = f"{i:02x} {ch:3}   "
-        chars.append(char)
+            chars.append(f"{i:02x} '{Ascii.symbol(i)}'   ")
 
     rows = []
     for i in range(32):
@@ -112,7 +102,6 @@ def ascii_table() -> str:
 
     i = 0
     for char in chars:
-        print(char)
         try:
             rows[i].append(char)
             i = i + 1
@@ -124,23 +113,8 @@ def ascii_table() -> str:
     for row in rows:
         line = f"{''.join(row)}\n"
         lines.append(line)
-        # print(line)
 
     return "".join(lines)
-
-
-def getc(c: str) -> str:
-    for a, b in ascii.items():
-        if ord(c) == a:
-            return b
-    return c
-
-
-def hex2str(c: int) -> str:
-    for a, b in ascii.items():
-        if c == a:
-            return b
-    return chr(c)
 
 
 class C1(Enum):
@@ -204,17 +178,17 @@ class CSI(Enum):
 
     @staticmethod
     def decode(s: str) -> CSI:
-        if not s[0] == Escape.ESCAPE:
+        if not s[0] == Ansi.ESCAPE:
             return None
 
         tc = s[-1]  # termination character in Escape sequence
 
         for csi in CSI:
             if tc == csi.value:
-                logging.debug(f'Found {csi}  "{Escape.to_str(s)}"')
+                logging.debug(f'Found {csi}  "{Ansi.to_str(s)}"')
                 return csi
 
-        logging.debug(f'Found {CSI.UNSUPPORTED}  "{Escape.to_str(s)}"')
+        logging.debug(f'Found {CSI.UNSUPPORTED}  "{Ansi.to_str(s)}"')
         return CSI.UNSUPPORTED
 
 
@@ -284,7 +258,7 @@ class SGR(Enum):
 
     @staticmethod
     def is_sgr(s: str) -> bool:
-        if s[0] == Escape.ESCAPE and s[-1] == "m":
+        if s[0] == Ansi.ESCAPE and s[-1] == "m":
             return True
         return False
 
@@ -350,10 +324,10 @@ class EscapeObj:
     text: str = ""
 
     def decode(self, seq: str) -> CSI:
-        if not seq[0] == Escape.ESCAPE:
+        if not seq[0] == Ansi.ESCAPE:
             return
 
-        self.text = Escape.to_str(seq)
+        self.text = Ansi.to_str(seq)
 
         tc = seq[-1]  # termination character in Escape sequence
 
@@ -445,7 +419,7 @@ class EscapeObj:
         self.sgr = attr_list
 
 
-class Escape:
+class Ansi:
     ETX = "\x03"  # End of text(ETX), CTRL-C
     ESCAPE = "\x1b"
 
@@ -528,23 +502,23 @@ class Escape:
     KEY_PGDN = "\x1b[6~"  #
     KEY_HOME = "\x1b[7~"  #
     KEY_END = "\x1b[8~"  #
-    KEY_F0 = "\x1b[10~"  # F
-    KEY_F1 = "\x1b[11~"  # F
-    KEY_F2 = "\x1b[12~"  # F
-    KEY_F3 = "\x1b[13~"  # F
-    KEY_F4 = "\x1b[14~"  # F
-    KEY_F5 = "\x1b[15~"  # F
-    KEY_F6 = "\x1b[17~"  # F
-    KEY_F7 = "\x1b[18~"  # F
-    KEY_F8 = "\x1b[19~"  # F
-    KEY_F9 = "\x1b[20~"  # F
-    KEY_F10 = "\x1b[21~"  # F
-    KEY_F11 = "\x1b[23~"  # F
-    KEY_F12 = "\x1b[24~"  # F
-    KEY_F13 = "\x1b[25~"  # F
-    KEY_F14 = "\x1b[26~"  # F
-    KEY_F15 = "\x1b[28~"  # F
-    KEY_F16 = "\x1b[29~"  # F
+    KEY_F0 = "\x1b[10~"  # F0
+    KEY_F1 = "\x1b[11~"  # F1
+    KEY_F2 = "\x1b[12~"  # F2
+    KEY_F3 = "\x1b[13~"  # F3
+    KEY_F4 = "\x1b[14~"  # F4
+    KEY_F5 = "\x1b[15~"  # F5
+    KEY_F6 = "\x1b[17~"  # F6
+    KEY_F7 = "\x1b[18~"  # F7
+    KEY_F8 = "\x1b[19~"  # F8
+    KEY_F9 = "\x1b[20~"  # F9
+    KEY_F10 = "\x1b[21~"  # F10
+    KEY_F11 = "\x1b[23~"  # F11
+    KEY_F12 = "\x1b[24~"  # F12
+    KEY_F13 = "\x1b[25~"  # F13
+    KEY_F14 = "\x1b[26~"  # F14
+    KEY_F15 = "\x1b[28~"  # F15
+    KEY_F16 = "\x1b[29~"  # F16
 
     E_RET = 100
     E_UP = 101
@@ -574,7 +548,7 @@ class Escape:
 
     @staticmethod
     def is_escape_seq(s: str) -> bool:
-        if s[0] == Escape.ESCAPE:
+        if s[0] == Ansi.ESCAPE:
             return True
         else:
             return False
@@ -667,7 +641,7 @@ class EscapeTokenizer:
             while True:
                 ch = self.lbuf.pop(0)  # get next character from buffer
 
-                if ch in [Ascii.NL, Ascii.BEL, Ascii.BS, Ascii.CR]:
+                if ch in [Ascii.LF, Ascii.BEL, Ascii.BS, Ascii.CR]:
                     if len(self.seq) > 0:
                         ret = self.seq
                         self.seq = ""
@@ -675,7 +649,7 @@ class EscapeTokenizer:
                         return ret
                     return ch
 
-                if ch == Escape.ESCAPE:  # Escape sequence start character found
+                if ch == Ansi.ESCAPE:  # Escape sequence start character found
                     if len(self.seq) > 0:
                         ret = self.seq
                         self.seq = ch
@@ -686,7 +660,7 @@ class EscapeTokenizer:
 
                 self.seq += ch
 
-                if self.seq[0] == Escape.ESCAPE:
+                if self.seq[0] == Ansi.ESCAPE:
                     if self.is_terminated() is True:
                         ret = self.seq
                         self.seq = ""
@@ -701,7 +675,7 @@ class EscapeTokenizer:
             if len(self.seq) == 0:
                 raise StopIteration
 
-            if self.seq[0] == Escape.ESCAPE:
+            if self.seq[0] == Ansi.ESCAPE:
                 raise StopIteration
 
             ret = self.seq
@@ -1193,7 +1167,7 @@ class TerminalLine:
             html.append(self.attr_html(text, tas))
 
         html.append("</div>")
-        print(" ".join(html))
+        # print(" ".join(html))
         return " ".join(html)
 
     # def line_to_html(self) -> str:
@@ -1244,7 +1218,7 @@ class TerminalLine:
 
     def delete_char(self, column: int, n: int):
         for i in range(column, column + n):
-            print(f"Deleting: {self.line[i-1].ch}")
+            # print(f"Deleting: {self.line[i-1].ch}")
             self.line.pop(i - 1)
         self.update()
 
@@ -1374,7 +1348,7 @@ class TerminalState(TerminalAttributeState):
             self.lines[i].reset()
 
         for token in self.et:
-            if Escape.is_escape_seq(token):
+            if Ansi.is_escape_seq(token):
                 eo = EscapeObj()
                 eo.decode(token)
 
@@ -1560,14 +1534,14 @@ class TerminalState(TerminalAttributeState):
                 )
                 continue
 
-            if token == Ascii.NL:  # newline
+            if token == Ascii.LF:  # newline
                 if (self.cursor.row) >= self.max.row:
                     self.new_line()
 
                 self.set_pos(x=1, y=(self.cursor.row + 1))
 
                 logging.debug(
-                    f"(NL)    Newline                                     {self.pos_str()}"
+                    f"(LF)    Linefeed                                     {self.pos_str()}"
                 )
                 continue
 
@@ -1594,73 +1568,73 @@ FLAG_BLUE = "\x1b[48;5;20m"
 FLAG_YELLOW = "\x1b[48;5;226m"
 
 flag = f"""
-{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Escape.END}
-{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Escape.END}
-{FLAG_YELLOW}                 {Escape.END}
-{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Escape.END}
-{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Escape.END}
+{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Ansi.END}
+{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Ansi.END}
+{FLAG_YELLOW}                 {Ansi.END}
+{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Ansi.END}
+{FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Ansi.END}
 """
 escape_attribute_test = f"""  
-{Escape.UNDERLINE}Font attributes{Escape.END}
-{Escape.RESET}Normal text         {Escape.RESET}
-{Escape.BOLD}Bold text           {Escape.NORMAL}Not Bold text{Escape.RESET}
-{Escape.DIM}Dim text            {Escape.NORMAL}Not dim text{Escape.RESET}
-{Escape.ITALIC}Italic text         {Escape.NOT_ITALIC}Not italic text{Escape.RESET}
-{Escape.UNDERLINE}Underline text      {Escape.NOT_UNDERLINED}Not underline text{Escape.RESET}
-{Escape.SLOWBLINK}Slow blinking text  {Escape.NOT_BLINKING}Not blinking text{Escape.RESET}
-{Escape.FASTBLINK}Fast blinking text  {Escape.NOT_BLINKING}Not blinking text{Escape.RESET}
-{Escape.FRAMED}Framed text         {Escape.RESET}
-{Escape.SUBSCRIPT}Subscript text      {Escape.NOT_SSCRIPT}Not subscript text{Escape.RESET}
-{Escape.SUPERSCRIPT}Superscript text    {Escape.NOT_SSCRIPT}Not superscript text{Escape.RESET}
-{Escape.FRACTUR}Fractur/Gothic text {Escape.RESET}
-{Escape.CROSSED}Crossed text        {Escape.NOT_CROSSED}Not crossed text{Escape.RESET}
-{Escape.OVERLINE}Overlined text      {Escape.NOT_OVERLINE}Not overlined text{Escape.RESET}
-{Escape.REVERSE}Reversed text       {Escape.NOT_REVERSED}Not reversed text{Escape.RESET}
+{Ansi.UNDERLINE}Font attributes{Ansi.END}
+{Ansi.RESET}Normal text         {Ansi.RESET}
+{Ansi.BOLD}Bold text           {Ansi.NORMAL}Not Bold text{Ansi.RESET}
+{Ansi.DIM}Dim text             {Ansi.NORMAL}Not dim text{Ansi.RESET}
+{Ansi.ITALIC}Italic text         {Ansi.NOT_ITALIC}Not italic text{Ansi.RESET}
+{Ansi.UNDERLINE}Underline text      {Ansi.NOT_UNDERLINED}Not underline text{Ansi.RESET}
+{Ansi.SLOWBLINK}Slow blinking text   {Ansi.NOT_BLINKING}Not blinking text{Ansi.RESET}
+{Ansi.FASTBLINK}Fast blinking text   {Ansi.NOT_BLINKING}Not blinking text{Ansi.RESET}
+{Ansi.FRAMED}Framed text         {Ansi.RESET}
+{Ansi.SUBSCRIPT}Subscript text       {Ansi.NOT_SSCRIPT}Not subscript text{Ansi.RESET}
+{Ansi.SUPERSCRIPT}Superscript text     {Ansi.NOT_SSCRIPT}Not superscript text{Ansi.RESET}
+{Ansi.FRACTUR}Fractur/Gothic text {Ansi.RESET}
+{Ansi.CROSSED}Crossed text        {Ansi.NOT_CROSSED}Not crossed text{Ansi.RESET}
+{Ansi.OVERLINE}Overlined text      {Ansi.NOT_OVERLINE}Not overlined text{Ansi.RESET}
+{Ansi.REVERSE}Reversed text       {Ansi.NOT_REVERSED}Not reversed text{Ansi.RESET}
 
-{Escape.BOLD}{Escape.ITALIC}{Escape.UNDERLINE}Bold and italic and underlined{Escape.RESET}
+{Ansi.BOLD}{Ansi.ITALIC}{Ansi.UNDERLINE}Bold and italic and underlined{Ansi.RESET}
 
-{Escape.UNDERLINE}Standard foreground color attributes{Escape.END}
+{Ansi.UNDERLINE}Standard foreground color attributes{Ansi.END}
 
-{Escape.BLACK}Black{Escape.END} {Escape.DARKGRAY}Dark Gray{Escape.END}
-{Escape.RED}Red{Escape.RESET}     {Escape.BR_RED}Bright Red{Escape.END}
-{Escape.GREEN}Green{Escape.END}   {Escape.BR_GREEN}Bright Green{Escape.END}
-{Escape.YELLOW}Yellow{Escape.END}  {Escape.BR_YELLOW}Bright Yellow{Escape.END}
-{Escape.BLUE}Blue{Escape.END}    {Escape.BR_BLUE}Bright Blue{Escape.END}
-{Escape.MAGENTA}Magenta{Escape.END} {Escape.BR_MAGENTA}Bright Magenta{Escape.END}
-{Escape.CYAN}Cyan{Escape.END}    {Escape.BR_CYAN}Bright Cyan{Escape.END}
-{Escape.WHITE}White{Escape.END}   {Escape.BR_WHITE}Bright White{Escape.END}
+{Ansi.BLACK}Black{Ansi.END} {Ansi.DARKGRAY}Dark Gray{Ansi.END}
+{Ansi.RED}Red{Ansi.RESET}     {Ansi.BR_RED}Bright Red{Ansi.END}
+{Ansi.GREEN}Green{Ansi.END}   {Ansi.BR_GREEN}Bright Green{Ansi.END}
+{Ansi.YELLOW}Yellow{Ansi.END}  {Ansi.BR_YELLOW}Bright Yellow{Ansi.END}
+{Ansi.BLUE}Blue{Ansi.END}    {Ansi.BR_BLUE}Bright Blue{Ansi.END}
+{Ansi.MAGENTA}Magenta{Ansi.END} {Ansi.BR_MAGENTA}Bright Magenta{Ansi.END}
+{Ansi.CYAN}Cyan{Ansi.END}    {Ansi.BR_CYAN}Bright Cyan{Ansi.END}
+{Ansi.WHITE}White{Ansi.END}    {Ansi.BR_WHITE}Bright White{Ansi.END}
 
-{Escape.UNDERLINE}Standard background color attributes{Escape.END}
+{Ansi.UNDERLINE}Standard background color attributes{Ansi.END}
 
-{Escape.BG_BLACK} Black {Escape.END}
-{Escape.BG_RED} Red {Escape.END}
-{Escape.BG_GREEN} Green {Escape.END}
-{Escape.BG_YELLOW} Yellow {Escape.END}
-{Escape.BG_BLUE} Blue {Escape.END}
-{Escape.BG_MAGENTA} Magenta {Escape.END}
-{Escape.BG_CYAN} Cyan {Escape.END}
+{Ansi.BG_BLACK} Black {Ansi.END}
+{Ansi.BG_RED} Red {Ansi.END}
+{Ansi.BG_GREEN} Green {Ansi.END}
+{Ansi.BG_YELLOW} Yellow {Ansi.END}
+{Ansi.BG_BLUE} Blue {Ansi.END}
+{Ansi.BG_MAGENTA} Magenta {Ansi.END}
+{Ansi.BG_CYAN} Cyan {Ansi.END}
 """
 
 cursor_test = f"""
-{Escape.DOWN} asdf {Escape.UP}  {Escape.BACK} {Escape.FORWARD} {Escape.FRACTUR}
+{Ansi.DOWN} asdf {Ansi.UP}  {Ansi.BACK} {Ansi.FORWARD} {Ansi.FRACTUR}
 """
 
 
 def color_256_test():
     buf = ""
     for c in range(0, 8):
-        buf += f"{Escape.fg_8bit_color(c)}{c:^7}"
+        buf += f"{Ansi.fg_8bit_color(c)}{c:^7}"
 
     buf += "\n"
     for c in range(8, 16):
-        buf += f"{Escape.fg_8bit_color(c)}{c:^7}"
+        buf += f"{Ansi.fg_8bit_color(c)}{c:^7}"
     buf += "\n\n"
     for r in range(0, 36):
         x = 16 + r * 6
         buf2 = ""
         for c in range(x, x + 6):
-            buf += f"{Escape.fg_8bit_color(c)}{c:>5}"
-            buf2 += f"{Escape.BLACK}{Escape.bg_8bit_color(c)}{c:^5}{Escape.RESET} "
+            buf += f"{Ansi.fg_8bit_color(c)}{c:>5}"
+            buf2 += f"{Ansi.BLACK}{Ansi.bg_8bit_color(c)}{c:^5}{Ansi.RESET} "
 
         buf += "  " + buf2
 
@@ -1669,18 +1643,18 @@ def color_256_test():
     buf += "\n"
 
     for c in range(232, 244):
-        buf += f"{Escape.fg_8bit_color(c)}{c:>3} "
+        buf += f"{Ansi.fg_8bit_color(c)}{c:>3} "
     buf += "\n"
     for c in range(244, 256):
-        buf += f"{Escape.fg_8bit_color(c)}{c:>3} "
+        buf += f"{Ansi.fg_8bit_color(c)}{c:>3} "
     buf += "\n"
 
     return buf
 
 
 incomplete_escape_sequence = f"""
-{Escape.BR_MAGENTA}Some colored text{Escape.END}
-{Escape.GREEN}Some more text with incomplete escape sequence \x1b["""
+{Ansi.BR_MAGENTA}Some colored text{Ansi.END}
+{Ansi.GREEN}Some more text with incomplete escape sequence \x1b["""
 
 end_with_newline = "Some text with newline end\n"
 
@@ -1690,7 +1664,7 @@ def main() -> None:
         format="[%(levelname)s] Line: %(lineno)d %(message)s", level=logging.DEBUG
     )
 
-    print(escape_attribute_test)
+    # print(escape_attribute_test)
     # print(flag)
 
     # dec = EscapeDecoder()
@@ -1742,7 +1716,8 @@ def main() -> None:
     # et.update(escape_attribute_test)
     # print("Buf:\n" + et.html_buf)
 
-    print(ascii_table())
+    # print(dir(Ascii))
+    # print(ascii_table())
 
 
 if __name__ == "__main__":

@@ -20,7 +20,7 @@ import sys
 from typing import Callable
 
 from escape import (
-    Escape,
+    Ansi,
     Ascii,
     TerminalState,
     TerminalLine,
@@ -61,10 +61,10 @@ keys = {
     # Qt.Key_Return: ("\n\r", "Return"),
     Qt.Key_Escape: ("", "Escape"),
     Qt.Key_Delete: ("", "Delete"),
-    Qt.Key_Left: (Escape.BACK, "Left"),
-    Qt.Key_Right: (Escape.FORWARD, "Right"),
-    Qt.Key_Up: (Escape.UP, "Up"),
-    Qt.Key_Down: (Escape.DOWN, "Down"),
+    Qt.Key_Left: (Ansi.BACK, "Left"),
+    Qt.Key_Right: (Ansi.FORWARD, "Right"),
+    Qt.Key_Up: (Ansi.UP, "Up"),
+    Qt.Key_Down: (Ansi.DOWN, "Down"),
     Qt.Key_Insert: ("", "Insert"),
     Qt.Key_Backspace: ("\b", "Backspace"),
     Qt.Key_Home: ("", "Home"),
@@ -312,10 +312,10 @@ class MainForm(QMainWindow):
         self.add_func_button("Clear terminal", lambda: self.terminal.clear())
         self.add_button("Font Attributes", escape_attribute_test)
         self.add_button("Colors 256", color_256_test())
-        self.add_button("Cursor up", Escape.UP)
-        self.add_button("Cursor down", Escape.DOWN)
-        self.add_button("Cursor back", Escape.BACK)
-        self.add_button("Cursor forward", Escape.FORWARD)
+        self.add_button("Cursor up", Ansi.UP)
+        self.add_button("Cursor down", Ansi.DOWN)
+        self.add_button("Cursor back", Ansi.BACK)
+        self.add_button("Cursor forward", Ansi.FORWARD)
         self.add_button("Erase in line", "\x1b[K")
 
         self.button_layout.addStretch()

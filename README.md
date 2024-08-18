@@ -158,6 +158,9 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 - [x] Reorganize "Send" menu
 - [ ] Add support for different protocols in "Send" menu
 - [ ] Add support for 8 bit characters in Hex + Ascii printout
+- [ ] Change from PyQt to PySide.
+- [ ] Change to PyQt6
+- [ ] Enable keyboard interraction when runing external program
 
 ## Known Issues
 - [x] Rendering: Error when <> characters are included
@@ -165,6 +168,7 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 - [x] Rendering: Terminal rendering performance is slow
 - [ ] Rendering: Real bright(bold) colors
 - [x] Rendering: Row removal fail
+- [ ] Rendering: "bpexample attr" fail when executed via extrnal program
 - [ ] UI: Tab cycling is not correct 
 - [x] UI: programing mode does not show output from some external programs
 - [ ] Feature: Reconnecting to port despite avrdude using the port
@@ -194,7 +198,6 @@ Enable user to add custom features like:
 - [ ] Commandline support for selecting and initiating plugin
 
 
-
 ### Bluetooth 
 Support for Bluetooth serialports
 
@@ -211,6 +214,8 @@ Define some sort of tag that indicates that data should be redirected to another
 
 ### Multiple ports open
 
+### MicroPython support
+
 ### Logging function
 
 ### Tcp stream function
@@ -218,8 +223,7 @@ Define some sort of tag that indicates that data should be redirected to another
 ### Graphical plot funcion
 Ability to read value and present as a graphical plot
 
-### PySide
-Change from PyQt to PySide.
+
 
 ## License 
 

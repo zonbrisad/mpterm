@@ -18,11 +18,11 @@ from PyQt5.QtCore import QTimer, QIODevice
 from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
 
 
-class State(enum.Enum):
-    DISCONNECTED = 0
-    CONNECTED = 1
-    SUSPENDED = 2
-    RECONNECTING = 3
+# class State(enum.Enum):
+#     DISCONNECTED = 0
+#     CONNECTED = 1
+#     # SUSPENDED = 2
+#     # RECONNECTING = 3
 
 
 errors = {
@@ -45,16 +45,16 @@ class SerialPort(QSerialPort):
         super().__init__()
 
         self.clear_counters()
-        self.state = State.DISCONNECTED
+        # self.serial_state = State.DISCONNECTED
 
-        self.suspend_timer = QTimer()
-        self.suspend_timer.setSingleShot(True)
-        self.suspend_timer.timeout.connect(self.suspend_timeout)
+        # self.suspend_timer = QTimer()
+        # self.suspend_timer.setSingleShot(True)
+        # self.suspend_timer.timeout.connect(self.suspend_timeout)
 
-        self.reconnect_timer = QTimer()
-        self.reconnect_timer.setInterval(400)
-        self.reconnect_timer.timeout.connect(self.reconnect_timeout)
-        self.reconnect_timer.start()
+        # self.reconnect_timer = QTimer()
+        # self.reconnect_timer.setInterval(400)
+        # self.reconnect_timer.timeout.connect(self.reconnect_timeout)
+        # self.reconnect_timer.start()
 
         self.cntReconnect = 0
 
@@ -79,19 +79,15 @@ class SerialPort(QSerialPort):
         err = super().error()
         return errors[err]
 
-    def open(self):
+    def open(self) -> bool:
         if self.isOpen():
             return True
         res = super().open(QIODevice.ReadWrite)
-        if res:
-            self.set_state(State.CONNECTED)
-            self.print()
 
         return res
 
     def close(self) -> None:
         super().close()
-        self.state = State.DISCONNECTED
 
     def clear(self) -> None:
         if self.isOpen():
@@ -112,47 +108,48 @@ class SerialPort(QSerialPort):
             else:
                 logging.error("Could not write data.")
 
-    def set_state(self, newState: State, timeout=4000) -> None:
-        if newState == State.SUSPENDED and self.state == State.CONNECTED:
-            self.close()
-            self.state = State.SUSPENDED
-            if timeout != -1:
-                self.suspend_timer.start(timeout)
+    # def set_state(self, new_state: State, timeout=4000) -> None:
+    #     if new_state == State.SUSPENDED and self.serial_state == State.CONNECTED:
+    #         self.close()
+    #         self.serial_state = State.SUSPENDED
+    #         if timeout != -1:
+    #             self.suspend_timer.start(timeout)
 
-        if newState == State.DISCONNECTED:
-            self.state = newState
-            self.suspend_timer.stop()
+    #     if new_state == State.DISCONNECTED:
+    #         self.serial_state = new_state
+    #         self.suspend_timer.stop()
 
-        if newState in [
-            State.CONNECTED,
-            State.DISCONNECTED,
-            State.RECONNECTING,
-            State.DISCONNECTED,
-        ]:
-            self.state = newState
+    #     if new_state in [
+    #         State.CONNECTED,
+    #         State.DISCONNECTED,
+    #     ]:
+    #         self.serial_state = new_state
 
-        # self.state = newState
-        logging.debug(f"State: {self.state.name}")
+    #     # self.state = newState
+    #     logging.debug(f"State: {self.serial_state.name}")
 
-    def suspend_timeout(self):
-        if self.state == State.SUSPENDED:
-            self.set_state(State.RECONNECTING)
-            self.state = State.RECONNECTING
-            logging.debug("Reconnecting port")
+    # def suspend_timeout(self):
+    #     if self.serial_state == State.SUSPENDED:
+    #         self.set_state(State.RECONNECTING)
+    #         self.serial_state = State.RECONNECTING
+    #         logging.debug("Reconnecting port")
 
-    def reconnect_timeout(self):
-        if self.state != State.RECONNECTING:
-            self.cntReconnect = 0
-            return
+    # def reconnect_timeout(self):
+    #     if self.serial_state != State.RECONNECTING:
+    #         self.cntReconnect = 0
+    #         return
 
-        self.cntReconnect += 1
-        logging.debug(f"Reconnecting... {self.cntReconnect}")
+    #     self.cntReconnect += 1
+    #     logging.debug(f"Reconnecting... {self.cntReconnect}")
 
-        self.clear()
+    #     self.clear()
 
-        self.open()
-        # if self.open():
-        # self.set_state(State.CONNECTED)
+    #     self.open()
+    # if self.open():
+    # self.set_state(State.CONNECTED)
+
+    # def write(self, data) -> None:
+    #     super().__write__()
 
 
 def main() -> None:

@@ -144,12 +144,9 @@ class MpPlugin:
             mpw.setOrientation(Qt.Orientation.Horizontal)
             mpw.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
             mpw.setRange(widget.min, widget.max)
-            # mpw.set_value(widget.value)
-            # mpw.setValue(widget.value)
 
             if widget.action is not None:
                 mpw.valueChanged.connect(widget.get_slider_value)
-                # mpw.valueChanged.connect(widget.action)
 
         widget.widget = mpw
         mpw.setToolTip(widget.description)

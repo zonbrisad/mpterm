@@ -39,7 +39,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 from qterminalwidget import QTerminalWidget
-from escape import Escape, escape_attribute_test
+from escape import Ansii, escape_attribute_test
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
