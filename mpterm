@@ -69,9 +69,6 @@ from escape import (
     Ascii,
     TerminalState,
     flag,
-    escape_attribute_test,
-    ascii_table,
-    color_256_test,
 )
 from qterminalwidget import QTerminalWidget, get_key
 from serialport import SerialPort
@@ -94,7 +91,7 @@ class App:
     EMAIL = "peter.malmberg@gmail.com"
     ORG = ""
     HOME = "github.com/zonbrisad/mpterm"
-    ICON = f"{self_dir}/icons/mp_icon2.png"
+    ICON = f"{self_dir}/icons/mp_icon2_128x128.png"
     MAX_LINES = 150
     RECEIVE_BUFFER = 256
     MACROS = 5
@@ -861,20 +858,22 @@ class MainForm(QMainWindow):
         menu_tests = menu_send.addMenu("Tests")
 
         self.add_action(
-            "Ascii table", menu_tests, lambda: self.send_string(ascii_table())
+            "Ascii table", menu_tests, lambda: self.send_string(Ascii.table())
         )
         self.add_action(
-            "Escape test", menu_tests, lambda: self.send_string(escape_attribute_test)
+            "Escape test",
+            menu_tests,
+            lambda: self.send_string(Ansi.test()),
         )
         self.add_action(
-            "Color test", menu_tests, lambda: self.send_string(color_256_test())
+            "Color test", menu_tests, lambda: self.send_string(Ansi.color_test())
         )
 
         menu_terminal = menu_send.addMenu("Terminal")
 
         menu_color = menu_terminal.addMenu("Colors")
-        self.add_action("Red", menu_color, lambda: self.send_string(Escape.RED))
-        self.add_action("Green", menu_color, lambda: self.send_string(Escape.GREEN))
+        self.add_action("Red", menu_color, lambda: self.send_string(Ansi.RED))
+        self.add_action("Green", menu_color, lambda: self.send_string(Ansi.GREEN))
         self.add_action("Yellow", menu_color, lambda: self.send_string(Ansi.YELLOW))
         self.add_action("Blue", menu_color, lambda: self.send_string(Ansi.BLUE))
         self.add_action("Magenta", menu_color, lambda: self.send_string(Ansi.MAGENTA))
@@ -1031,8 +1030,6 @@ class MainForm(QMainWindow):
             self.old_state = self.state
             self.state = new_state
 
-        logging.debug(f"State: {self.state.name}")
-
     def state_handler(self) -> None:
         if self.state == MpState.RECONNECTING:
             self.init_port()
@@ -1130,7 +1127,7 @@ class MainForm(QMainWindow):
         )
         self.process.start(ext_prog)
         logging.debug(
-            f"Runing external program: {ext_prog}  {self.process.processId()}"
+            f"Running external program: {ext_prog}  {self.process.processId()}"
         )
         self.ui_handler()
         self.terminal.scroll_down()

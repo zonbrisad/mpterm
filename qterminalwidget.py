@@ -24,8 +24,6 @@ from escape import (
     Ascii,
     TerminalState,
     TerminalLine,
-    color_256_test,
-    escape_attribute_test,
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import (
@@ -310,8 +308,8 @@ class MainForm(QMainWindow):
         self.right_layout.addWidget(self.terminal)
 
         self.add_func_button("Clear terminal", lambda: self.terminal.clear())
-        self.add_button("Font Attributes", escape_attribute_test)
-        self.add_button("Colors 256", color_256_test())
+        self.add_button("Font Attributes", Ansi.test())
+        self.add_button("Colors 256", Ansi.color_test())
         self.add_button("Cursor up", Ansi.UP)
         self.add_button("Cursor down", Ansi.DOWN)
         self.add_button("Cursor back", Ansi.BACK)

@@ -4,7 +4,7 @@
 #
 # Ansi features
 #
-# File:    bpp.py
+# File:    escape.py
 # Author:  Peter Malmberg <peter.malmberg@gmail.com>
 # Date:    2022-05-22
 # License: MIT
@@ -32,7 +32,7 @@
 from __future__ import annotations
 from copy import copy
 from enum import Enum
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import logging
 
 
@@ -86,344 +86,40 @@ class Ascii:
                 if chr(ch) == getattr(Ascii, x):
                     return x
 
-
-def ascii_table() -> str:
-    chars = []
-    for i in range(128):
-        if i < 0x20:
-            chars.append(f"{i:02x} {Ascii.symbol(i):3}   ")
-        else:
-            chars.append(f"{i:02x} '{Ascii.symbol(i)}'   ")
-
-    rows = []
-    for i in range(32):
-        row = []
-        rows.append(row)
-
-    i = 0
-    for char in chars:
-        try:
-            rows[i].append(char)
-            i = i + 1
-        except IndexError:
-            rows[0].append(char)
-            i = 1
-
-    lines = []
-    for row in rows:
-        line = f"{''.join(row)}\n"
-        lines.append(line)
-
-    return "".join(lines)
-
-
-class C1(Enum):
-    CSI = "["  # Control Sequence Introducer
-    # OSC = "]"  # Operating System Command
-    # Fs (independet function) sequences 0x60-0x7E
-    # RIS = "c"  # Reset to Initial State
-
-    # Fp (private use) sequences 0x30-0x3F
-    DECSC = "7"  # Save cursor position and character attributes
-    DECRC = "8"  # Restore cursor and attributes to previously saved position
-
-    # RESERVERD = "'"  # Reserved for future standardization
-    UNSUPPORTED = "UNSUPPORTED"
-
-
-class CSI(Enum):
-    """Control Sequence Introducer
-
-    Args:
-        Enum (_type_): _description_
-    """
-
-    CURSOR_UP = "A"
-    CURSOR_DOWN = "B"
-    CURSOR_FORWARD = "C"
-    CURSOR_BACK = "D"
-    CURSOR_NEXT_LINE = "E"
-    CURSOR_PREVIOUS_LINE = "F"
-    CURSOR_HORIZONTAL_ABSOLUTE = "G"
-    CURSOR_POSITION = "H"
-    ERASE_IN_DISPLAY = "J"
-    ERASE_IN_LINE = "K"
-    INSERT_LINE = "L"  # Insert line and move current line(s) down (VT102)
-    DELETE_LINE = "M"  # Delete line and move lines up (VT102)
-    DELETE_CHAR = "P"  # Delete character(s) from cursor position (VT102)
-    SCROLL_UP = "S"  # "\e[2S" Move lines up, new lines at bottom
-    SCROLL_DOWN = "T"
-
-    HVP = "f"  #  Horizontal and Vertical Position(depends on PUM=Positioning Unit Mode)
-    RESET_MODE = "l"  # Reset mode (RM)
-    #                   2   - Keyboard Action Mode (KAM).
-    #                   4   - Replace Mode (IRM).
-    #                   1 2 - Send/receive (SRM).
-    #                   2 0 - Normal Linefeed (LNM
-
-    SGR = "m"  # Select graphics rendition (SGR)
-    # AUX = "i"  # Enable/Disable aux serial port
-    # DSR = "n"  # Device status report
-
-    SET_SCROLLING_REGION = "r"
-    # \e[12;24r  Set scrolling region between line 12 to 24
-    # If a linefeed is received while on row 24 line 12 is removed and lines 13-24 is scrolled up
-
-    # Private sequences
-    SAVE_CURSOR_POSITION = "s"  # Save Current Cursor Position
-    RESTORE_CURSOR_POSITION = "u"  # Restore Saved Curosr Position
-
-    UNSUPPORTED = "UNSUP"
-    # TEXT = "TEXT"
-
     @staticmethod
-    def decode(s: str) -> CSI:
-        if not s[0] == Ansi.ESCAPE:
-            return None
-
-        tc = s[-1]  # termination character in Escape sequence
-
-        for csi in CSI:
-            if tc == csi.value:
-                logging.debug(f'Found {csi}  "{Ansi.to_str(s)}"')
-                return csi
-
-        logging.debug(f'Found {CSI.UNSUPPORTED}  "{Ansi.to_str(s)}"')
-        return CSI.UNSUPPORTED
-
-
-class SGR(Enum):
-    """Select Graphic Rendition
-
-    Args:
-        Enum (_type_): _description_
-    """
-
-    # SGR (Select Graphic Rendition)
-    RESET = 0  # Reset all attributes
-    BOLD = 1  # Bold/increased intensity
-    DIM = 2  # Dim/decreased intensity
-    ITALIC = 3
-    UNDERLINE = 4
-    SLOW_BLINK = 5
-    RAPID_BLINK = 6
-    REVERSE_VIDEO = 7
-    CONCEAL = 8
-    CROSSED = 9
-    PRIMARY = 10  # Primary (default) font
-
-    FRACTUR = 20  # Gothic
-    DOUBLE_UNDERLINE = 21
-
-    NORMAL_INTENSITY = 22
-    NOT_ITALIC = 23
-    NOT_UNDERLINED = 24
-    NOT_BLINKING = 25
-    NOT_REVERSED = 27
-    REVEAL = 28
-    NOT_CROSSED = 29
-    FG_COLOR_BLACK = 30
-    FG_COLOR_RED = 31
-    FG_COLOR_GREEN = 32
-    FG_COLOR_YELLOW = 33
-    FG_COLOR_BLUE = 34
-    FG_COLOR_MAGENTA = 35
-    FG_COLOR_CYAN = 36
-    FG_COLOR_WHITE = 37
-
-    BG_COLOR_BLACK = 40
-    BG_COLOR_RED = 41
-    BG_COLOR_GREEN = 42
-    BG_COLOR_YELLOW = 43
-    BG_COLOR_BLUE = 44
-    BG_COLOR_MAGENTA = 45
-    BG_COLOR_CYAN = 46
-    BG_COLOR_WHITE = 47
-
-    OVERLINE = 53
-    NOT_OVERLINE = 55
-
-    SET_FG_COLOR_DEFAULT = 39  # Set default color foreground
-    SET_BG_COLOR_DEFAULT = 49  # Set default color background
-
-    SET_FG_COLOR = 38  # Select 256 color or RGB color foreground
-    SET_BG_COLOR = 48  # Select 256 color or RGB color background
-    SET_UL_COLOR = 58  # Select underline color
-    FRAMED = 51
-
-    SUPERSCRIPT = 73
-    SUBSCRIPT = 74
-
-    UNSUPPORTED = 0xFFFF
-
-    @staticmethod
-    def is_sgr(s: str) -> bool:
-        if s[0] == Ansi.ESCAPE and s[-1] == "m":
-            return True
-        return False
-
-    @staticmethod
-    def find_sgr(sgr_code: str) -> SGR:
-        for e in SGR:
-            if sgr_code == e.value:
-                return e
-        return SGR.UNSUPPORTED
-
-    @staticmethod
-    def decode(s: str):
-        if not SGR.is_sgr(s):
-            return None
-
-        x = s[2:-1]
-        # attributes = x.split(";")
-        attributes = x.replace(":", ";").split(";")
-        attr_list = []
-        for attr in attributes:
-            if attr == "":  # If no number present it is a reset(0)
-                # attr_list.append({"SGR":SGR.RESET})
-                attr = "0"
-
-            # Extended(256/Truecolor) color management
-            if attr in [SGR.SET_BG_COLOR.value, SGR.SET_FG_COLOR.value]:
-                logging.debug(attributes)
-                # 256 color mode
-                if int(attributes[1]) == 5:
-                    attr_list.append(
-                        {"SGR": SGR.find_sgr(attr), "color": int(attributes[2])}
-                    )
-                # Truecolor mode
-                if int(attributes[1]) == 2:
-                    # xx.append({"SGR":SGR.find_sgr(c), "color":int(sp[2])})
-                    pass
-                break
-
-            # Handle underline style
-            if attr == SGR.UNDERLINE.value:
-                attr_list.append({"SGR": SGR.find_sgr(attr)})
-                break
-
-            # Handle underline color
-            if attr == SGR.SET_UL_COLOR.value:
-                break
-
-            attr_list.append({"SGR": SGR.find_sgr(attr)})
-
-        # if isinstance(t, SGR):
-        logging.debug(f"SGR: {attr_list}")
-        return attr_list
-
-
-@dataclass
-class EscapeObj:
-    c1: C1 = C1.UNSUPPORTED
-    csi: CSI = CSI.UNSUPPORTED
-    sgr: SGR = SGR.UNSUPPORTED
-    n: int = 1
-    m: int = 1
-    is_text: bool = False
-    text: str = ""
-
-    def decode(self, seq: str) -> CSI:
-        if not seq[0] == Ansi.ESCAPE:
-            return
-
-        self.text = Ansi.to_str(seq)
-
-        tc = seq[-1]  # termination character in Escape sequence
-
-        for c in C1:
-            if seq[1] == c.value:
-                self.c1 = c
-
-        if self.c1 == C1.UNSUPPORTED:
-            # logging.debug(f'C1 unsupported:  "{self.text}"')
-            return
-
-        if seq[1] != "[":
-            self.csi = CSI.UNSUPPORTED
-            return
-
-        for csi in CSI:
-            if tc == csi.value:
-                self.csi = csi
-
-        if self.csi == CSI.UNSUPPORTED:
-            # logging.debug(f'CSI unsupported:  "{self.text}"')
-            return
-
-        # The following CSI's has 0 as default for n
-        if self.csi in [CSI.ERASE_IN_DISPLAY, CSI.ERASE_IN_LINE]:
-            self.n = 0
-
-        paramsx = seq[2:-1].replace(":", ";").split(";")
-        params = [param for param in paramsx if param != ""]  # removing empty strings
-
-        # logging.debug(f'Found {self.csi}  "{Escape.to_str(seq)}" {params}')
-        if len(params) > 0:
-            self.n = int(params[0])
-        if len(params) > 1:
-            self.m = int(params[1])
-
-        # Decode SGR (Select Graphic Rendition)
-        if self.csi == CSI.SGR:
-            self.decode_sgr(seq)
-
-    def __str__(self) -> str:
-        return f"{self.csi:20} n={self.n:<2} m={self.m:<2}"
-
-    @staticmethod
-    def find_sgr(sgr_code: int) -> SGR:
-        for sgr in SGR:
-            if sgr_code == sgr.value:
-                return sgr
-        return SGR.UNSUPPORTED
-
-    def decode_sgr(self, s: str):
-        x = s[2:-1]
-        attributes = x.replace(":", ";").split(";")
-        attr_list = []
-        for attr in attributes:
-            if attr == "":  # If no number present it is a reset(0)
-                attr = 0
+    def table() -> str:
+        chars = []
+        for i in range(128):
+            if i < 0x20:
+                chars.append(f"{i:02x} {Ascii.symbol(i):3}   ")
             else:
-                attr = int(attr)
+                chars.append(f"{i:02x} '{Ascii.symbol(i)}'   ")
 
-            # Extended(256/Truecolor) color management
-            if attr in [SGR.SET_BG_COLOR.value, SGR.SET_FG_COLOR.value]:
-                # logging.debug(attributes)
-                # 256 color mode
-                if int(attributes[1]) == 5:
-                    attr_list.append(
-                        {"SGR": SGR.find_sgr(attr), "color": int(attributes[2])}
-                    )
-                # Truecolor mode
-                if int(attributes[1]) == 2:
-                    # xx.append({"SGR":SGR.find_sgr(c), "color":int(sp[2])})
-                    pass
-                break
+        rows = []
+        for i in range(32):
+            row = []
+            rows.append(row)
 
-            # Handle underline style
-            if attr == SGR.UNDERLINE.value:
-                attr_list.append({"SGR": SGR.find_sgr(attr)})
-                break
+        i = 0
+        for char in chars:
+            try:
+                rows[i].append(char)
+                i = i + 1
+            except IndexError:
+                rows[0].append(char)
+                i = 1
 
-            # Handle underline color
-            if attr == SGR.SET_UL_COLOR.value:
-                break
+        lines = []
+        for row in rows:
+            line = f"{''.join(row)}\n"
+            lines.append(line)
 
-            attr_list.append({"SGR": SGR.find_sgr(attr)})
-
-        # for sgr in attr_list:
-        #     logging.debug(f"SGR: {sgr}")
-
-        self.sgr = attr_list
+        return "".join(lines)
 
 
 class Ansi:
-    ETX = "\x03"  # End of text(ETX), CTRL-C
-    ESCAPE = "\x1b"
+    """ANSI foreground colors codes"""
 
-    """ ANSI foreground colors codes """
     BLACK = "\x1b[0;30m"  # Black
     RED = "\x1b[0;31m"  # Red
     GREEN = "\x1b[0;32m"  # Green
@@ -548,7 +244,7 @@ class Ansi:
 
     @staticmethod
     def is_escape_seq(s: str) -> bool:
-        if s[0] == Ansi.ESCAPE:
+        if s[0] == Ascii.ESC:
             return True
         else:
             return False
@@ -561,6 +257,482 @@ class Ansi:
             .replace("\x0d", "\\r")
             .replace("\x08", "\\b")
         )
+
+    @staticmethod
+    def row_add(a, b, c) -> str:
+        return f"{a}{b:22}{c}Not {b}{Ansi.RESET}"
+
+    @staticmethod
+    def row_add_c(c1, cs1, c2, cs2) -> str:
+        return f"{c1}{cs1:22}{Ansi.RESET}{c2}{cs2:20}{Ansi.RESET}"
+
+    @staticmethod
+    def test() -> str:
+        """Font attribute tests"""
+        s = []
+        s.append(f"{Ansi.UNDERLINE}Font attributes{Ansi.END}")
+        s.append(Ansi.row_add(Ansi.BOLD, "Bold text", Ansi.NORMAL))
+        s.append(Ansi.row_add(Ansi.DIM, "Dim text", Ansi.NORMAL))
+        s.append(Ansi.row_add(Ansi.ITALIC, "Italic text", Ansi.NOT_ITALIC))
+        s.append(Ansi.row_add(Ansi.UNDERLINE, "Underline text", Ansi.NOT_UNDERLINED))
+        s.append(Ansi.row_add(Ansi.SLOWBLINK, "Slow blinking  text", Ansi.NOT_BLINKING))
+        s.append(Ansi.row_add(Ansi.FASTBLINK, "Fast blinking text", Ansi.NOT_BLINKING))
+        s.append(Ansi.row_add(Ansi.FRAMED, "Framed text", Ansi.RESET))
+        s.append(Ansi.row_add(Ansi.SUBSCRIPT, "Subscript text", Ansi.NOT_SSCRIPT))
+        s.append(Ansi.row_add(Ansi.SUPERSCRIPT, "Superscript text", Ansi.NOT_SSCRIPT))
+        s.append(Ansi.row_add(Ansi.FRACTUR, "Fractur/Gothic text", Ansi.RESET))
+        s.append(Ansi.row_add(Ansi.CROSSED, "Crossed text", Ansi.NOT_CROSSED))
+        s.append(Ansi.row_add(Ansi.OVERLINE, "Overlined text", Ansi.NOT_OVERLINE))
+        s.append(Ansi.row_add(Ansi.REVERSE, "Reversed text", Ansi.NOT_REVERSED))
+
+        s.append(f"\n{Ansi.UNDERLINE}Standard foreground color attributes{Ansi.END}")
+        s.append(Ansi.row_add_c(Ansi.BLACK, "Black", Ansi.DARKGRAY, "Dark Gray"))
+        s.append(Ansi.row_add_c(Ansi.RED, "Red", Ansi.BR_RED, "Bright Red"))
+        s.append(Ansi.row_add_c(Ansi.GREEN, "Green", Ansi.BR_GREEN, "Bright Green"))
+        s.append(Ansi.row_add_c(Ansi.YELLOW, "Yellow", Ansi.BR_YELLOW, "Bright Yellow"))
+        s.append(Ansi.row_add_c(Ansi.BLUE, "Blue", Ansi.BR_BLUE, "Bright Blue"))
+        s.append(
+            Ansi.row_add_c(Ansi.MAGENTA, "Magenta", Ansi.BR_MAGENTA, "Bright Magenta")
+        )
+        s.append(Ansi.row_add_c(Ansi.CYAN, "Cyan", Ansi.BR_CYAN, "Bright Cyan"))
+        s.append(Ansi.row_add_c(Ansi.WHITE, "White", Ansi.BR_WHITE, "Bright White"))
+
+        s.append(f"\n{Ansi.UNDERLINE}Standard background color attributes{Ansi.END}")
+        s.append(f"{Ansi.BG_BLACK} Black {Ansi.RESET}")
+        s.append(f"{Ansi.BG_RED} Red {Ansi.RESET}")
+        s.append(f"{Ansi.BG_GREEN} Green {Ansi.RESET}")
+        s.append(f"{Ansi.BG_YELLOW} Yellow {Ansi.RESET}")
+        s.append(f"{Ansi.BG_BLUE} Blue {Ansi.RESET}")
+        s.append(f"{Ansi.BG_MAGENTA} Magenta {Ansi.RESET}")
+        s.append(f"{Ansi.BG_CYAN} Cyan {Ansi.RESET}")
+
+        return "\n".join(s)
+
+    def color_test() -> str:
+        """Color attribute test"""
+        buf = ""
+        for c in range(0, 8):
+            buf += f"{Ansi.fg_8bit_color(c)}{c:^7}"
+
+        buf += "\n"
+        for c in range(8, 16):
+            buf += f"{Ansi.fg_8bit_color(c)}{c:^7}"
+        buf += "\n\n"
+        for r in range(0, 36):
+            x = 16 + r * 6
+            buf2 = ""
+            for c in range(x, x + 6):
+                buf += f"{Ansi.fg_8bit_color(c)}{c:>5}"
+                buf2 += f"{Ansi.BLACK}{Ansi.bg_8bit_color(c)}{c:^5}{Ansi.RESET} "
+
+            buf += "  " + buf2
+
+            buf += "\n"
+
+        buf += "\n"
+
+        for c in range(232, 244):
+            buf += f"{Ansi.fg_8bit_color(c)}{c:>3} "
+        buf += "\n"
+        for c in range(244, 256):
+            buf += f"{Ansi.fg_8bit_color(c)}{c:>3} "
+        buf += "\n"
+
+        return buf
+
+
+class PrivateSequence(Enum):
+    AUTO_WRAP = "7"  # default on
+    LINES_PER_SCREEN = "9"  # l = 36, h = 24(default)
+    CURSOR = "25"
+    REPORT_FOCUS = "1004"
+    ALT_SCREEN_BUFFER = "1049"
+    BRACKEDED_PASTE_MODE = "2004"
+
+
+class C1(Enum):
+    CSI = "["  # Control Sequence Introducer
+    # OSC = "]"  # Operating System Command
+    # Fs (independet function) sequences 0x60-0x7E
+    # RIS = "c"  # Reset to Initial State
+
+    # Fp (private use) sequences 0x30-0x3F
+    DECSC = "7"  # Save cursor position and character attributes
+    DECRC = "8"  # Restore cursor and attributes to previously saved position
+
+    # RESERVERD = "'"  # Reserved for future standardization
+    UNSUPPORTED = "UNSUPPORTED"
+
+
+class CSI(Enum):
+    """Control Sequence Introducer
+
+    Args:
+        Enum (_type_): _description_
+    """
+
+    CURSOR_UP = "A"
+    CURSOR_DOWN = "B"
+    CURSOR_FORWARD = "C"
+    CURSOR_BACK = "D"
+    CURSOR_NEXT_LINE = "E"
+    CURSOR_PREVIOUS_LINE = "F"
+    CURSOR_HORIZONTAL_ABSOLUTE = "G"
+    CURSOR_POSITION = "H"
+    ERASE_IN_DISPLAY = "J"
+    ERASE_IN_LINE = "K"
+    INSERT_LINE = "L"  # Insert line and move current line(s) down (VT102)
+    DELETE_LINE = "M"  # Delete line and move lines up (VT102)
+    DELETE_CHAR = "P"  # Delete character(s) from cursor position (VT102)
+    SCROLL_UP = "S"  # "\e[2S" Move lines up, new lines at bottom
+    SCROLL_DOWN = "T"
+
+    HVP = "f"  #  Horizontal and Vertical Position(depends on PUM=Positioning Unit Mode)
+
+    ENABLE = "h"  # Enable/set
+    DISABLE = "l"  # Disable/reset
+    #  2 - Keyboard Action Mode (KAM).
+    #  4 - Replace Mode (IRM).
+    # 12 - Send/receive (SRM).
+    # 20 - Normal Linefeed (LNM
+    # 25 - cursor visible
+    # 47h - save screen
+    # 47l - restore screen
+
+    SGR = "m"  # Select graphics rendition (SGR)
+    # AUX = "i"  # Enable/Disable aux serial port
+    # DSR = "n"  # Device status report
+
+    SET_SCROLLING_REGION = "r"
+    # \e[12;24r  Set scrolling region between line 12 to 24
+    # If a linefeed is received while on row 24 line 12 is removed and lines 13-24 is scrolled up
+
+    # Private sequences
+    SAVE_CURSOR_POSITION = "s"  # Save Current Cursor Position
+    RESTORE_CURSOR_POSITION = "u"  # Restore Saved Curosr Position
+
+    UNSUPPORTED = "UNSUPPORTED"
+    # TEXT = "TEXT"
+
+    @staticmethod
+    def decode(s: str) -> CSI:
+        if not s[0] == Ascii.ESCAPE:
+            return None
+
+        tc = s[-1]  # termination character in Escape sequence
+
+        for csi in CSI:
+            if tc == csi.value:
+                logging.debug(f'Found: {csi}  "{Ansi.to_str(s)}"')
+                return csi
+
+        logging.debug(f'Found: {CSI.UNSUPPORTED}  "{Ansi.to_str(s)}"')
+        return CSI.UNSUPPORTED
+
+
+class SGR(Enum):
+    """Select Graphic Rendition
+
+    Args:
+        Enum (_type_): _description_
+    """
+
+    # SGR (Select Graphic Rendition)
+    RESET = 0  # Reset all attributes
+    BOLD = 1  # Bold/increased intensity
+    DIM = 2  # Dim/decreased intensity
+    ITALIC = 3
+    UNDERLINE = 4
+    SLOW_BLINK = 5
+    RAPID_BLINK = 6
+    REVERSE_VIDEO = 7
+    CONCEAL = 8
+    CROSSED = 9
+    PRIMARY = 10  # Primary (default) font
+
+    FRACTUR = 20  # Gothic
+    DOUBLE_UNDERLINE = 21
+
+    NORMAL_INTENSITY = 22
+    NOT_ITALIC = 23
+    NOT_UNDERLINED = 24
+    NOT_BLINKING = 25
+    NOT_REVERSED = 27
+    REVEAL = 28
+    NOT_CROSSED = 29
+    FG_COLOR_BLACK = 30
+    FG_COLOR_RED = 31
+    FG_COLOR_GREEN = 32
+    FG_COLOR_YELLOW = 33
+    FG_COLOR_BLUE = 34
+    FG_COLOR_MAGENTA = 35
+    FG_COLOR_CYAN = 36
+    FG_COLOR_WHITE = 37
+
+    BG_COLOR_BLACK = 40
+    BG_COLOR_RED = 41
+    BG_COLOR_GREEN = 42
+    BG_COLOR_YELLOW = 43
+    BG_COLOR_BLUE = 44
+    BG_COLOR_MAGENTA = 45
+    BG_COLOR_CYAN = 46
+    BG_COLOR_WHITE = 47
+
+    OVERLINE = 53
+    NOT_OVERLINE = 55
+
+    SET_FG_COLOR_DEFAULT = 39  # Set default color foreground
+    SET_BG_COLOR_DEFAULT = 49  # Set default color background
+
+    SET_FG_COLOR = 38  # Select 256 color or RGB color foreground
+    SET_BG_COLOR = 48  # Select 256 color or RGB color background
+    SET_UL_COLOR = 58  # Select underline color
+    FRAMED = 51
+
+    SUPERSCRIPT = 73
+    SUBSCRIPT = 74
+
+    UNSUPPORTED = 0xFFFF
+
+    @staticmethod
+    def is_sgr(s: str) -> bool:
+        if s[0] == Ascii.ESC and s[-1] == "m":
+            return True
+        return False
+
+    @staticmethod
+    def find_sgr(sgr_code: str) -> SGR:
+        for e in SGR:
+            if sgr_code == e.value:
+                return e
+        return SGR.UNSUPPORTED
+
+    # @staticmethod
+    # def decode(s: str) -> list:
+    #     if not SGR.is_sgr(s):
+    #         return None
+
+    #     x = s[2:-1]
+    #     # attributes = x.split(";")
+    #     attributes = x.replace(":", ";").split(";")
+    #     attr_list = []
+    #     for attr in attributes:
+    #         if attr == "":  # If no number present it is a reset(0)
+    #             # attr_list.append({"SGR":SGR.RESET})
+    #             attr = "0"
+
+    #         # Extended(256/Truecolor) color management
+    #         if attr in [SGR.SET_BG_COLOR.value, SGR.SET_FG_COLOR.value]:
+    #             logging.debug(attributes)
+    #             # 256 color mode
+    #             if int(attributes[1]) == 5:
+    #                 attr_list.append(
+    #                     {"SGR": SGR.find_sgr(attr), "color": int(attributes[2])}
+    #                 )
+    #             # Truecolor mode
+    #             if int(attributes[1]) == 2:
+    #                 # xx.append({"SGR":SGR.find_sgr(c), "color":int(sp[2])})
+    #                 pass
+    #             break
+
+    #         # Handle underline style
+    #         if attr == SGR.UNDERLINE.value:
+    #             attr_list.append({"SGR": SGR.find_sgr(attr)})
+    #             break
+
+    #         # Handle underline color
+    #         if attr == SGR.SET_UL_COLOR.value:
+    #             break
+
+    #         attr_list.append({"SGR": SGR.find_sgr(attr)})
+
+    #     # if isinstance(t, SGR):
+    #     logging.debug(f"SGR: {attr_list}")
+    #     return attr_list
+
+
+@dataclass
+class SGRA:
+    id: int = 0
+    code: SGR = SGR.UNSUPPORTED
+    color = None
+
+    def decode(self, attrs: list[str]) -> int:
+        ret = 0
+        for i, attr in enumerate(attrs):
+            if attr == "":  # If no number present it is a reset(0)
+                attr = 0
+            else:
+                attr = int(attr)
+
+            self.code = attr
+            ret = 1
+
+            # Extended(256/Truecolor) color management
+            if attr in [SGR.SET_BG_COLOR.value, SGR.SET_FG_COLOR.value]:
+                color_mode = int(attrs[i + 1])
+
+                # 256 color mode
+                if color_mode == 5:
+                    self.color = int(attr[i + 2])
+                    # attr_list.append(
+                    #     {"SGR": SGR.find_sgr(attr), "color": int(attributes[2])}
+                    # )
+                # Truecolor mode
+                if color_mode == 2:
+                    # xx.append({"SGR":SGR.find_sgr(c), "color":int(sp[2])})
+                    pass
+                break
+
+            # Handle underline style
+            if attr == SGR.UNDERLINE.value:
+                break
+            # Handle underline color
+            if attr == SGR.SET_UL_COLOR.value:
+                break
+        # attr_list.append({"SGR": SGR.find_sgr(attr)})
+        return ret
+
+    # self.sgr = attr_list
+
+
+@dataclass
+class EscapeObj:
+    c1: C1 = C1.UNSUPPORTED
+    csi: CSI = CSI.UNSUPPORTED
+    sgr: SGR = SGR.UNSUPPORTED
+    sgrs: list[SGRA] = field(default_factory=list)
+    n: int = 1
+    m: int = 1
+    is_text: bool = False
+    text: str = ""
+
+    def decode(self, seq: str) -> CSI:
+        if not seq[0] == Ascii.ESC:
+            return None
+
+        self.text = Ansi.to_str(seq)
+
+        tc = seq[-1]  # termination character in Escape sequence
+
+        for c in C1:
+            if seq[1] == c.value:
+                self.c1 = c
+
+        if self.c1 == C1.UNSUPPORTED:
+            logging.debug(f"{str(self)}")
+            return None
+
+        if seq[1] != "[":
+            self.csi = CSI.UNSUPPORTED
+            return None
+
+        for csi in CSI:
+            if tc == csi.value:
+                self.csi = csi
+
+        if self.csi == CSI.UNSUPPORTED:
+            logging.debug(f"{str(self)}")
+            return None
+
+        # The following CSI's has 0 as default for n
+        if self.csi in [CSI.ERASE_IN_DISPLAY, CSI.ERASE_IN_LINE]:
+            self.n = 0
+
+        # remove questionmark "?" if private sequence
+        if self.csi in (CSI.ENABLE, CSI.DISABLE):
+            seq = seq.replace("?", "")
+
+        params = seq[2:-1].replace(":", ";").split(";")
+        params = [param for param in params if param != ""]  # removing empty strings
+
+        if len(params) > 0:
+            self.n = int(params[0])
+        if len(params) > 1:
+            self.m = int(params[1])
+
+        # Decode SGR (Select Graphic Rendition)
+        if self.csi == CSI.SGR:
+            # self.decode_sgr(seq)
+            self.decode_sgr_new(seq)
+
+        # logging.debug(f'Found {self.csi}  "{Ansi.to_str(seq)}" {params}')
+        # logging.debug(f'Found {self.csi}  "{Ansi.to_str(seq)}" {params}')
+        logging.debug(f"{str(self)}")
+        if self.csi == CSI.SGR:
+            for sgr in enumerate(self.sgr):
+                #             if i == 0:
+                #                 logging.debug(f'(SGR):  {str(s):29}  "{str(eo.text)}"')
+                #             else:
+                # logging.debug(f'            {sgr["SGR"]}')
+                logging.debug(f"            {str(sgr):36}")
+
+    def __str__(self) -> str:
+        if self.c1 != C1.CSI:
+            return f"{self.c1:20} {str(self.text):12}"
+
+        if self.csi in (CSI.ENABLE, CSI.DISABLE):
+            return f"{self.csi:20} {str(self.text):12} {self.n:<2}"
+
+        if self.csi == CSI.SGR:
+            return f"{self.csi:20} {str(self.text):12}"
+
+        return f"{self.csi:20} {str(self.text):12}n={self.n:<2} m={self.m:<2}"
+        # return f"{self.csi:20} n={self.n:<2} m={self.m:<2}"
+
+    @staticmethod
+    def find_sgr(sgr_code: int) -> SGR:
+        for sgr in SGR:
+            if sgr_code == sgr.value:
+                return sgr
+        return SGR.UNSUPPORTED
+
+    def decode_sgr_new(self, attr_string: str) -> None:
+        x = attr_string[2:-1]
+        attributes = x.replace(":", ";").split(";")
+
+        while len(attributes) > 0:
+            sgr = SGRA()
+            a = sgr.decode(attributes)
+            attributes.pop(len(a))
+            self.sgrs.append(sgr)
+
+    def decode_sgr(self, s: str):
+        x = s[2:-1]
+        attributes = x.replace(":", ";").split(";")
+        attr_list = []
+
+        for attr in attributes:
+            if attr == "":  # If no number present it is a reset(0)
+                attr = 0
+            else:
+                attr = int(attr)
+
+            # Extended(256/Truecolor) color management
+            if attr in [SGR.SET_BG_COLOR.value, SGR.SET_FG_COLOR.value]:
+                # 256 color mode
+                if int(attributes[1]) == 5:
+                    attr_list.append(
+                        {"SGR": SGR.find_sgr(attr), "color": int(attributes[2])}
+                    )
+                # Truecolor mode
+                if int(attributes[1]) == 2:
+                    # xx.append({"SGR":SGR.find_sgr(c), "color":int(sp[2])})
+                    pass
+                break
+
+            # Handle underline style
+            if attr == SGR.UNDERLINE.value:
+                attr_list.append({"SGR": SGR.find_sgr(attr)})
+                break
+
+            # Handle underline color
+            if attr == SGR.SET_UL_COLOR.value:
+                break
+
+            attr_list.append({"SGR": SGR.find_sgr(attr)})
+
+        self.sgr = attr_list
 
 
 class EscapeTokenizer:
@@ -649,7 +821,7 @@ class EscapeTokenizer:
                         return ret
                     return ch
 
-                if ch == Ansi.ESCAPE:  # Escape sequence start character found
+                if ch == Ascii.ESC:  # Escape sequence start character found
                     if len(self.seq) > 0:
                         ret = self.seq
                         self.seq = ch
@@ -660,22 +832,17 @@ class EscapeTokenizer:
 
                 self.seq += ch
 
-                if self.seq[0] == Ansi.ESCAPE:
+                if self.seq[0] == Ascii.ESC:
                     if self.is_terminated() is True:
                         ret = self.seq
                         self.seq = ""
                         return ret
 
-                    # if self.is_terminator(ch) is True:
-                    #     ret = self.seq
-                    #     self.seq = ""
-                    #     return ret
-
         except IndexError:
             if len(self.seq) == 0:
                 raise StopIteration
 
-            if self.seq[0] == Ansi.ESCAPE:
+            if self.seq[0] == Ascii.ESC:
                 raise StopIteration
 
             ret = self.seq
@@ -1506,18 +1673,22 @@ class TerminalState(TerminalAttributeState):
                             if a == SGR.SET_BG_COLOR_DEFAULT:
                                 self.tas.BG_COLOR = self.DEFAULT_BG_COLOR
 
-                if eo.c1 == C1.CSI:
-                    if eo.csi == CSI.SGR:
-                        for i, s in enumerate(eo.sgr):
-                            if i == 0:
-                                logging.debug(f'(SGR):  {str(s):29}  "{str(eo.text)}"')
-                            else:
-                                logging.debug(f"            {str(s):36}")
-                    else:
-                        t = f'"{str(eo.text)}"'
-                        logging.debug(f"(CSI):  {str(eo):34} {t:12} {self.pos_str()}")
-                else:
-                    logging.debug(f'(C1):   {eo.c1:20}  "{str(eo.text)}"')
+                # if eo.c1 == C1.CSI:
+                #     if eo.csi == CSI.SGR:
+                #         for i, s in enumerate(eo.sgr):
+                #             if i == 0:
+                #                 logging.debug(f'(SGR):  {str(s):29}  "{str(eo.text)}"')
+                #             else:
+                #                 logging.debug(f"            {str(s):36}")
+                #     else:
+                #         logging.debug(f"{str(eo)}")
+                #         # if eo.csi in (CSI.ENABLE, CSI.DISABLE):
+                #         #     logging.debug(f"(Private sequence):  {str(eo):34} {str(eo.text):12} {self.pos_str()}")
+
+                #         # t = f'"{str(eo.text)}"'
+                #         # logging.debug(f"(CSI):  {str(eo):34} {t:12} {self.pos_str()}")
+                # else:
+                #     logging.debug(f'(C1):   {eo.c1:20}  "{str(eo.text)}"')
                 continue
 
             if token == Ascii.CR:  # carriage return
@@ -1574,83 +1745,6 @@ flag = f"""
 {FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Ansi.END}
 {FLAG_BLUE}     {FLAG_YELLOW}  {FLAG_BLUE}          {Ansi.END}
 """
-escape_attribute_test = f"""  
-{Ansi.UNDERLINE}Font attributes{Ansi.END}
-{Ansi.RESET}Normal text         {Ansi.RESET}
-{Ansi.BOLD}Bold text           {Ansi.NORMAL}Not Bold text{Ansi.RESET}
-{Ansi.DIM}Dim text             {Ansi.NORMAL}Not dim text{Ansi.RESET}
-{Ansi.ITALIC}Italic text         {Ansi.NOT_ITALIC}Not italic text{Ansi.RESET}
-{Ansi.UNDERLINE}Underline text      {Ansi.NOT_UNDERLINED}Not underline text{Ansi.RESET}
-{Ansi.SLOWBLINK}Slow blinking text   {Ansi.NOT_BLINKING}Not blinking text{Ansi.RESET}
-{Ansi.FASTBLINK}Fast blinking text   {Ansi.NOT_BLINKING}Not blinking text{Ansi.RESET}
-{Ansi.FRAMED}Framed text         {Ansi.RESET}
-{Ansi.SUBSCRIPT}Subscript text       {Ansi.NOT_SSCRIPT}Not subscript text{Ansi.RESET}
-{Ansi.SUPERSCRIPT}Superscript text     {Ansi.NOT_SSCRIPT}Not superscript text{Ansi.RESET}
-{Ansi.FRACTUR}Fractur/Gothic text {Ansi.RESET}
-{Ansi.CROSSED}Crossed text        {Ansi.NOT_CROSSED}Not crossed text{Ansi.RESET}
-{Ansi.OVERLINE}Overlined text      {Ansi.NOT_OVERLINE}Not overlined text{Ansi.RESET}
-{Ansi.REVERSE}Reversed text       {Ansi.NOT_REVERSED}Not reversed text{Ansi.RESET}
-
-{Ansi.BOLD}{Ansi.ITALIC}{Ansi.UNDERLINE}Bold and italic and underlined{Ansi.RESET}
-
-{Ansi.UNDERLINE}Standard foreground color attributes{Ansi.END}
-
-{Ansi.BLACK}Black{Ansi.END} {Ansi.DARKGRAY}Dark Gray{Ansi.END}
-{Ansi.RED}Red{Ansi.RESET}     {Ansi.BR_RED}Bright Red{Ansi.END}
-{Ansi.GREEN}Green{Ansi.END}   {Ansi.BR_GREEN}Bright Green{Ansi.END}
-{Ansi.YELLOW}Yellow{Ansi.END}  {Ansi.BR_YELLOW}Bright Yellow{Ansi.END}
-{Ansi.BLUE}Blue{Ansi.END}    {Ansi.BR_BLUE}Bright Blue{Ansi.END}
-{Ansi.MAGENTA}Magenta{Ansi.END} {Ansi.BR_MAGENTA}Bright Magenta{Ansi.END}
-{Ansi.CYAN}Cyan{Ansi.END}    {Ansi.BR_CYAN}Bright Cyan{Ansi.END}
-{Ansi.WHITE}White{Ansi.END}    {Ansi.BR_WHITE}Bright White{Ansi.END}
-
-{Ansi.UNDERLINE}Standard background color attributes{Ansi.END}
-
-{Ansi.BG_BLACK} Black {Ansi.END}
-{Ansi.BG_RED} Red {Ansi.END}
-{Ansi.BG_GREEN} Green {Ansi.END}
-{Ansi.BG_YELLOW} Yellow {Ansi.END}
-{Ansi.BG_BLUE} Blue {Ansi.END}
-{Ansi.BG_MAGENTA} Magenta {Ansi.END}
-{Ansi.BG_CYAN} Cyan {Ansi.END}
-"""
-
-cursor_test = f"""
-{Ansi.DOWN} asdf {Ansi.UP}  {Ansi.BACK} {Ansi.FORWARD} {Ansi.FRACTUR}
-"""
-
-
-def color_256_test():
-    buf = ""
-    for c in range(0, 8):
-        buf += f"{Ansi.fg_8bit_color(c)}{c:^7}"
-
-    buf += "\n"
-    for c in range(8, 16):
-        buf += f"{Ansi.fg_8bit_color(c)}{c:^7}"
-    buf += "\n\n"
-    for r in range(0, 36):
-        x = 16 + r * 6
-        buf2 = ""
-        for c in range(x, x + 6):
-            buf += f"{Ansi.fg_8bit_color(c)}{c:>5}"
-            buf2 += f"{Ansi.BLACK}{Ansi.bg_8bit_color(c)}{c:^5}{Ansi.RESET} "
-
-        buf += "  " + buf2
-
-        buf += "\n"
-
-    buf += "\n"
-
-    for c in range(232, 244):
-        buf += f"{Ansi.fg_8bit_color(c)}{c:>3} "
-    buf += "\n"
-    for c in range(244, 256):
-        buf += f"{Ansi.fg_8bit_color(c)}{c:>3} "
-    buf += "\n"
-
-    return buf
-
 
 incomplete_escape_sequence = f"""
 {Ansi.BR_MAGENTA}Some colored text{Ansi.END}
@@ -1664,8 +1758,8 @@ def main() -> None:
         format="[%(levelname)s] Line: %(lineno)d %(message)s", level=logging.DEBUG
     )
 
-    # print(escape_attribute_test)
-    # print(flag)
+    print(Ansi.color_test())
+    print(Ansi.test())
 
     # dec = EscapeDecoder()
     # dec.append_string(f"Normal color {Esc.RED}Red color {Esc.END}More normal color {Esc.BLUE}Blue angels {Esc.END}White end")
