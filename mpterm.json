@@ -1,6 +1,6 @@
 {
     "alias": "default",
-    "port": "ttyUSB1",
+    "port": "ttyS1",
     "bitrate": "28400",
     "databits": "8",
     "parity": "None",

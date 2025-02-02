@@ -61,7 +61,12 @@ from PyQt5.QtWidgets import (
     QSizePolicy,
 )
 
-from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
+try:
+    from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
+except ModuleNotFoundError:
+    print("Lib qtserialport not installed")
+    print(">apt install python3-pyqt5.qtserialport")
+    exit(0)
 
 from dataclasses import dataclass, field
 from escape import (
