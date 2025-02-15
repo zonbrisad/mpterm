@@ -18,7 +18,6 @@
 # Imports --------------------------------------------------------------------
 
 from enum import Enum
-from tkinter import NO
 from mpplugin import MpPlugin, MpPluginWidget, MpPluginWidgetType
 from mpframe import MpFrame
 

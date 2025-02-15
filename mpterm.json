@@ -1,6 +1,10 @@
 {
     "alias": "default",
+<<<<<<< HEAD
     "port": "ttyUSB0",
+=======
+    "port": "ttyS1",
+>>>>>>> 16203df673844bcbbaa01570c544526127aa7212
     "bitrate": "28400",
     "databits": "8",
     "parity": "None",
