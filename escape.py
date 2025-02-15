@@ -116,10 +116,11 @@ class Ascii:
 
         return "".join(lines)
 
+def ascii_table() -> str:
+    return Ascii.table()
 
 class Ansi:
     """ANSI foreground colors codes"""
-
     BLACK = "\x1b[0;30m"  # Black
     RED = "\x1b[0;31m"  # Red
     GREEN = "\x1b[0;32m"  # Green
@@ -387,17 +388,13 @@ class CSI(Enum):
     SCROLL_UP = "S"  # "\e[2S" Move lines up, new lines at bottom
     SCROLL_DOWN = "T"
 
-    HVP = "f"  #  Horizontal and Vertical Position(depends on PUM=Positioning Unit Mode)
+    HVP = "f"  # Horizontal and Vertical Position(depends on PUM=Positioning Unit Mode)
 
-    ENABLE = "h"  # Enable/set
-    DISABLE = "l"  # Disable/reset
-    #  2 - Keyboard Action Mode (KAM).
-    #  4 - Replace Mode (IRM).
-    # 12 - Send/receive (SRM).
-    # 20 - Normal Linefeed (LNM
-    # 25 - cursor visible
-    # 47h - save screen
-    # 47l - restore screen
+    RESET_MODE = "l"  # Reset mode (RM)
+    #                   2   - Keyboard Action Mode (KAM).
+    #                   4   - Replace Mode (IRM).
+    #                   1 2 - Send/receive (SRM).
+    #                   2 0 - Normal Linefeed (LNM
 
     SGR = "m"  # Select graphics rendition (SGR)
     # AUX = "i"  # Enable/Disable aux serial port
@@ -416,7 +413,7 @@ class CSI(Enum):
 
     @staticmethod
     def decode(s: str) -> CSI:
-        if not s[0] == Ascii.ESCAPE:
+        if not s[0] == Ascii.ESC:
             return None
 
         tc = s[-1]  # termination character in Escape sequence
@@ -507,93 +504,48 @@ class SGR(Enum):
                 return e
         return SGR.UNSUPPORTED
 
-    # @staticmethod
-    # def decode(s: str) -> list:
-    #     if not SGR.is_sgr(s):
-    #         return None
+    @staticmethod
+    def decode(s: str):
+        if not SGR.is_sgr(s):
+            return None
 
-    #     x = s[2:-1]
-    #     # attributes = x.split(";")
-    #     attributes = x.replace(":", ";").split(";")
-    #     attr_list = []
-    #     for attr in attributes:
-    #         if attr == "":  # If no number present it is a reset(0)
-    #             # attr_list.append({"SGR":SGR.RESET})
-    #             attr = "0"
-
-    #         # Extended(256/Truecolor) color management
-    #         if attr in [SGR.SET_BG_COLOR.value, SGR.SET_FG_COLOR.value]:
-    #             logging.debug(attributes)
-    #             # 256 color mode
-    #             if int(attributes[1]) == 5:
-    #                 attr_list.append(
-    #                     {"SGR": SGR.find_sgr(attr), "color": int(attributes[2])}
-    #                 )
-    #             # Truecolor mode
-    #             if int(attributes[1]) == 2:
-    #                 # xx.append({"SGR":SGR.find_sgr(c), "color":int(sp[2])})
-    #                 pass
-    #             break
-
-    #         # Handle underline style
-    #         if attr == SGR.UNDERLINE.value:
-    #             attr_list.append({"SGR": SGR.find_sgr(attr)})
-    #             break
-
-    #         # Handle underline color
-    #         if attr == SGR.SET_UL_COLOR.value:
-    #             break
-
-    #         attr_list.append({"SGR": SGR.find_sgr(attr)})
-
-    #     # if isinstance(t, SGR):
-    #     logging.debug(f"SGR: {attr_list}")
-    #     return attr_list
-
-
-@dataclass
-class SGRA:
-    id: int = 0
-    code: SGR = SGR.UNSUPPORTED
-    color = None
-
-    def decode(self, attrs: list[str]) -> int:
-        ret = 0
-        for i, attr in enumerate(attrs):
+        x = s[2:-1]
+        # attributes = x.split(";")
+        attributes = x.replace(":", ";").split(";")
+        attr_list = []
+        for attr in attributes:
             if attr == "":  # If no number present it is a reset(0)
-                attr = 0
-            else:
-                attr = int(attr)
-
-            self.code = attr
-            ret = 1
+                # attr_list.append({"SGR":SGR.RESET})
+                attr = "0"
 
             # Extended(256/Truecolor) color management
             if attr in [SGR.SET_BG_COLOR.value, SGR.SET_FG_COLOR.value]:
-                color_mode = int(attrs[i + 1])
-
+                logging.debug(attributes)
                 # 256 color mode
-                if color_mode == 5:
-                    self.color = int(attr[i + 2])
-                    # attr_list.append(
-                    #     {"SGR": SGR.find_sgr(attr), "color": int(attributes[2])}
-                    # )
+                if int(attributes[1]) == 5:
+                    attr_list.append(
+                        {"SGR": SGR.find_sgr(attr), "color": int(attributes[2])}
+                    )
                 # Truecolor mode
-                if color_mode == 2:
+                if int(attributes[1]) == 2:
                     # xx.append({"SGR":SGR.find_sgr(c), "color":int(sp[2])})
                     pass
                 break
 
             # Handle underline style
             if attr == SGR.UNDERLINE.value:
+                attr_list.append({"SGR": SGR.find_sgr(attr)})
                 break
+
             # Handle underline color
             if attr == SGR.SET_UL_COLOR.value:
                 break
-        # attr_list.append({"SGR": SGR.find_sgr(attr)})
-        return ret
 
-    # self.sgr = attr_list
+            attr_list.append({"SGR": SGR.find_sgr(attr)})
+
+        # if isinstance(t, SGR):
+        logging.debug(f"SGR: {attr_list}")
+        return attr_list
 
 
 @dataclass
@@ -601,7 +553,6 @@ class EscapeObj:
     c1: C1 = C1.UNSUPPORTED
     csi: CSI = CSI.UNSUPPORTED
     sgr: SGR = SGR.UNSUPPORTED
-    sgrs: list[SGRA] = field(default_factory=list)
     n: int = 1
     m: int = 1
     is_text: bool = False
@@ -620,7 +571,7 @@ class EscapeObj:
                 self.c1 = c
 
         if self.c1 == C1.UNSUPPORTED:
-            logging.debug(f"{str(self)}")
+            # logging.debug(f'C1 unsupported:  "{self.text}"')
             return None
 
         if seq[1] != "[":
@@ -632,20 +583,17 @@ class EscapeObj:
                 self.csi = csi
 
         if self.csi == CSI.UNSUPPORTED:
-            logging.debug(f"{str(self)}")
+            # logging.debug(f'CSI unsupported:  "{self.text}"')
             return None
 
         # The following CSI's has 0 as default for n
         if self.csi in [CSI.ERASE_IN_DISPLAY, CSI.ERASE_IN_LINE]:
             self.n = 0
 
-        # remove questionmark "?" if private sequence
-        if self.csi in (CSI.ENABLE, CSI.DISABLE):
-            seq = seq.replace("?", "")
+        paramsx = seq[2:-1].replace(":", ";").split(";")
+        params = [param for param in paramsx if param != ""]  # removing empty strings
 
-        params = seq[2:-1].replace(":", ";").split(";")
-        params = [param for param in params if param != ""]  # removing empty strings
-
+        # logging.debug(f'Found {self.csi}  "{Escape.to_str(seq)}" {params}')
         if len(params) > 0:
             self.n = int(params[0])
         if len(params) > 1:
@@ -653,32 +601,10 @@ class EscapeObj:
 
         # Decode SGR (Select Graphic Rendition)
         if self.csi == CSI.SGR:
-            # self.decode_sgr(seq)
-            self.decode_sgr_new(seq)
-
-        # logging.debug(f'Found {self.csi}  "{Ansi.to_str(seq)}" {params}')
-        # logging.debug(f'Found {self.csi}  "{Ansi.to_str(seq)}" {params}')
-        logging.debug(f"{str(self)}")
-        if self.csi == CSI.SGR:
-            for sgr in enumerate(self.sgr):
-                #             if i == 0:
-                #                 logging.debug(f'(SGR):  {str(s):29}  "{str(eo.text)}"')
-                #             else:
-                # logging.debug(f'            {sgr["SGR"]}')
-                logging.debug(f"            {str(sgr):36}")
+            self.decode_sgr(seq)
 
     def __str__(self) -> str:
-        if self.c1 != C1.CSI:
-            return f"{self.c1:20} {str(self.text):12}"
-
-        if self.csi in (CSI.ENABLE, CSI.DISABLE):
-            return f"{self.csi:20} {str(self.text):12} {self.n:<2}"
-
-        if self.csi == CSI.SGR:
-            return f"{self.csi:20} {str(self.text):12}"
-
-        return f"{self.csi:20} {str(self.text):12}n={self.n:<2} m={self.m:<2}"
-        # return f"{self.csi:20} n={self.n:<2} m={self.m:<2}"
+        return f"{self.csi:20} n={self.n:<2} m={self.m:<2}"
 
     @staticmethod
     def find_sgr(sgr_code: int) -> SGR:
@@ -686,16 +612,6 @@ class EscapeObj:
             if sgr_code == sgr.value:
                 return sgr
         return SGR.UNSUPPORTED
-
-    def decode_sgr_new(self, attr_string: str) -> None:
-        x = attr_string[2:-1]
-        attributes = x.replace(":", ";").split(";")
-
-        while len(attributes) > 0:
-            sgr = SGRA()
-            a = sgr.decode(attributes)
-            attributes.pop(len(a))
-            self.sgrs.append(sgr)
 
     def decode_sgr(self, s: str):
         x = s[2:-1]
@@ -1673,22 +1589,18 @@ class TerminalState(TerminalAttributeState):
                             if a == SGR.SET_BG_COLOR_DEFAULT:
                                 self.tas.BG_COLOR = self.DEFAULT_BG_COLOR
 
-                # if eo.c1 == C1.CSI:
-                #     if eo.csi == CSI.SGR:
-                #         for i, s in enumerate(eo.sgr):
-                #             if i == 0:
-                #                 logging.debug(f'(SGR):  {str(s):29}  "{str(eo.text)}"')
-                #             else:
-                #                 logging.debug(f"            {str(s):36}")
-                #     else:
-                #         logging.debug(f"{str(eo)}")
-                #         # if eo.csi in (CSI.ENABLE, CSI.DISABLE):
-                #         #     logging.debug(f"(Private sequence):  {str(eo):34} {str(eo.text):12} {self.pos_str()}")
-
-                #         # t = f'"{str(eo.text)}"'
-                #         # logging.debug(f"(CSI):  {str(eo):34} {t:12} {self.pos_str()}")
-                # else:
-                #     logging.debug(f'(C1):   {eo.c1:20}  "{str(eo.text)}"')
+                if eo.c1 == C1.CSI:
+                    if eo.csi == CSI.SGR:
+                        for i, s in enumerate(eo.sgr):
+                            if i == 0:
+                                logging.debug(f'(SGR):  {str(s):29}  "{str(eo.text)}"')
+                            else:
+                                logging.debug(f"            {str(s):36}")
+                    else:
+                        t = f'"{str(eo.text)}"'
+                        logging.debug(f"(CSI):  {str(eo):34} {t:12} {self.pos_str()}")
+                else:
+                    logging.debug(f'(C1):   {eo.c1:20}  "{str(eo.text)}"')
                 continue
 
             if token == Ascii.CR:  # carriage return

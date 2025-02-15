@@ -162,13 +162,21 @@ class QTerminalWidget(QPlainTextEdit):
         #     """
         # )
 
-        self.setStyleSheet(  # Good line distance, but with line overlapping
+        # self.setStyleSheet(  # Good line distance, but with line overlapping
+        #     """
+        # color : White;
+        # background-color: rgb(0, 0, 0);
+        # font-family:Monospace;
+        # font-size:10pt;
+        # line-height:1.2;
+        # """
+        self.setStyleSheet(  # Working, but row distance long
             """
         color : White;
         background-color: rgb(0, 0, 0);
         font-family:Monospace;
-        font-size:10pt;
-        line-height:1.2;
+        font-size:12pt;
+        line-height:1.0;
         """
         )
         # self.setStyleSheet(  # Test of font other than "Monospace"
