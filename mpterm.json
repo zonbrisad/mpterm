@@ -1,7 +1,7 @@
 {
     "alias": "default",
-    "port": "ttyS1",
-    "bitrate": "28400",
+    "port": "ttyUSB1",
+    "bitrate": "115200",
     "databits": "8",
     "parity": "None",
     "stopbits": "1",
@@ -10,7 +10,7 @@
     "suspend_timeout": 4,
     "ext_program": "htop",
     "newline": "LF",
-    "win_x": 1439,
+    "win_x": 1454,
     "win_y": 875,
     "sync_string": "",
     "columns": 50,

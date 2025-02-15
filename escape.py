@@ -119,7 +119,6 @@ class Ascii:
 
 class Ansi:
     """ANSI foreground colors codes"""
-
     BLACK = "\x1b[0;30m"  # Black
     RED = "\x1b[0;31m"  # Red
     GREEN = "\x1b[0;32m"  # Green
@@ -387,7 +386,7 @@ class CSI(Enum):
     SCROLL_UP = "S"  # "\e[2S" Move lines up, new lines at bottom
     SCROLL_DOWN = "T"
 
-    HVP = "f"  #  Horizontal and Vertical Position(depends on PUM=Positioning Unit Mode)
+    HVP = "f"  # Horizontal and Vertical Position(depends on PUM=Positioning Unit Mode)
 
     ENABLE = "h"  # Enable/set
     DISABLE = "l"  # Disable/reset
@@ -416,7 +415,7 @@ class CSI(Enum):
 
     @staticmethod
     def decode(s: str) -> CSI:
-        if not s[0] == Ascii.ESCAPE:
+        if not s[0] == Ascii.ESC:
             return None
 
         tc = s[-1]  # termination character in Escape sequence
