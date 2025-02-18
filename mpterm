@@ -852,7 +852,7 @@ class MainForm(QMainWindow):
             "EOT [0x04] (Ctrl-D)", menu_send, lambda: self.send_string(Ascii.ETX)
         )
         self.add_action("Tab [0x09]", menu_send, lambda: self.send_string(Ascii.TAB))
-        self.add_action("LF [0x0a]", menu_send, lambda: self.send_string(Ascii.NL))
+        self.add_action("LF [0x0a]", menu_send, lambda: self.send_string(Ascii.LF))
         self.add_action("CR [0x0d]", menu_send, lambda: self.send_string(Ascii.CR))
 
         menu_tests = menu_send.addMenu("Tests")
