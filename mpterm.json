@@ -1,6 +1,6 @@
 {
     "alias": "default",
-    "port": "ttyS1",
+    "port": "ttyUSB3",
     "bitrate": "115200",
     "databits": "8",
     "parity": "None",
@@ -11,7 +11,7 @@
     "ext_program": "htop",
     "newline": "LF",
     "win_x": 1454,
-    "win_y": 875,
+    "win_y": 874,
     "sync_string": "",
     "columns": 50,
     "plugin": "None",

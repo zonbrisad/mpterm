@@ -119,6 +119,7 @@ class Ascii:
 
 class Ansi:
     """ANSI foreground colors codes"""
+
     BLACK = "\x1b[0;30m"  # Black
     RED = "\x1b[0;31m"  # Red
     GREEN = "\x1b[0;32m"  # Green
@@ -693,8 +694,19 @@ class EscapeObj:
         while len(attributes) > 0:
             sgr = SGRA()
             a = sgr.decode(attributes)
-            attributes.pop(len(a))
+            for _ in range(a):
+                attributes.pop(0)
+            print(f"{a=}")
+            # attributes.pop(a)
             self.sgrs.append(sgr)
+
+        # for attr in attributes:
+        #     sgr = SGRA()
+        #     a = sgr.decode(attributes)
+        #     # attributes.pop(len(a))
+        #     print(f"{a=}")
+        #     attributes.pop(a)
+        #     self.sgrs.append(sgr)
 
     def decode_sgr(self, s: str):
         x = s[2:-1]
