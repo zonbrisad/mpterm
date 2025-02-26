@@ -1030,6 +1030,9 @@ class MainForm(QMainWindow):
                 )
             self.set_state(MpState.CONNECTED)
 
+        if self.state == MpState.CONNECTED and not self.serial_port.isOpen():
+            self.set_state(MpState.DISCONNECTED)
+
     def edit_macro_dialog(self) -> None:
         self.macro_dialog.exec(self.prof.macros)
 
@@ -1420,26 +1423,6 @@ class MainForm(QMainWindow):
             )
         self.set_state(MpState.CONNECTED)
         self.ui_handler()
-
-    # def open_port(self) -> None:
-    #     if self.serial_port.isOpen():
-    #         self.serial_port.close()
-    #         self.update_ui()
-    #         return
-
-    #     self.serial_port.clear()
-    #     self.init_port()
-    #     res = self.serial_port.open()
-    #     if res:
-    #         self.message(
-    #             f"Opening port: /dev/{self.serial_port.portName()} {self.serial_port.baudRate()}"
-    #         )
-    #     else:
-    #         self.message_error(
-    #             f"Failed to open port /dev/{self.serial_port.portName()}. {self.serial_port.error()}"
-    #         )
-
-    #     self.update_ui()
 
     def init_port(self) -> None:
         self.set_port()
