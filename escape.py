@@ -117,10 +117,6 @@ class Ascii:
         return "".join(lines)
 
 
-def ascii_table() -> str:
-    return Ascii.table()
-
-
 class Ansi:
     """ANSI foreground colors codes"""
 
@@ -392,11 +388,15 @@ class CSI(Enum):
 
     HVP = "f"  # Horizontal and Vertical Position(depends on PUM=Positioning Unit Mode)
 
-    RESET_MODE = "l"  # Reset mode (RM)
-    #                   2   - Keyboard Action Mode (KAM).
-    #                   4   - Replace Mode (IRM).
-    #                   1 2 - Send/receive (SRM).
-    #                   2 0 - Normal Linefeed (LNM
+    ENABLE = "h"  # Enable/set
+    DISABLE = "l"  # Disable/reset
+    #  2 - Keyboard Action Mode (KAM).
+    #  4 - Replace Mode (IRM).
+    # 12 - Send/receive (SRM).
+    # 20 - Normal Linefeed (LNM
+    # 25 - cursor visible
+    # 47h - save screen
+    # 47l - restore screen
 
     SGR = "m"  # Select graphics rendition (SGR)
     # AUX = "i"  # Enable/Disable aux serial port
@@ -565,6 +565,7 @@ class EscapeObj:
     c1: C1 = C1.UNSUPPORTED
     csi: CSI = CSI.UNSUPPORTED
     sgr: SGR = SGR.UNSUPPORTED
+    sgrs: list[SGRA] = field(default_factory=list)
     n: int = 1
     m: int = 1
     is_text: bool = False
@@ -583,7 +584,7 @@ class EscapeObj:
                 self.c1 = c
 
         if self.c1 == C1.UNSUPPORTED:
-            # logging.debug(f'C1 unsupported:  "{self.text}"')
+            logging.debug(f"{str(self)}")
             return None
 
         if seq[1] != "[":
@@ -595,17 +596,20 @@ class EscapeObj:
                 self.csi = csi
 
         if self.csi == CSI.UNSUPPORTED:
-            # logging.debug(f'CSI unsupported:  "{self.text}"')
+            logging.debug(f"{str(self)}")
             return None
 
         # The following CSI's has 0 as default for n
         if self.csi in [CSI.ERASE_IN_DISPLAY, CSI.ERASE_IN_LINE]:
             self.n = 0
 
-        paramsx = seq[2:-1].replace(":", ";").split(";")
-        params = [param for param in paramsx if param != ""]  # removing empty strings
+        # remove questionmark "?" if private sequence
+        if self.csi in (CSI.ENABLE, CSI.DISABLE):
+            seq = seq.replace("?", "")
 
-        # logging.debug(f'Found {self.csi}  "{Escape.to_str(seq)}" {params}')
+        params = seq[2:-1].replace(":", ";").split(";")
+        params = [param for param in params if param != ""]  # removing empty strings
+
         if len(params) > 0:
             self.n = int(params[0])
         if len(params) > 1:
@@ -621,7 +625,17 @@ class EscapeObj:
                 logging.debug(f"            {sgr}")
 
     def __str__(self) -> str:
-        return f"{self.csi:20} n={self.n:<2} m={self.m:<2}"
+        if self.c1 != C1.CSI:
+            return f"{self.c1:20} {str(self.text):12}"
+
+        if self.csi in (CSI.ENABLE, CSI.DISABLE):
+            return f"{self.csi:20} {str(self.text):12} {self.n:<2}"
+
+        if self.csi == CSI.SGR:
+            return f"{self.csi:20} {str(self.text):12}"
+
+        return f"{self.csi:20} {str(self.text):12}n={self.n:<2} m={self.m:<2}"
+        # return f"{self.csi:20} n={self.n:<2} m={self.m:<2}"
 
     def decode_sgr_new(self, attr_string: str) -> None:
         x = attr_string[2:-1]

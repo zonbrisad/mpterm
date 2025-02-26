@@ -1,22 +1,17 @@
 {
     "alias": "default",
-<<<<<<< HEAD
-    "port": "ttyUSB0",
-    "bitrate": "28400",
-=======
     "port": "ttyUSB1",
     "bitrate": "115200",
->>>>>>> terminalrefactor
     "databits": "8",
     "parity": "None",
     "stopbits": "1",
     "flowcontrol": "None",
     "mode": "Ascii",
     "suspend_timeout": 4,
-    "ext_program": "sudo apt install rolldice",
+    "ext_program": "htop",
     "newline": "LF",
-    "win_x": 2021,
-    "win_y": 1207,
+    "win_x": 1440,
+    "win_y": 838,
     "sync_string": "",
     "columns": 50,
     "plugin": "None",
