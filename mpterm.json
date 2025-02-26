@@ -1,17 +1,22 @@
 {
     "alias": "default",
+<<<<<<< HEAD
     "port": "ttyUSB0",
     "bitrate": "28400",
+=======
+    "port": "ttyUSB1",
+    "bitrate": "115200",
+>>>>>>> terminalrefactor
     "databits": "8",
     "parity": "None",
     "stopbits": "1",
     "flowcontrol": "None",
     "mode": "Ascii",
     "suspend_timeout": 4,
-    "ext_program": "htop",
+    "ext_program": "sudo apt install rolldice",
     "newline": "LF",
-    "win_x": 1439,
-    "win_y": 875,
+    "win_x": 2021,
+    "win_y": 1207,
     "sync_string": "",
     "columns": 50,
     "plugin": "None",
@@ -24,22 +29,22 @@
         {
             "name": "M2",
             "hex": true,
-            "text": "0xff 0x55 0x0b 0x02 0x00 0x00 0x00 0x01 0x4A"
+            "text": "0x1b 0x5b 0x30 0x3b 0x33 0x31 0x6d"
         },
         {
             "name": "M3",
-            "hex": true,
-            "text": "0xff 0x55 0x11 0x02 0x01 0x00 0x00 0x00 0x00 0x50"
+            "hex": false,
+            "text": "\\x1b[&m"
         },
         {
             "name": "M4",
-            "hex": true,
-            "text": "0xff 0x55 0x0b 0x02 0x01 0x00 0x00 0x00 0x00 0x4A"
+            "hex": false,
+            "text": "\\e[38mRed\\e[0m\\n"
         },
         {
             "name": "M5",
             "hex": false,
-            "text": "cf\\n"
+            "text": "\\x1b[38mRed\\n"
         }
     ]
 }

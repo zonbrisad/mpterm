@@ -236,7 +236,13 @@ class Macro:
 
             # print(hs)
             return bytearray(hs)
-        return bytearray(self.text.replace("\\n", "\n"), "utf-8")
+
+        return bytearray(
+            self.text.replace("\\n", "\n")
+            .replace("\\e", "\x1b")
+            .replace("\\x1b", "\x1b"),
+            "utf-8",
+        )
 
 
 @dataclass
@@ -1137,7 +1143,6 @@ class MainForm(QMainWindow):
 
     def external_program_finished(self) -> None:
         logging.debug("External program finnished executing")
-        print("Finnished")
         self.terminal.append_html_text("<br>")
         if self.old_state == MpState.CONNECTED:
             self.set_state(MpState.RECONNECTING)

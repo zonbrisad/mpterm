@@ -117,7 +117,9 @@ class QTerminalWidget(QPlainTextEdit):
         super().__init__(parent)
 
         self.cur = QTextCursor(self.document())
-        self.terminal_state = TerminalState()
+        self.terminal_state = TerminalState(rows=24, columns=80)
+        # self.terminal_state = TerminalState(rows=50, columns=120)
+
         self.setCursorWidth(2)
         self.ensureCursorVisible()
         self.setReadOnly(True)
@@ -175,7 +177,7 @@ class QTerminalWidget(QPlainTextEdit):
         color : White;
         background-color: rgb(0, 0, 0);
         font-family:Monospace;
-        font-size:12pt;
+        font-size:10pt;
         line-height:1.0;
         """
         )
@@ -265,12 +267,16 @@ class QTerminalWidget(QPlainTextEdit):
                     self.move(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
 
                 self.cur.insertHtml(line.line_to_html())
+                # print(f"HTML {line.line_to_html()}")
 
         self.limit_lines()
 
     def scroll_down(self) -> None:
         vsb = self.verticalScrollBar()
         vsb.setValue(vsb.maximum())
+
+
+space_test_string = f"""{Ansi.BOLD}1234{Ansi.RESET}5678\n"""
 
 
 class MainForm(QMainWindow):
@@ -323,6 +329,7 @@ class MainForm(QMainWindow):
         self.add_button("Cursor back", Ansi.BACK)
         self.add_button("Cursor forward", Ansi.FORWARD)
         self.add_button("Erase in line", "\x1b[K")
+        self.add_button("Spacetest", space_test_string)
 
         self.button_layout.addStretch()
 
@@ -355,6 +362,9 @@ class MainForm(QMainWindow):
 
 
 def main() -> None:
+    logging.basicConfig(
+        format="[%(levelname)s] Line: %(lineno)d %(message)s", level=logging.DEBUG
+    )
     app = QApplication(sys.argv)
     mainForm = MainForm(sys.argv)
     mainForm.show()
