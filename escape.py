@@ -284,7 +284,6 @@ class Ansi:
         s.append(Ansi.row_add(Ansi.CROSSED, "Crossed text", Ansi.NOT_CROSSED))
         s.append(Ansi.row_add(Ansi.OVERLINE, "Overlined text", Ansi.NOT_OVERLINE))
         s.append(Ansi.row_add(Ansi.REVERSE, "Reversed text", Ansi.NOT_REVERSED))
-        return "\n".join(s)
         s.append(f"\n{Ansi.UNDERLINE}Standard foreground color attributes{Ansi.END}")
         s.append(Ansi.row_add_c(Ansi.BLACK, "Black", Ansi.DARKGRAY, "Dark Gray"))
         s.append(Ansi.row_add_c(Ansi.RED, "Red", Ansi.BR_RED, "Bright Red"))
@@ -671,7 +670,7 @@ class EscapeTokenizer:
         self.lbuf.extend(list(utf))
 
     def is_csi(self) -> bool:
-        """Check if sgr.code string is CSI terminated"""
+        """Check if sequence string is CSI terminated"""
 
         if self.seq[1] != C1.CSI.value:
             return False
@@ -1205,7 +1204,6 @@ class TerminalLine:
             fg_color = tas.FG_COLOR
             bg_color = tas.BG_COLOR
 
-        # b = f'<span style="color:{fg_color};background-color:{bg_color};font-size:10pt;line-height:1.38;'
         b = f'<span style="color:{fg_color};background-color:{bg_color};font-size:10pt;'
 
         if tas.BOLD:
@@ -1328,18 +1326,23 @@ class TerminalLine:
 
 
 class TerminalState(TerminalAttributeState):
-    def __init__(self) -> None:
+    def __init__(self, rows: int = 24, columns: int = 80) -> None:
         self.et = EscapeTokenizer()
         self.line_id = 0
         self.tas = TerminalAttributeState()
         self.default_fg_color = TColor.WHITE
         self.default_bg_color = TColor.BLACK
+        self.set_terminal(rows, columns)
         self.reset()
+
+    def set_terminal(self, rows: int, columns: int) -> None:
+        self.rows = rows
+        self.columns = columns
 
     def reset(self):
         self.cursor = TerminalCoordinate()
         self.saved_cursor = TerminalCoordinate()
-        self.max = TerminalCoordinate(row=24, column=80)
+        self.max = TerminalCoordinate(self.rows, self.columns)
         self.lines: list[TerminalLine] = []
         for _ in range(0, self.max.row):
             self.new_line()
@@ -1429,7 +1432,7 @@ class TerminalState(TerminalAttributeState):
 
     def update(self, s: str) -> list:
         self.et.append_string(s)
-        for i in range(0, 24):
+        for i in range(0, self.max.row):
             self.lines[i].reset()
 
         for token in self.et:

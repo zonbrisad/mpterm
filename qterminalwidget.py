@@ -117,7 +117,9 @@ class QTerminalWidget(QPlainTextEdit):
         super().__init__(parent)
 
         self.cur = QTextCursor(self.document())
-        self.terminal_state = TerminalState()
+        self.terminal_state = TerminalState(rows=24, columns=80)
+        # self.terminal_state = TerminalState(rows=50, columns=120)
+
         self.setCursorWidth(2)
         self.ensureCursorVisible()
         self.setReadOnly(True)
@@ -175,7 +177,7 @@ class QTerminalWidget(QPlainTextEdit):
         color : White;
         background-color: rgb(0, 0, 0);
         font-family:Monospace;
-        font-size:12pt;
+        font-size:10pt;
         line-height:1.0;
         """
         )

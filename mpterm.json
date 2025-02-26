@@ -1,6 +1,6 @@
 {
     "alias": "default",
-    "port": "ttyUSB3",
+    "port": "ttyUSB1",
     "bitrate": "115200",
     "databits": "8",
     "parity": "None",
@@ -10,8 +10,8 @@
     "suspend_timeout": 4,
     "ext_program": "sudo apt install rolldice",
     "newline": "LF",
-    "win_x": 1454,
-    "win_y": 1062,
+    "win_x": 2021,
+    "win_y": 1207,
     "sync_string": "",
     "columns": 50,
     "plugin": "None",

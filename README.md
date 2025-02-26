@@ -52,9 +52,9 @@ MpTerm does not have full ANSI terminal support and will likely never have. At p
 - Basic ANSI Terminal functionality
 - Externaly triggered suspend function
 - Externaly triggered programing function
-- Userdefineable macros
+- Userdefinable macros
 - Echo mode
-- Plugins
+- Plugins (experimental)
 
 ## Requirements
 
@@ -133,9 +133,11 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 - [x] Rendering: Color encoding (8 colors)
 - [x] Rendering: 256 color encoding
 - [ ] Rendering: Dim text
+- [ ] Rendering: Blink attribute
 - [ ] Rendering: Truecolor (RGB)
 - [ ] Rendering: Underline style (not supported by Qt QTextEdit/QPlainTextEdit yet)
 - [ ] Rendering: Fix color rendering for basic 16 colors
+- [ ] Rendering: Real bright(bold) colors
 - [x] Rendering: Reverse text
 - [x] Button: backspace
 - [x] Button: tab
@@ -178,7 +180,7 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 - [x] Rendering: Error when <> characters are included
 - [x] Rendering: Text lines overlap with one(maybe two) pixel row(s)
 - [x] Rendering: Terminal rendering performance is slow
-- [ ] Rendering: Real bright(bold) colors
+
 - [x] Rendering: Row removal fail
 - [x] Rendering: "bpexample attr" fail when executed via extrnal program
 - [ ] UI: Tab cycling is not correct
