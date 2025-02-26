@@ -961,6 +961,8 @@ class MainForm(QMainWindow):
         self.timer_5.start()
 
         self.suspend_timer = QTimer()
+        self.suspend_timer.setSingleShot(True)
+        self.suspend_timer.setInterval(self.prof.suspend_timeout * 1000)
         self.suspend_timer.timeout.connect(lambda: self.set_state(MpState.RECONNECTING))
 
         self.process = QProcess()
@@ -992,7 +994,7 @@ class MainForm(QMainWindow):
 
     def set_state(self, new_state: MpState, timeout=-1) -> None:
         logging.debug(f"Set state: {new_state}")
-
+        # traceback.print_exc()
         # if new_state == MpState.EXTERNAL:
         #     self.serial_port.close()
 
@@ -1001,7 +1003,6 @@ class MainForm(QMainWindow):
 
         if new_state == MpState.SUSPENDED:
             self.serial_port.close()
-            self.suspend_timer.setInterval(self.prof.suspend_timeout * 1000)
             self.suspend_timer.start()
 
         if new_state in [
