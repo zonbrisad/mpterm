@@ -1,6 +1,6 @@
 {
     "alias": "default",
-    "port": "ttyUSB1",
+    "port": "ttyUSB0",
     "bitrate": "115200",
     "databits": "8",
     "parity": "None",
@@ -8,7 +8,7 @@
     "flowcontrol": "None",
     "mode": "Ascii",
     "suspend_timeout": 4,
-    "ext_program": "htop",
+    "ext_program": "bash -i",
     "newline": "LF",
     "win_x": 1440,
     "win_y": 838,

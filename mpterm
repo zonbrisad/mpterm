@@ -965,9 +965,9 @@ class MainForm(QMainWindow):
         self.suspend_timer.timeout.connect(lambda: self.set_state(MpState.RECONNECTING))
 
         self.process = QProcess()
-        #        self.process.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
+        self.process.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
         self.process.readyReadStandardOutput.connect(self.program_stdout_available)
-        self.process.readyReadStandardError.connect(self.program_stderr_available)
+        # self.process.readyReadStandardError.connect(self.program_stderr_available)
         self.process.finished.connect(self.external_program_finished)
 
         self.terminal_paused = False
@@ -978,40 +978,17 @@ class MainForm(QMainWindow):
         self.ui_handler()
         self.init_port()
 
-    def keyPressEvent(self, e: QKeyEvent) -> None:
-        super().keyPressEvent(e)
-        # logging.debug(f"  {e.key():name}  {get_description(e)}")
-        self.serial_port.send_string(get_key(e))
-
-        # if self.process.
-        self.process.write(get_key(e).encode())
-
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
-        key2key = {
-            Qt.Key_Tab: Ascii.TAB,
-            Qt.Key_Left: Ansi.BACK,
-            Qt.Key_Right: Ansi.FORWARD,
-            Qt.Key_Up: Ansi.UP,
-            Qt.Key_Down: Ansi.DOWN,
-            Qt.Key_Delete: Ansi.KEY_DELETE,
-            Qt.Key_Space: " ",
-            Qt.Key_Enter: "",
-            Qt.Key_Return: "",
-        }
-        # logging.debug(f"Event: {event}")
-        # print(event.type())
+
         if event.type() == QEvent.KeyPress:
             keyEvent = QKeyEvent(event)
             if keyEvent.key() in [Qt.Key_Enter, Qt.Key_Return]:
-                self.serial_port.send_string(self.cb_line_mode.currentData())
+                self.send_string(self.cb_line_mode.currentData())
                 return True
 
-            if keyEvent.key() in key2key:
-                logging.debug(f"Key:{keyEvent.key()}")
-                self.serial_port.send_string(key2key[keyEvent.key()])
-                return True
-            else:
-                return False
+            self.send_string(get_key(keyEvent))
+            return True
+
         return False
 
     def set_state(self, new_state: MpState, timeout=-1) -> None:
@@ -1080,11 +1057,6 @@ class MainForm(QMainWindow):
     def send_macro(self, macro: Macro) -> None:
         self.serial_port.send(macro.data())
 
-    # def key(self, e: QKeyEvent) -> None:
-    #     # logging.debug(f"  {e.key():name}  {get_description(e)}")
-    #     # self.sp.send_string(get_key(e))
-    #     print("Keypressed")
-
     def terminal_pause(self) -> None:
         if self.terminal_paused is True:
             self.terminal_paused = False
@@ -1102,14 +1074,6 @@ class MainForm(QMainWindow):
     def program_stdout_available(self) -> None:
         logging.debug("Program received stdout data")
         data = self.process.readAllStandardOutput()
-        data_str = str(data, "utf-8")
-        self.terminal.append_ansi_text(data_str)
-        self.terminal.scroll_down()
-        self.ui_handler()
-
-    def program_stderr_available(self) -> None:
-        logging.debug("Program received stderr data")
-        data = self.process.readAllStandardError()
         data_str = str(data, "utf-8")
         self.terminal.append_ansi_text(data_str)
         self.terminal.scroll_down()
@@ -1427,7 +1391,11 @@ class MainForm(QMainWindow):
         self.ui_handler()
 
     def send_string(self, data: str) -> None:
-        print(f"Side: {len(data)}")
+
+        if self.process.state() == QProcess.Running:
+            self.process.write(data.encode())
+            return
+
         self.send(bytearray(data, "utf-8"))
 
     def open_port(self) -> None:

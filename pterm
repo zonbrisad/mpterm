@@ -1,0 +1,304 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# -----------------------------------------------------------------------
+#
+# Simple Qt terminal
+#
+# File:    pterm
+# Author:
+# Date:    2017-05-29
+# License:
+# Python:  >=3
+# QT       5
+#
+# -----------------------------------------------------------------------
+# This file is generated from pyplate Python template generator.
+# Pyplate is developed by
+# Peter Malmberg <peter.malmberg@gmail.com>
+#
+
+# Imports --------------------------------------------------------------------
+
+import sys
+import os
+import traceback
+import logging
+import argparse
+
+# from datetime import datetime, date, time
+from typing import Callable
+
+from PyQt5.QtCore import (
+    Qt,
+    QTimer,
+    QProcess,
+    QEvent,
+    QObject,
+)
+from PyQt5.QtGui import QIcon, QKeyEvent, QCloseEvent
+from PyQt5.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QVBoxLayout,
+    QHBoxLayout,
+    QMenu,
+    QMenuBar,
+    QAction,
+    QStatusBar,
+    QWidget,
+)
+
+from qterminalwidget import QTerminalWidget, get_key
+
+# Settings ------------------------------------------------------------------
+
+# Absolute path to script itself
+self_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
+
+
+class App:
+    NAME = "pterm"
+    VERSION = "0.10"
+    DESCRIPTION = "pterm "
+    LICENSE = ""
+    AUTHOR = "Peter Malmberg"
+    EMAIL = "peter.malmberg@gmail.com"
+    ORG = ""
+    HOME = ""
+    ICON = f"{self_dir}/icons/mp_icon2_128x128.png"
+    MAX_LINES = 150
+    RECEIVE_BUFFER = 256
+    MACROS = 5
+    SETTINGS_FILE = f"{self_dir}/pterm.json"
+
+
+# Definitions ---------------------------------------------------------------
+
+
+# Code ----------------------------------------------------------------------
+
+
+class StyleS:
+    normal = """
+    QLineEdit:enabled {
+    color:Blask;
+    }
+    QLineEdit:disabled {
+    color:gray;
+    }
+    """
+    error = """
+    QLineEdit:enabled {
+    color:Red;
+    }
+    QLineEdit:disabled {
+    color:gray;
+    }
+    """
+    win = "border:0"
+
+
+qt_style_sheet = """
+QToolTip{
+    color: black;
+    background-color: LightYellow;
+    padding: 1px;
+    border: 0px solid black;
+}
+"""
+
+
+class MainForm(QMainWindow):
+    # Handle windows close event
+    def closeEvent(self, a0: QCloseEvent) -> None:
+        self.process.setProcessState(QProcess.NotRunning)
+        return super().closeEvent(a0)
+
+    def add_action(
+        self,
+        name: str,
+        menu: QMenu,
+        trig: Callable = None,
+        tip: str = "",
+        shortcut: str = "",
+    ) -> QAction:
+        action = QAction(name, self)
+        action.triggered.connect(trig)
+        action.setStatusTip(tip)
+        action.setShortcut(shortcut)
+        menu.addAction(action)
+        return action
+
+    def __init__(self, args, parent=None) -> None:
+        super(MainForm, self).__init__(parent)
+
+        self.resize(900, 700)
+        self.setWindowIcon(QIcon(App.ICON))
+        self.setContentsMargins(2, 2, 2, 2)
+        self.setStyleSheet(qt_style_sheet)
+
+        self.central_widget = QWidget(self)
+        self.setCentralWidget(self.central_widget)
+
+        # Layouts
+        self.main_layout = QVBoxLayout(self.central_widget)
+        self.main_layout.setSpacing(2)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.middle_layout = QHBoxLayout(self.central_widget)
+
+        # Terminal layout (middle)
+        self.terminal_layout = QVBoxLayout(self.central_widget)
+
+        self.middle_layout.addLayout(self.terminal_layout)
+
+        self.main_layout.addLayout(self.middle_layout)
+
+        # Middle layout widgets
+        #
+        self.terminal = QTerminalWidget(self.central_widget)
+        self.terminal.setMaxLines(App.MAX_LINES)
+        self.terminal_layout.addWidget(self.terminal)
+
+        # Status bar
+        self.statusbar = QStatusBar(self)
+        self.statusbar.setLayoutDirection(Qt.LeftToRight)
+        self.statusbar.setStyleSheet(StyleS.normal)
+        self.setStatusBar(self.statusbar)
+
+        # Menubar
+        menubar = QMenuBar(self)
+        self.setMenuBar(menubar)
+
+        # File menu
+        menu_file = menubar.addMenu("&File")
+        self.add_action("Quit", menu_file, self.exit_program).setShortcutContext(
+            Qt.WidgetShortcut
+        )
+
+        # Action menu
+        menu_action = menubar.addMenu("&Action")
+        self.add_action("Clear", menu_action, self.terminal_clear)
+
+        self.timer_5 = QTimer()
+        self.timer_5.setInterval(200)
+        self.timer_5.timeout.connect(self.timer_5_timeout)
+        self.timer_5.start()
+
+        self.process = QProcess()
+        self.process.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
+        self.process.readyReadStandardOutput.connect(self.program_stdout_available)
+        # self.process.readyReadStandardError.connect(self.program_stderr_available)
+        self.process.finished.connect(self.process_finished)
+        self.process.start("bash", ["-i"])
+
+        self.terminal.installEventFilter(self)
+        self.terminal.append_html_text(
+            f"""{App.NAME} Ver: <b>{App.VERSION}</b><br><br>"""
+        )
+
+        self.ui_handler()
+
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+        # logging.debug(f"Event: {event}")
+        if event.type() == QEvent.KeyPress:
+            keyEvent = QKeyEvent(event)
+            k = get_key(keyEvent)
+
+            self.process.write(k.encode())
+            return True
+
+        return False
+
+    def program_stdout_available(self) -> None:
+        logging.debug("Program received stdout data")
+        data = self.process.readAllStandardOutput()
+        data_str = str(data, "utf-8")
+        self.terminal.append_ansi_text(data_str)
+        self.terminal.scroll_down()
+        self.ui_handler()
+
+    def process_finished(self) -> None:
+        self.process.setProcessState(QProcess.NotRunning)
+        self.close()
+
+    def timer_5_timeout(self) -> None:
+        self.ui_handler()
+
+    def ui_handler(self) -> None:
+        self.setWindowTitle(f"{App.NAME}")
+
+    def terminal_clear(self) -> None:
+        self.terminal.clear()
+        self.update()
+
+    def _message(self, name: str) -> None:
+        self.statusbar.showMessage(name, 4000)
+        self.statusbar.show
+
+    # Show message in status bar
+    def message(self, name: str) -> None:
+        self.statusbar.setStyleSheet(StyleS.normal)
+        self._message(name)
+        logging.debug(name)
+
+    # Show error message in status bar
+    def message_error(self, name: str) -> None:
+        self.statusbar.setStyleSheet(StyleS.error)
+        self._message(name)
+        logging.error(name)
+
+    def append_html_text(self, text: str) -> None:
+        self.terminal.append_html_text(text)
+        self.terminal.scroll_down()
+
+    def read(self) -> None:
+        self.terminal.scroll_down()
+
+    def exit_program(self, e) -> None:
+        self.close()
+
+
+def main() -> None:
+    logging_format = "[%(levelname)s] %(lineno)4d %(funcName)-16s : %(message)s"
+
+    # options parsing
+    parser = argparse.ArgumentParser(
+        prog=App.NAME, add_help=True, description=App.DESCRIPTION
+    )
+    parser.add_argument(
+        "--version", action="version", version=f"%(prog)s {App.VERSION}"
+    )
+    parser.add_argument("--info", action="store_true", help="Information about script")
+    parser.add_argument("--debug", action="store_true", help="Activate debug printout")
+
+    args = parser.parse_args()
+
+    if args.debug:
+        logging.basicConfig(format=logging_format, level=logging.DEBUG)
+
+    app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    app.setAttribute(Qt.AA_UseHighDpiPixmaps)
+
+    mainForm = MainForm(args)
+    mainForm.args = args
+    mainForm.show()
+
+    sys.exit(app.exec_())
+
+
+# Main run_ext_program handle
+if __name__ == "__main__":
+    try:
+        main()
+        sys.exit(0)
+    except KeyboardInterrupt as e:  # Ctrl-C
+        raise e
+    except SystemExit as e:  # sys.exit()
+        raise e
+    except Exception as e:
+        print("ERROR, UNEXPECTED EXCEPTION")
+        print(str(e))
+        traceback.print_exc()
+        os._exit(1)

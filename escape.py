@@ -176,7 +176,6 @@ class Ansi:
 
     END = "\x1b[m"  # Clear Attributes
     CLEAR = "\x1b[2J"
-    # RESET = "\x1b[m"
 
     WONR = "\x1b[1;47\x1b[1;31m"
 

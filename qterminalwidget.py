@@ -55,10 +55,10 @@ from PyQt5.QtWidgets import (
 # Code -----------------------------------------------------------------------
 
 keys = {
-    # Qt.Key_Enter: ("\n", "Enter"),
-    # Qt.Key_Return: ("\n\r", "Return"),
+    Qt.Key_Enter: ("\n", "Enter"),
+    Qt.Key_Return: ("\n", "Return"),
     Qt.Key_Escape: ("", "Escape"),
-    Qt.Key_Delete: ("", "Delete"),
+    Qt.Key_Delete: (Ansi.KEY_DELETE, "Delete"),
     Qt.Key_Left: (Ansi.BACK, "Left"),
     Qt.Key_Right: (Ansi.FORWARD, "Right"),
     Qt.Key_Up: (Ansi.UP, "Up"),
@@ -125,14 +125,6 @@ class QTerminalWidget(QPlainTextEdit):
         self.setReadOnly(True)
         self.clear()
 
-        # font = QFont()
-        # font.setFamily("Monospace")
-        # font.setPointSize(10)
-        # self.setFont(font)
-
-        # self.maximumBlockCount = 100
-        # self.setMaximumBlockCount(10)
-
         #
         # https://stackoverflow.com/questions/10250533/set-line-spacing-in-qtextedit
         #
@@ -145,33 +137,6 @@ class QTerminalWidget(QPlainTextEdit):
         # self.setFocusPolicy(Qt.NoFocus)
         # https://developer.mozilla.org/en-US/docs/Web/CSS/line-height
 
-        # self.setStyleSheet(  # No overlapping lines, but line distance to large
-        #     """
-        #     color : White;
-        #     background-color: rgb(0, 0, 0);
-        #     font-family:Monospace;
-        #     font-size:12pt;
-        #     line-height:1.2;
-        #     """
-        # )
-        # self.setStyleSheet(  #
-        #     """
-        #     color : White;
-        #     background-color: rgb(0, 0, 0);
-        #     font-family:Monospace;
-        #     font-size:10px;
-        #     font-style:normal;
-        #     """
-        # )
-
-        # self.setStyleSheet(  # Good line distance, but with line overlapping
-        #     """
-        # color : White;
-        # background-color: rgb(0, 0, 0);
-        # font-family:Monospace;
-        # font-size:10pt;
-        # line-height:1.2;
-        # """
         self.setStyleSheet(  # Working, but row distance long
             """
         color : White;
@@ -181,19 +146,7 @@ class QTerminalWidget(QPlainTextEdit):
         line-height:1.0;
         """
         )
-        # self.setStyleSheet(  # Test of font other than "Monospace"
-        #     """
-        #     color : White;
-        #     background-color: rgb(0, 0, 0);
-        #     font-family:UbuntuMono;
-        #     font-size:12pt;
-        #     line-height:normal;
-        #     """
-        # )
 
-        # self.overwrite = False
-        # self.idx = 0
-        # self.cr = False
         self.max_lines = 100
         self.last_id = 0
 
@@ -247,7 +200,6 @@ class QTerminalWidget(QPlainTextEdit):
         lines = self.terminal_state.update(data)
 
         for line in lines:
-            # print(f"X {line}")
             if type(line) is TerminalLine:
                 if line.id > self.last_id:  # a new line detected
                     self.last_id = line.id
@@ -346,19 +298,12 @@ class MainForm(QMainWindow):
         self.actionExit.setShortcutContext(Qt.WidgetShortcut)
         self.menuFile.addAction(self.actionExit)
 
-        # self.terminal.append_terminal_text(escape_attribute_test)
-        # print(escape_attribute_test)
-
         self.terminal.append_html_text(
             """<div style="font-size:20px;line-height:40px;color:green;">
                 Line 1 <br>
                 Line 2 <br>
               </div>"""
         )
-
-        # list fonts
-        # fonts = QFontDatabase()
-        # print(fonts.families())
 
 
 def main() -> None:
