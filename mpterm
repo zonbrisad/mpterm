@@ -89,7 +89,7 @@ self_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
 
 class App:
     NAME = "mpterm"
-    VERSION = "0.50"
+    VERSION = "0.51"
     DESCRIPTION = "MpTerm is a simple serial terminal program, aimed at embedded systems development"
     LICENSE = ""
     AUTHOR = "Peter Malmberg"
