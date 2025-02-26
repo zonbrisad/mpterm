@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
 #
-# terminal window for qt5
+# Ansi terminal window for Qt5
 #
 # File:     terminalwin
 # Author:   Peter Malmberg  <peter.malmberg@gmail.com>
-# Org:      __ORGANISTATION__
+# Org:
 # Date:     2022-12-02
 # License:
 # Python:   >= 3.0
@@ -28,12 +28,9 @@ from escape import (
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import (
     QTextCursor,
-    QFont,
     QKeyEvent,
     QKeyEvent,
     QCloseEvent,
-    QFontDatabase,
-    QTextBlockFormat,
 )
 from PyQt5.QtWidgets import (
     QApplication,
@@ -44,9 +41,7 @@ from PyQt5.QtWidgets import (
     QMenu,
     QMenuBar,
     QAction,
-    QLabel,
     QPushButton,
-    QComboBox,
     QWidget,
 )
 

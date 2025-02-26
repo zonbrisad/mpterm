@@ -72,7 +72,6 @@ from dataclasses import dataclass, field
 from escape import (
     Ansi,
     Ascii,
-    TerminalState,
     flag,
 )
 from qterminalwidget import QTerminalWidget, get_key
@@ -1391,7 +1390,6 @@ class MainForm(QMainWindow):
         self.ui_handler()
 
     def send_string(self, data: str) -> None:
-
         if self.process.state() == QProcess.Running:
             self.process.write(data.encode())
             return
