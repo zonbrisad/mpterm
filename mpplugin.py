@@ -75,7 +75,7 @@ class MpPluginWidget:
 
     def get_value(self) -> Any:
         if self.type == MpPluginWidgetType.Slider:
-            return self.widget.tickPosition()
+            return self.widget.sliderPosition()
         elif self.type == MpPluginWidgetType.ComboBox:
             return self.widget.currentData()
         # elif self.type == MpPluginWidgetType.LineEdit:
@@ -129,10 +129,10 @@ class MpPlugin:
         self.serial_port.send_string(data)
 
     def send_msg(self, data: bytearray, timeout: int) -> None:
-        self.mode = MpReceiveMode.Message
         self.buf.clear()
         self.serial_port.send(data)
         if timeout > 0:
+            self.mode = MpReceiveMode.Message
             self.start_timer(timeout)
 
     def send_msg_string(self, data: str, timeout: int) -> None:

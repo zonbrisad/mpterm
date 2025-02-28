@@ -10,11 +10,11 @@
     "suspend_timeout": 4,
     "ext_program": "bash -i",
     "newline": "LF",
-    "win_x": 1422,
+    "win_x": 1245,
     "win_y": 948,
     "sync_string": "",
     "columns": 50,
-    "plugin": "KAxxxxP",
+    "plugin": "Dl24",
     "macros": [
         {
             "name": "M1",

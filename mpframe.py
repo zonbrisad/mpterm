@@ -67,6 +67,12 @@ class MpFrame:
 
         return None
 
+    def hex_str(self) -> str:
+        return " ".join("{:02x}".format(byte) for byte in self.frame)
+
+    def __str__(self) -> str:
+        return self.hex_str()
+
 
 def main() -> None:
     pass

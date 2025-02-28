@@ -78,63 +78,97 @@ class MpTermPlugin(MpPlugin):
         self.add_button("Enable", "Enable output", self.cmd_enable)
         self.add_button("Disable", "Disable output", self.cmd_disable)
         self.voltage_label = self.add_label("0.0")
-        self.add_slider("Voltage", "Set Voltage", self.action_voltage_slider, 0, 3000)
+        self.vslider = self.add_slider(
+            "Voltage", "Set Voltage", self.action_voltage_slider, 0, 3000
+        )
         self.add_button("Set Voltage", "Set voltage", self.cmd_set_voltage)
         self.current_label = self.add_label("0.0")
-        self.vslider = self.add_slider(
+        self.islider = self.add_slider(
             "Current", "Set current", self.action_current_slider, 0, 500
         )
         self.add_button("Set Current", "Set Current", self.cmd_set_current)
-        self.vval = 0
-        self.ival = 0
+
+        self.cmd = None
+        self.set_voltage(0)
+        self.set_current(0)
 
     def data(self, data: bytearray) -> None:
-        ans = str(data, "utf-8")
-        self.append_ansi_text(f"[{Ansi.BR_GREEN}Recv{Ansi.RESET}] {ans}\n")
+        sdata = str(data, "utf-8")
+        self.append_ansi_text(f"[{Ansi.BR_GREEN}Recv{Ansi.RESET}] {sdata}\n")
+        if self.cmd == KAxxxxP.VoltSet:
+            volt = float(sdata)
+            self.set_voltage(volt)
+            self.vslider.widget.setSliderPosition(int(round(volt * 100, 2)))
+        if self.cmd == KAxxxxP.CurSet:
+            current = float(sdata)
+            self.set_current(current)
+            self.islider.widget.setSliderPosition(int(round(current * 100, 2)))
 
-    def send_command(self, cmd: KAxxxxP, desc: str = "", timeout: int = 100) -> None:
-        self.send(cmd.value, desc, timeout)
+        self.cmd = None
+
+    def send_command(
+        self, cmd: KAxxxxP, arg: str = "", desc: str = "", timeout: int = 100
+    ) -> None:
+        self.cmd = cmd
+        self.send(f"{cmd.value}{arg}", desc, timeout)
 
     def send(self, cmd: str, desc: str = "", timeout: int = 100) -> None:
         self.send_msg_string(cmd, timeout)
-        self.append_ansi_text(f"[{Ansi.BR_RED}Send{Ansi.RESET}] {cmd:12}{desc}\n")
+        self.append_ansi_text(
+            f"[{Ansi.BR_RED}Send{Ansi.RESET}] {cmd:20}{Ansi.CYAN}{desc}{Ansi.RESET}\n"
+        )
 
     def cmd_read_id(self) -> None:
-        self.send_command(KAxxxxP.ReadID, "Read unit Id")
+        self.send_command(KAxxxxP.ReadID, desc="Read unit Id")
 
     def cmd_enable(self) -> None:
-        self.send_command(KAxxxxP.Enable, "Enable output", timeout=0)
+        self.send_command(KAxxxxP.Enable, desc="Enable output", timeout=0)
 
     def cmd_disable(self) -> None:
-        self.send_command(KAxxxxP.Disable, "Disable output", timeout=0)
+        self.send_command(KAxxxxP.Disable, desc="Disable output", timeout=0)
 
     def cmd_get_set_voltage(self) -> None:
-        self.send_command(KAxxxxP.VoltSet, "Set voltage")
+        self.send_command(KAxxxxP.VoltSet, desc="Set voltage")
 
     def cmd_get_set_current(self) -> None:
-        self.send_command(KAxxxxP.CurSet, "Set current")
+        self.send_command(KAxxxxP.CurSet, desc="Set current")
 
     def cmd_get_voltage(self) -> None:
-        self.send_command(KAxxxxP.Voltage, "Current")
+        self.send_command(KAxxxxP.Voltage, desc="Read set Voltage")
 
     def cmd_get_current(self) -> None:
-        self.send_command(KAxxxxP.Current, "Current")
+        self.send_command(KAxxxxP.Current, desc="Read set Current")
+
+    def set_voltage(self, value: float) -> None:
+        self.vval = value
+        self.voltage_label.set_text(f"  {value:>9.2f} V")
+
+    def set_current(self, value: float) -> None:
+        self.ival = value
+        self.current_label.set_text(f"  {value:>7.2f} A")
 
     def action_voltage_slider(self, value: int) -> None:
         voltage = float(value / 100)
         self.vval = voltage
-        self.voltage_label.set_text(f"{str(voltage):>7} V")
+        self.set_voltage(voltage)
 
     def cmd_set_voltage(self) -> None:
-        self.send(f"{KAxxxxP.SetV(self.vval)}", "Set voltage", timeout=0)
+        self.send_command(
+            KAxxxxP.SetVolt,
+            arg=f"{self.vval:.2f}",
+            desc="Set voltage",
+            timeout=0,
+        )
 
     def action_current_slider(self, value: int) -> None:
         current = float(value / 100)
         self.ival = current
-        self.current_label.set_text(f"{str(current):>7} A")
+        self.set_current(current)
 
     def cmd_set_current(self) -> None:
-        self.send(f"{KAxxxxP.SetC(self.ival)}", "Set Current", timeout=0)
+        self.send_command(
+            KAxxxxP.SetCurr, arg=f"{self.ival:.2f}", desc="Set Current", timeout=0
+        )
 
 
 def main() -> None:

@@ -22,6 +22,7 @@
 from enum import Enum
 from mpplugin import MpPlugin, MpPluginWidget, MpPluginWidgetType
 from mpframe import MpFrame
+from escape import Ansi
 
 # Variables ------------------------------------------------------------------
 
@@ -129,7 +130,7 @@ class AtorchFrame(MpFrame):
         return AtorchReply.Unknown
 
     def frame_to_str(self) -> str:
-        return self.hex_to_str(0, len(self.frame))
+        return self.hex_str()
 
     def hex_to_value(self, index: int, bytes: int) -> int:
         val = 0
@@ -184,7 +185,7 @@ class AtorchFrame(MpFrame):
     def to_html(self) -> str:
         self.frm = []
         self.frm.append("<pre>")
-        self.frm.append(self.frame_to_str())
+        # self.frm.append(self.frame_to_str())
         self.frm.append("<br>")
 
         self.add_segment(0x00, 2, "", "Magic header")
@@ -365,43 +366,52 @@ class MpTermPlugin(MpPlugin):
         )
         self.frame = AtorchFrame(AtorchDeviceType.DC_Meter)
 
-    def data(self, data: bytearray) -> str:
+    def data(self, data: bytearray) -> None:
         ret = ""
         for i in range(0, data.count()):
             byte = int.from_bytes(data.at(i), "big")
             if self.frame.add_byte(byte) is True:
                 ret += self.frame.to_html()
+                self.append_ansi_text(
+                    f"[{Ansi.BR_GREEN}Recv{Ansi.RESET}] {self.frame}\n"
+                )
                 self.frame.clear()
+                self.append_html_text(ret)
 
-        return ret
+    def send_command(
+        self, cmd: AtorchCommandType, arg: str = "", desc: str = "", timeout: int = 100
+    ) -> None:
+        data = self.frame.command(cmd)
+        self.cmd = cmd
+        self.send_msg(data, timeout=0)
+        # hex_data = " ".join("{:02x}".format(x) for x in data)
+        hex_data = str(self.frame)
+        self.append_ansi_text(
+            f"[{Ansi.BR_RED}Send{Ansi.RESET}] {hex_data:30}{Ansi.CYAN}{desc}{Ansi.RESET}\n"
+        )
 
     def cmd_clear_all(self) -> None:
-        # data = self.frame.command(AtorchCommandType.Reset_All)
-        self.send(self.frame.command(AtorchCommandType.Reset_All))
+        self.send_command(AtorchCommandType.Reset_All, desc="Reset all")
 
     def cmd_clear_duration(self) -> None:
-        data = self.frame.command(AtorchCommandType.Reset_Duration)
-        self.send(data)
+        self.send_command(AtorchCommandType.Reset_Duration, desc="Reset duration")
 
     def cmd_clear_ah(self) -> None:
-        data = self.frame.command(AtorchCommandType.Reset_Ah)
-        self.send(data)
+        self.send_command(AtorchCommandType.Reset_Ah, desc="Reset Ah")
 
     def cmd_clear_wh(self) -> None:
-        data = self.frame.command(AtorchCommandType.Reset_Wh)
-        self.send(data)
+        self.send_command(AtorchCommandType.Reset_Wh, desc="Reset Wh")
 
     def cmd_setup(self) -> None:
-        data = self.frame.command(AtorchCommandType.Setup)
-        self.send(data)
+        self.send_command(AtorchCommandType.Setup, desc="Setup")
 
     def cmd_enter(self) -> None:
-        data = self.frame.command(AtorchCommandType.Enter)
-        self.send(data)
+        self.send_command(AtorchCommandType.Enter, desc="Enter")
 
     def cmd_plus(self) -> None:
         data = self.frame.command(AtorchCommandType.Plus, 1)
         self.send(data)
+        # self.send_command(AtorchCommandType.Plus, desc="Plus")
 
     def cmd_minus(self) -> None:
         data = self.frame.command(AtorchCommandType.Minus, 1)
