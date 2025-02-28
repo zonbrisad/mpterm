@@ -20,16 +20,16 @@ from typing import Any, Callable
 from serialport import SerialPort
 from qterminalwidget import QTerminalWidget
 from PyQt5.QtWidgets import (
+    QWidget,
     QLabel,
     QPushButton,
     QCheckBox,
     QComboBox,
-    QWidget,
     QSlider,
     QSizePolicy,
 )
-from PyQt5.QtCore import QTimer, Qt, QSize
-from qedit import QHexEdit, QNumberEdit
+from PyQt5.QtCore import QTimer, Qt
+from qedit import QNumberEdit
 
 
 class MpPluginWidgetType(Enum):
@@ -40,6 +40,12 @@ class MpPluginWidgetType(Enum):
     CheckBox = 4
     LineEdit = 5
     Slider = 6
+    Spacer = 100
+
+
+class MpReceiveMode(Enum):
+    Continous = 1
+    Message = 2
 
 
 @dataclass
@@ -49,7 +55,7 @@ class MpPluginWidget:
     description: str = ""
     action: Callable = None
     combo_data: Any = None
-    widget: Any = None
+    widget: QWidget = None
     value: Any = None
     min: int = None
     max: int = None
@@ -62,6 +68,17 @@ class MpPluginWidget:
 
     def get_slider_value(self, value) -> Any:
         self.action(value)
+
+    def set_text(self, name: str) -> None:
+        self.name = name
+        self.widget.setText(name)
+
+    def get_value(self) -> Any:
+        if self.type == MpPluginWidgetType.Slider:
+            return self.widget.tickPosition()
+        elif self.type == MpPluginWidgetType.ComboBox:
+            return self.widget.currentData()
+        # elif self.type == MpPluginWidgetType.LineEdit:
 
 
 class MpPlugin:
@@ -79,9 +96,11 @@ class MpPlugin:
 
         self.timer = QTimer()
         self.timer.setSingleShot(True)
-        # self.timer.timeout.connect(self.timeout)
-        # self.timer.setInterval(1000)
-        # self.timer.start()
+        self.timer.timeout.connect(self.receive_timeout)
+
+        self.buf: bytearray = bytearray()
+
+        self.mode = MpReceiveMode.Continous
 
     def _set_serial_port(self, serial_port: SerialPort) -> None:
         self.serial_port = serial_port
@@ -89,8 +108,17 @@ class MpPlugin:
     def _set_terminal_widget(self, terminal: QTerminalWidget) -> None:
         self.terminal = terminal
 
+    def receive(self, data: bytearray) -> None:
+        if self.mode == MpReceiveMode.Continous:
+            self.data(data)
+        elif self.mode == MpReceiveMode.Message:
+            self.buf.extend(data)
+
+    def receive_timeout(self) -> None:
+        self.data(self.buf)
+
     def start_timer(self, timeout: int) -> None:
-        # self.timer.timeout.connect(self.timeout)
+        self.timer.setSingleShot(True)
         self.timer.setInterval(timeout)
         self.timer.start()
 
@@ -100,6 +128,16 @@ class MpPlugin:
     def send_string(self, data: str) -> None:
         self.serial_port.send_string(data)
 
+    def send_msg(self, data: bytearray, timeout: int) -> None:
+        self.mode = MpReceiveMode.Message
+        self.buf.clear()
+        self.serial_port.send(data)
+        if timeout > 0:
+            self.start_timer(timeout)
+
+    def send_msg_string(self, data: str, timeout: int) -> None:
+        self.send_msg(bytearray(data.encode()), timeout)
+
     def append_html_text(self, html: str) -> None:
         self.terminal.append_html_text(html)
         self.terminal.scroll_down()
@@ -108,9 +146,30 @@ class MpPlugin:
         self.terminal.append_ansi_text(ansi)
         self.terminal.scroll_down()
 
-    def add_widget(self, widget) -> None:
+    def add_widget(self, widget: MpPluginWidget) -> None:
         self.widgets.append(widget)
         self._create_widget(widget)
+
+    def add_label(self, text: str) -> MpPluginWidget:
+        widget = MpPluginWidget(MpPluginWidgetType.Label, text)
+        self.add_widget(widget)
+        return widget
+
+    def add_button(
+        self, text: str, description: str, action: Callable
+    ) -> MpPluginWidget:
+        widget = MpPluginWidget(MpPluginWidgetType.Button, text, description, action)
+        self.add_widget(widget)
+        return widget
+
+    def add_slider(
+        self, text: str, description: str, action: Callable, min: int, max: int
+    ) -> MpPluginWidget:
+        widget = MpPluginWidget(
+            MpPluginWidgetType.Slider, text, description, action, min=min, max=max
+        )
+        self.add_widget(widget)
+        return widget
 
     def _create_widget(self, widget: MpPluginWidget) -> None:
         if widget.type == MpPluginWidgetType.Label:

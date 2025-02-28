@@ -58,7 +58,7 @@ keys = {
     Qt.Key_Right: (Ansi.FORWARD, "Right"),
     Qt.Key_Up: (Ansi.UP, "Up"),
     Qt.Key_Down: (Ansi.DOWN, "Down"),
-    Qt.Key_Insert: ("", "Insert"),
+    Qt.Key_Insert: (Ansi.KEY_INSERT, "Insert"),
     Qt.Key_Backspace: ("\b", "Backspace"),
     Qt.Key_Home: (Ansi.KEY_HOME, "Home"),
     Qt.Key_End: (Ansi.KEY_END, "End"),

@@ -139,16 +139,15 @@ class MainForm(QMainWindow):
 
         self.central_widget = QWidget(self)
         self.setCentralWidget(self.central_widget)
-
         # Layouts
         self.main_layout = QVBoxLayout(self.central_widget)
         self.main_layout.setSpacing(2)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.middle_layout = QHBoxLayout(self.central_widget)
+        self.middle_layout = QHBoxLayout()
 
         # Terminal layout (middle)
-        self.terminal_layout = QVBoxLayout(self.central_widget)
+        self.terminal_layout = QVBoxLayout()
 
         self.middle_layout.addLayout(self.terminal_layout)
 

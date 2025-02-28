@@ -628,22 +628,22 @@ class MainForm(QMainWindow):
         self.main_layout.setSpacing(2)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.middle_layout = QHBoxLayout(self.central_widget)
+        self.middle_layout = QHBoxLayout()
 
         # Port settings layout (above)
-        self.port_layout = QHBoxLayout(self.central_widget)
+        self.port_layout = QHBoxLayout()
         self.port_layout.setSpacing(10)
         self.port_layout.addStretch()
 
         # "Buttons" layout (to the left)
-        self.button_layout = QVBoxLayout(self.central_widget)
+        self.button_layout = QVBoxLayout()
         self.button_layout.addSpacing(10)
 
         # Terminal layout (middle)
-        self.terminal_layout = QVBoxLayout(self.central_widget)
+        self.terminal_layout = QVBoxLayout()
 
         # Macro layout (to the right)
-        self.macro_layout = QVBoxLayout(self.central_widget)
+        self.macro_layout = QVBoxLayout()
         self.macro_layout.addSpacing(20)
 
         self.middle_layout.addLayout(self.button_layout)
@@ -1371,7 +1371,7 @@ class MainForm(QMainWindow):
 
         plugin = self.plugin_widget.current_plugin()
         if plugin is not None:
-            self.terminal.append_html_text(plugin.data(data))
+            plugin.receive(data)
         else:
             DisplayMode = self.cb_display_mode.currentData()
             if DisplayMode == MpTerm.Ascii:  # Standard ascii display mode

@@ -766,6 +766,13 @@ class EscapeTokenizer:
             return ret
 
 
+def rgb2str(r: int, g: int, b: int) -> str:
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
+print(rgb2str(205, 0, 0))
+
+
 @dataclass
 class TColor:
     # BLACK : str = "#2e3436"
@@ -785,6 +792,26 @@ class TColor:
     BRIGHT_MAGENTA: str = "#ad7fa8"
     BRIGHT_CYAN: str = "#34e2e2"
     BRIGHT_WHITE: str = "#eeeeec"
+
+
+PalettXterm = TColor(
+    BLACK=rgb2str(0, 0, 0),
+    RED=rgb2str(205, 0, 0),
+    GREEN=rgb2str(0, 205, 0),
+    YELLOW=rgb2str(205, 205, 0),
+    BLUE=rgb2str(0, 0, 238),
+    MAGENTA=rgb2str(205, 0, 205),
+    CYAN=rgb2str(0, 205, 205),
+    WHITE=rgb2str(229, 229, 229),
+    BRIGHT_BLACK=rgb2str(127, 127, 127),
+    BRIGHT_RED=rgb2str(255, 0, 0),
+    BRIGHT_GREEN=rgb2str(0, 255, 0),
+    BRIGHT_YELLOW=rgb2str(255, 255, 0),
+    BRIGHT_BLUE=rgb2str(92, 92, 255),
+    BRIGHT_MAGENTA=rgb2str(255, 0, 255),
+    BRIGHT_CYAN=rgb2str(0, 255, 255),
+    BRIGHT_WHITE=rgb2str(255, 255, 255),
+)
 
 
 CC256 = [
@@ -1163,8 +1190,8 @@ class TerminalLine:
         self.line: list[TerminalCharacter] = []
         # for i in range(0, columns):
         #     self.line.append(TerminalCharacter(" ", tas))
-        self.id = id
-        self.text = ""
+        self.id: int = id
+        self.text: str = ""
         self.changed: bool = False
         self.cursor = None
 
@@ -1327,12 +1354,67 @@ class TerminalLine:
 class TerminalState(TerminalAttributeState):
     def __init__(self, rows: int = 24, columns: int = 80) -> None:
         self.et = EscapeTokenizer()
-        self.line_id = 0
+        self.line_id: int = 0
         self.tas = TerminalAttributeState()
         self.default_fg_color = TColor.WHITE
         self.default_bg_color = TColor.BLACK
         self.set_terminal(rows, columns)
         self.reset()
+        self.palette: TColor = TColor
+
+    def fg_color(self, color: SGR) -> str:
+        if self.BOLD is True:
+            if color == SGR.FG_COLOR_BLACK:
+                return self.palette.BRIGHT_BLACK
+            if color == SGR.FG_COLOR_RED:
+                return self.palette.BRIGHT_RED
+            if color == SGR.FG_COLOR_GREEN:
+                return self.palette.BRIGHT_GREEN
+            if color == SGR.FG_COLOR_YELLOW:
+                return self.palette.BRIGHT_YELLOW
+            if color == SGR.FG_COLOR_BLUE:
+                return self.palette.BRIGHT_BLUE
+            if color == SGR.FG_COLOR_MAGENTA:
+                return self.palette.BRIGHT_MAGENTA
+            if color == SGR.FG_COLOR_CYAN:
+                return self.palette.BRIGHT_CYAN
+            if color == SGR.FG_COLOR_WHITE:
+                return self.palette.BRIGHT_WHITE
+
+        if color == SGR.FG_COLOR_BLACK:
+            return self.palette.BLACK
+        if color == SGR.FG_COLOR_RED:
+            return self.palette.RED
+        if color == SGR.FG_COLOR_GREEN:
+            return self.palette.GREEN
+        if color == SGR.FG_COLOR_YELLOW:
+            return self.palette.YELLOW
+        if color == SGR.FG_COLOR_BLUE:
+            return self.palette.BLUE
+        if color == SGR.FG_COLOR_MAGENTA:
+            return self.palette.MAGENTA
+        if color == SGR.FG_COLOR_CYAN:
+            return self.palette.CYAN
+        if color == SGR.FG_COLOR_WHITE:
+            return self.palette.WHITE
+
+    def bg_color(self, color: SGR) -> str:
+        if color == SGR.BG_COLOR_BLACK:
+            return self.palette.BLACK
+        if color == SGR.BG_COLOR_RED:
+            return self.palette.RED
+        if color == SGR.BG_COLOR_GREEN:
+            return self.palette.GREEN
+        if color == SGR.BG_COLOR_YELLOW:
+            return self.palette.YELLOW
+        if color == SGR.BG_COLOR_BLUE:
+            return self.palette.BLUE
+        if color == SGR.BG_COLOR_MAGENTA:
+            return self.palette.MAGENTA
+        if color == SGR.BG_COLOR_CYAN:
+            return self.palette.CYAN
+        if color == SGR.BG_COLOR_WHITE:
+            return self.palette.WHITE
 
     def set_terminal(self, rows: int, columns: int) -> None:
         self.rows = rows
@@ -1403,7 +1485,7 @@ class TerminalState(TerminalAttributeState):
             if self.cursor.row > self.max.row:
                 self.cursor.row = self.max.row
 
-    def erase_in_line(self, mode):
+    def erase_in_line(self, mode: int):
         logging.debug(
             f"Erase in line: {self.cursor.row=}  {self.cursor.column=} {mode=}"
         )
@@ -1411,7 +1493,7 @@ class TerminalState(TerminalAttributeState):
             self.cursor.column, self.tas, mode
         )
 
-    def erase_in_display(self, mode):
+    def erase_in_display(self, mode: int):
         if mode == 0:  # Clear from cursor to end of screen
             for line in range(self.cursor.row, self.max.row + 1):
                 self.lines[self.max.row - line].erase_in_line(1, self.tas, 2)
@@ -1422,7 +1504,7 @@ class TerminalState(TerminalAttributeState):
             for line in range(1, self.max.row):
                 self.lines[self.max.row - line].erase_in_line(1, self.tas, 2)
 
-    def append(self, text):
+    def append(self, text: str):
         self.cursor.column = self.lines[self.max.row - self.cursor.row].append(
             text, self.tas, self.cursor.column
         )
@@ -1563,12 +1645,15 @@ class TerminalState(TerminalAttributeState):
                                 SGR.FG_COLOR_CYAN,
                                 SGR.FG_COLOR_WHITE,
                             ]:
-                                if self.BOLD:
-                                    self.tas.FG_COLOR = sgr_to_escape_color_bold[
-                                        sgr.code
-                                    ]
-                                else:
-                                    self.tas.FG_COLOR = sgr_to_escape_color[sgr.code]
+
+                                self.tas.FG_COLOR = self.fg_color(sgr.code)
+
+                                # if self.BOLD:
+                                #     self.tas.FG_COLOR = sgr_to_escape_color_bold[
+                                #         sgr.code
+                                #     ]
+                                # else:
+                                #     self.tas.FG_COLOR = sgr_to_escape_color[sgr.code]
 
                             elif sgr.code in [
                                 SGR.BG_COLOR_BLACK,
@@ -1580,7 +1665,8 @@ class TerminalState(TerminalAttributeState):
                                 SGR.BG_COLOR_CYAN,
                                 SGR.BG_COLOR_WHITE,
                             ]:
-                                self.tas.BG_COLOR = sgr_to_escape_color[sgr.code]
+                                # self.tas.BG_COLOR = sgr_to_escape_color[sgr.code]
+                                self.tas.BG_COLOR = self.bg_color(sgr.code)
 
                             elif sgr.code == SGR.SET_FG_COLOR:
                                 self.tas.FG_COLOR = CC256[sgr.color]["hex"]

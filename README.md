@@ -180,7 +180,6 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 - [x] Rendering: Error when <> characters are included
 - [x] Rendering: Text lines overlap with one(maybe two) pixel row(s)
 - [x] Rendering: Terminal rendering performance is slow
-
 - [x] Rendering: Row removal fail
 - [x] Rendering: "bpexample attr" fail when executed via extrnal program
 - [ ] UI: Tab cycling is not correct
