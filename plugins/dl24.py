@@ -20,6 +20,7 @@
 # Imports --------------------------------------------------------------------
 
 from enum import Enum
+from typing import Any
 from mpplugin import MpPlugin, MpPluginWidget, MpPluginWidgetType
 from mpframe import MpFrame
 from escape import Ansi
@@ -177,10 +178,20 @@ class AtorchFrame(MpFrame):
     def add_row(self, data, value, desc) -> None:
         self.frm.append(f"{data:12} | {value:16} | {desc}<br>")
 
-    def add_segment(self, index: int, length: int, value: str, desc: str) -> None:
-        self.frm.append(
-            f"{index:3} | {self.hex_to_str(index, length):12} | {value:16} | {desc}<br>"
-        )
+    def add_segment(self, index: int, length: int, value: Any, desc: str) -> None:
+
+        if type(value) is str:
+            self.frm.append(
+                f"{index:3} | {self.hex_to_str(index, length):12} | {value:<16} | {desc}<br>"
+            )
+        elif type(value) is float:
+            self.frm.append(
+                f"{index:3} | {self.hex_to_str(index, length):12} | {value:>16.2f} | {desc}<br>"
+            )
+        elif type(value) is int:
+            self.frm.append(
+                f"{index:3} | {self.hex_to_str(index, length):12} | {value:>16} | {desc}<br>"
+            )
 
     def to_html(self) -> str:
         self.frm = []
@@ -387,7 +398,7 @@ class MpTermPlugin(MpPlugin):
         # hex_data = " ".join("{:02x}".format(x) for x in data)
         hex_data = str(self.frame)
         self.append_ansi_text(
-            f"[{Ansi.BR_RED}Send{Ansi.RESET}] {hex_data:30}{Ansi.CYAN}{desc}{Ansi.RESET}\n"
+            f"[{Ansi.BR_RED}Send{Ansi.RESET}]{hex_data:36}{Ansi.CYAN}{desc}{Ansi.RESET}\n"
         )
 
     def cmd_clear_all(self) -> None:

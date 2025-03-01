@@ -766,54 +766,6 @@ class EscapeTokenizer:
             return ret
 
 
-def rgb2str(r: int, g: int, b: int) -> str:
-    return f"#{r:02x}{g:02x}{b:02x}"
-
-
-print(rgb2str(205, 0, 0))
-
-
-@dataclass
-class TColor:
-    # BLACK : str = "#2e3436"
-    BLACK: str = "#000000"
-    RED: str = "#cc0000"
-    GREEN: str = "#4e9a06"
-    YELLOW: str = "#c4a000"
-    BLUE: str = "#3465a4"
-    MAGENTA: str = "#75507b"
-    CYAN: str = "#06989a"
-    WHITE: str = "#d3d7cf"
-    BRIGHT_BLACK: str = "#555753"
-    BRIGHT_RED: str = "#ef2929"
-    BRIGHT_GREEN: str = "#8ae234"
-    BRIGHT_YELLOW: str = "#fce94f"
-    BRIGHT_BLUE: str = "#729fcf"
-    BRIGHT_MAGENTA: str = "#ad7fa8"
-    BRIGHT_CYAN: str = "#34e2e2"
-    BRIGHT_WHITE: str = "#eeeeec"
-
-
-PalettXterm = TColor(
-    BLACK=rgb2str(0, 0, 0),
-    RED=rgb2str(205, 0, 0),
-    GREEN=rgb2str(0, 205, 0),
-    YELLOW=rgb2str(205, 205, 0),
-    BLUE=rgb2str(0, 0, 238),
-    MAGENTA=rgb2str(205, 0, 205),
-    CYAN=rgb2str(0, 205, 205),
-    WHITE=rgb2str(229, 229, 229),
-    BRIGHT_BLACK=rgb2str(127, 127, 127),
-    BRIGHT_RED=rgb2str(255, 0, 0),
-    BRIGHT_GREEN=rgb2str(0, 255, 0),
-    BRIGHT_YELLOW=rgb2str(255, 255, 0),
-    BRIGHT_BLUE=rgb2str(92, 92, 255),
-    BRIGHT_MAGENTA=rgb2str(255, 0, 255),
-    BRIGHT_CYAN=rgb2str(0, 255, 255),
-    BRIGHT_WHITE=rgb2str(255, 255, 255),
-)
-
-
 CC256 = [
     {"name": "Black (SYSTEM)", "hex": "#000000"},
     {"name": "Maroon (SYSTEM)", "hex": "#800000"},
@@ -1074,36 +1026,220 @@ CC256 = [
 ]
 
 
-sgr_to_escape_color = {
-    SGR.FG_COLOR_BLACK: TColor.BLACK,
-    SGR.FG_COLOR_RED: TColor.RED,
-    SGR.FG_COLOR_GREEN: TColor.GREEN,
-    SGR.FG_COLOR_YELLOW: TColor.YELLOW,
-    SGR.FG_COLOR_BLUE: TColor.BLUE,
-    SGR.FG_COLOR_MAGENTA: TColor.MAGENTA,
-    SGR.FG_COLOR_CYAN: TColor.CYAN,
-    SGR.FG_COLOR_WHITE: TColor.WHITE,
-    SGR.BG_COLOR_BLACK: TColor.BLACK,
-    SGR.BG_COLOR_RED: TColor.RED,
-    SGR.BG_COLOR_GREEN: TColor.GREEN,
-    SGR.BG_COLOR_YELLOW: TColor.YELLOW,
-    SGR.BG_COLOR_BLUE: TColor.BLUE,
-    SGR.BG_COLOR_MAGENTA: TColor.MAGENTA,
-    SGR.BG_COLOR_CYAN: TColor.CYAN,
-    SGR.BG_COLOR_WHITE: TColor.WHITE,
-}
+def rgb2str(r: int, g: int, b: int) -> str:
+    return f"#{r:02x}{g:02x}{b:02x}"
 
 
-sgr_to_escape_color_bold = {
-    SGR.FG_COLOR_BLACK: TColor.BRIGHT_BLACK,
-    SGR.FG_COLOR_RED: TColor.BRIGHT_RED,
-    SGR.FG_COLOR_GREEN: TColor.BRIGHT_GREEN,
-    SGR.FG_COLOR_YELLOW: TColor.BRIGHT_YELLOW,
-    SGR.FG_COLOR_BLUE: TColor.BRIGHT_BLUE,
-    SGR.FG_COLOR_MAGENTA: TColor.BRIGHT_MAGENTA,
-    SGR.FG_COLOR_CYAN: TColor.BRIGHT_CYAN,
-    SGR.FG_COLOR_WHITE: TColor.BRIGHT_WHITE,
-}
+# @dataclass
+# class TColor:
+#     BLACK: str = ""
+#     RED: str = ""
+#     GREEN: str = ""
+#     YELLOW: str = ""
+#     BLUE: str = ""
+#     MAGENTA: str = ""
+#     CYAN: str = ""
+#     WHITE: str = ""
+#     BRIGHT_BLACK: str = ""
+#     BRIGHT_RED: str = ""
+#     BRIGHT_GREEN: str = ""
+#     BRIGHT_YELLOW: str = ""
+#     BRIGHT_BLUE: str = ""
+#     BRIGHT_MAGENTA: str = ""
+#     BRIGHT_CYAN: str = ""
+#     BRIGHT_WHITE: str = ""
+
+
+# PaletteWinXP = TColor(
+#     BLACK="#000000",
+#     RED="#800000",
+#     GREEN="#008000",
+#     YELLOW="#808000",
+#     BLUE="#000080",
+#     MAGENTA="#800080",
+#     CYAN="#008080",
+#     WHITE="#c0c0c0",
+#     BRIGHT_BLACK="#808080",
+#     BRIGHT_RED="#ff0000",
+#     BRIGHT_GREEN="#00ff00",
+#     BRIGHT_YELLOW="#ffff00",
+#     BRIGHT_BLUE="#0000ff",
+#     BRIGHT_MAGENTA="#ff00ff",
+#     BRIGHT_CYAN="#00ffff",
+#     BRIGHT_WHITE="#ffffff",
+# )
+
+
+# PaletteDefault = TColor(
+#     BLACK="#000000",
+#     RED="#cc0000",
+#     GREEN="#4e9a06",
+#     YELLOW="#c4a000",
+#     BLUE="#3465a4",
+#     MAGENTA="#75507b",
+#     CYAN="#06989a",
+#     WHITE="#d3d7cf",
+#     BRIGHT_BLACK="#555753",
+#     BRIGHT_RED="#ef2929",
+#     BRIGHT_GREEN="#8ae234",
+#     BRIGHT_YELLOW="#fce94f",
+#     BRIGHT_BLUE="#729fcf",
+#     BRIGHT_MAGENTA="#ad7fa8",
+#     BRIGHT_CYAN="#34e2e2",
+#     BRIGHT_WHITE="#eeeeec",
+# )
+
+# PaletteXterm = TColor(
+#     BLACK=rgb2str(0, 0, 0),
+#     RED=rgb2str(205, 0, 0),
+#     GREEN=rgb2str(0, 205, 0),
+#     YELLOW=rgb2str(205, 205, 0),
+#     BLUE=rgb2str(0, 0, 238),
+#     MAGENTA=rgb2str(205, 0, 205),
+#     CYAN=rgb2str(0, 205, 205),
+#     WHITE=rgb2str(229, 229, 229),
+#     BRIGHT_BLACK=rgb2str(127, 127, 127),
+#     BRIGHT_RED=rgb2str(255, 0, 0),
+#     BRIGHT_GREEN=rgb2str(0, 255, 0),
+#     BRIGHT_YELLOW=rgb2str(255, 255, 0),
+#     BRIGHT_BLUE=rgb2str(92, 92, 255),
+#     BRIGHT_MAGENTA=rgb2str(255, 0, 255),
+#     BRIGHT_CYAN=rgb2str(0, 255, 255),
+#     BRIGHT_WHITE=rgb2str(255, 255, 255),
+# )
+
+# PaletteVSCode = TColor(
+#     BLACK=rgb2str(0, 0, 0),
+#     RED=rgb2str(205, 49, 49),
+#     GREEN=rgb2str(0, 128, 0),
+#     YELLOW=rgb2str(238, 237, 240),
+#     BLUE=rgb2str(0, 0, 128),
+#     MAGENTA=rgb2str(1, 36, 86),
+#     CYAN=rgb2str(0, 128, 128),
+#     WHITE=rgb2str(192, 192, 192),
+#     BRIGHT_BLACK=rgb2str(128, 128, 128),
+#     BRIGHT_RED=rgb2str(255, 0, 0),
+#     BRIGHT_GREEN=rgb2str(0, 255, 0),
+#     BRIGHT_YELLOW=rgb2str(255, 255, 0),
+#     BRIGHT_BLUE=rgb2str(0, 0, 255),
+#     BRIGHT_MAGENTA=rgb2str(255, 0, 255),
+#     BRIGHT_CYAN=rgb2str(0, 255, 255),
+#     BRIGHT_WHITE=rgb2str(255, 255, 255),
+# )
+
+PaletteXtermL = [
+    rgb2str(0, 0, 0),
+    rgb2str(205, 0, 0),
+    rgb2str(0, 205, 0),
+    rgb2str(205, 205, 0),
+    rgb2str(0, 0, 238),
+    rgb2str(205, 0, 205),
+    rgb2str(0, 205, 205),
+    rgb2str(229, 229, 229),
+    rgb2str(127, 127, 127),
+    rgb2str(255, 0, 0),
+    rgb2str(0, 255, 0),
+    rgb2str(255, 255, 0),
+    rgb2str(92, 92, 255),
+    rgb2str(255, 0, 255),
+    rgb2str(0, 255, 255),
+    rgb2str(255, 255, 255),
+]
+
+PaletteVSCodeL = [
+    rgb2str(0, 0, 0),
+    rgb2str(205, 49, 49),
+    rgb2str(13, 188, 121),
+    rgb2str(229, 229, 16),
+    rgb2str(36, 114, 200),
+    rgb2str(188, 63, 188),
+    rgb2str(17, 168, 205),
+    rgb2str(229, 229, 229),
+    rgb2str(102, 102, 102),
+    rgb2str(241, 76, 76),
+    rgb2str(35, 209, 139),
+    rgb2str(245, 245, 67),
+    rgb2str(59, 142, 234),
+    rgb2str(214, 112, 214),
+    rgb2str(41, 184, 219),
+    rgb2str(229, 229, 229),
+]
+
+PalettePutty = [
+    rgb2str(0, 0, 0),
+    rgb2str(187, 0, 0),
+    rgb2str(0, 187, 0),
+    rgb2str(187, 187, 0),
+    rgb2str(0, 0, 187),
+    rgb2str(187, 0, 187),
+    rgb2str(0, 187, 187),
+    rgb2str(187, 187, 187),
+    rgb2str(85, 85, 85),
+    rgb2str(255, 85, 85),
+    rgb2str(85, 255, 85),
+    rgb2str(255, 255, 85),
+    rgb2str(85, 85, 255),
+    rgb2str(255, 85, 255),
+    rgb2str(85, 255, 255),
+    rgb2str(255, 255, 255),
+]
+
+PaletteWinXPL = [
+    rgb2str(0, 0, 0),
+    rgb2str(128, 0, 0),
+    rgb2str(0, 128, 0),
+    rgb2str(128, 128, 0),
+    rgb2str(0, 0, 128),
+    rgb2str(128, 0, 128),
+    rgb2str(0, 128, 128),
+    rgb2str(192, 192, 192),
+    rgb2str(128, 128, 128),
+    rgb2str(255, 0, 0),
+    rgb2str(0, 255, 0),
+    rgb2str(255, 255, 0),
+    rgb2str(0, 0, 255),
+    rgb2str(255, 0, 255),
+    rgb2str(0, 255, 255),
+    rgb2str(255, 255, 255),
+]
+# PaletteWinXPL = [
+#     "#000000",
+#     "#800000",
+#     "#008000",
+#     "#808000",
+#     "#000080",
+#     "#800080",
+#     "#008080",
+#     "#c0c0c0",
+#     "#808080",
+#     "#ff0000",
+#     "#00ff00",
+#     "#ffff00",
+#     "#0000ff",
+#     "#ff00ff",
+#     "#00ffff",
+#     "#ffffff",
+# ]
+
+
+PaletteDefault = [
+    "#000000",
+    "#cc0000",
+    "#4e9a06",
+    "#c4a000",
+    "#3465a4",
+    "#75507b",
+    "#06989a",
+    "#d3d7cf",
+    "#555753",
+    "#ef2929",
+    "#8ae234",
+    "#fce94f",
+    "#729fcf",
+    "#ad7fa8",
+    "#34e2e2",
+    "#eeeeec",
+]
 
 
 @dataclass
@@ -1123,11 +1259,18 @@ class TerminalAttributeState:
     SUBSCRIPT: bool = False
     REVERSE: bool = False
     OVERLINE: bool = False
-    FG_COLOR: str = TColor.WHITE
-    BG_COLOR: str = TColor.BLACK
     CURSOR: bool = False
-    DEFAULT_FG_COLOR: str = TColor.WHITE
-    DEFAULT_BG_COLOR: str = TColor.BLACK
+    FG_COLOR: str = ""
+    BG_COLOR: str = ""
+    DEFAULT_FG_COLOR: str = ""
+    DEFAULT_BG_COLOR: str = ""
+    palette: list = None
+
+    def __post_init__(self) -> None:
+        self.DEFAULT_FG_COLOR = self.palette[7]
+        self.DEFAULT_BG_COLOR = self.palette[0]
+        self.FG_COLOR = self.DEFAULT_FG_COLOR
+        self.BG_COLOR = self.DEFAULT_BG_COLOR
 
     def reset(self):
         self.BOLD = False
@@ -1141,8 +1284,6 @@ class TerminalAttributeState:
         self.OVERLINE = False
         self.FG_COLOR = self.DEFAULT_FG_COLOR
         self.BG_COLOR = self.DEFAULT_BG_COLOR
-        # self.FG_COLOR = TColor.WHITE
-        # self.BG_COLOR = TColor.BLACK
         self.CURSOR = False
 
     def __str__(self) -> str:
@@ -1167,14 +1308,12 @@ class TerminalAttributeState:
             state += 256
         if self.CURSOR is True:
             state += 512
-        # if self.FG_COLOR is True:
-        # if self.BG_COLOR is True:
         return f"{state:010b}"
 
 
 class TerminalCharacter:
     def __init__(self, ch: str, tas: TerminalAttributeState):
-        self.tas = TerminalAttributeState()
+        self.tas = TerminalAttributeState(palette=tas.palette)
         self.tas = copy(tas)
         self.ch = ch
         self.cursor: bool = False
@@ -1230,7 +1369,7 @@ class TerminalLine:
             fg_color = tas.FG_COLOR
             bg_color = tas.BG_COLOR
 
-        b = f'<span style="color:{fg_color};background-color:{bg_color};font-size:10pt;'
+        b = f'<span style="color:{fg_color};background-color:{bg_color};font-size:12pt;'
 
         if tas.BOLD:
             b += "font-weight:bold;"
@@ -1278,34 +1417,6 @@ class TerminalLine:
         html.append("</div>")
         # print(" ".join(html))
         return "".join(html)
-
-    # def line_to_html(self) -> str:
-    #     html = ""
-    #     text = ""
-    #     for idx, tc in enumerate(self.line):
-    #         if idx == 0:
-    #             tas = tc.tas
-
-    #         if self.cursor is not None:
-    #             if idx == (self.cursor.column - 1):
-    #                 tas.CURSOR = True
-    #             else:
-    #                 tas.CURSOR = False
-
-    #         else:
-    #             tas.CURSOR = False
-
-    #         if tas == tc.tas:
-    #             text += tc.ch
-    #         else:
-    #             html += self.attr_html(text, tas)
-    #             text = tc.ch
-    #             tas = tc.tas
-
-    #     if len(text) > 0:
-    #         html += self.attr_html(text, tas)
-
-    #     return html
 
     def append(self, text: str, tas: TerminalAttributeState, pos: int) -> int:
         i = pos - 1
@@ -1355,66 +1466,31 @@ class TerminalState(TerminalAttributeState):
     def __init__(self, rows: int = 24, columns: int = 80) -> None:
         self.et = EscapeTokenizer()
         self.line_id: int = 0
-        self.tas = TerminalAttributeState()
-        self.default_fg_color = TColor.WHITE
-        self.default_bg_color = TColor.BLACK
+        # self.palette = PaletteVSCodeL
+        # self.palette = PaletteXtermL
+        # self.palette = PaletteWinXPL
+        self.palette = PalettePutty
+        self.default_fg_color = self.palette[7]
+        self.default_bg_color = self.palette[0]
+        self.tas = TerminalAttributeState(palette=self.palette)
         self.set_terminal(rows, columns)
         self.reset()
-        self.palette: TColor = TColor
 
     def fg_color(self, color: SGR) -> str:
+        color_id = color.value - 30
         if self.BOLD is True:
-            if color == SGR.FG_COLOR_BLACK:
-                return self.palette.BRIGHT_BLACK
-            if color == SGR.FG_COLOR_RED:
-                return self.palette.BRIGHT_RED
-            if color == SGR.FG_COLOR_GREEN:
-                return self.palette.BRIGHT_GREEN
-            if color == SGR.FG_COLOR_YELLOW:
-                return self.palette.BRIGHT_YELLOW
-            if color == SGR.FG_COLOR_BLUE:
-                return self.palette.BRIGHT_BLUE
-            if color == SGR.FG_COLOR_MAGENTA:
-                return self.palette.BRIGHT_MAGENTA
-            if color == SGR.FG_COLOR_CYAN:
-                return self.palette.BRIGHT_CYAN
-            if color == SGR.FG_COLOR_WHITE:
-                return self.palette.BRIGHT_WHITE
+            color_id += 8
 
-        if color == SGR.FG_COLOR_BLACK:
-            return self.palette.BLACK
-        if color == SGR.FG_COLOR_RED:
-            return self.palette.RED
-        if color == SGR.FG_COLOR_GREEN:
-            return self.palette.GREEN
-        if color == SGR.FG_COLOR_YELLOW:
-            return self.palette.YELLOW
-        if color == SGR.FG_COLOR_BLUE:
-            return self.palette.BLUE
-        if color == SGR.FG_COLOR_MAGENTA:
-            return self.palette.MAGENTA
-        if color == SGR.FG_COLOR_CYAN:
-            return self.palette.CYAN
-        if color == SGR.FG_COLOR_WHITE:
-            return self.palette.WHITE
+        return self.palette[color_id]
 
     def bg_color(self, color: SGR) -> str:
-        if color == SGR.BG_COLOR_BLACK:
-            return self.palette.BLACK
-        if color == SGR.BG_COLOR_RED:
-            return self.palette.RED
-        if color == SGR.BG_COLOR_GREEN:
-            return self.palette.GREEN
-        if color == SGR.BG_COLOR_YELLOW:
-            return self.palette.YELLOW
-        if color == SGR.BG_COLOR_BLUE:
-            return self.palette.BLUE
-        if color == SGR.BG_COLOR_MAGENTA:
-            return self.palette.MAGENTA
-        if color == SGR.BG_COLOR_CYAN:
-            return self.palette.CYAN
-        if color == SGR.BG_COLOR_WHITE:
-            return self.palette.WHITE
+        return self.palette[color.value - 40]
+
+    def get_256_color(self, color: int) -> str:
+        if color < 16:
+            return self.palette[color]
+
+        return CC256[color]["hex"]
 
     def set_terminal(self, rows: int, columns: int) -> None:
         self.rows = rows
@@ -1434,7 +1510,8 @@ class TerminalState(TerminalAttributeState):
         self.tas.reset()
 
     def pos_str(self) -> str:
-        ps = f"{self.cursor.row=} {self.cursor.column=}"
+        # ps = f"{self.cursor.row=} {self.cursor.column=}"
+        ps = f"{self.cursor}"
         return ps
 
     def clear_line(self, line: int):
@@ -1648,13 +1725,6 @@ class TerminalState(TerminalAttributeState):
 
                                 self.tas.FG_COLOR = self.fg_color(sgr.code)
 
-                                # if self.BOLD:
-                                #     self.tas.FG_COLOR = sgr_to_escape_color_bold[
-                                #         sgr.code
-                                #     ]
-                                # else:
-                                #     self.tas.FG_COLOR = sgr_to_escape_color[sgr.code]
-
                             elif sgr.code in [
                                 SGR.BG_COLOR_BLACK,
                                 SGR.BG_COLOR_RED,
@@ -1665,14 +1735,15 @@ class TerminalState(TerminalAttributeState):
                                 SGR.BG_COLOR_CYAN,
                                 SGR.BG_COLOR_WHITE,
                             ]:
-                                # self.tas.BG_COLOR = sgr_to_escape_color[sgr.code]
                                 self.tas.BG_COLOR = self.bg_color(sgr.code)
 
                             elif sgr.code == SGR.SET_FG_COLOR:
-                                self.tas.FG_COLOR = CC256[sgr.color]["hex"]
+                                # self.tas.FG_COLOR = CC256[sgr.color]["hex"]
+                                self.tas.FG_COLOR = self.get_256_color(sgr.color)
 
                             elif sgr.code == SGR.SET_BG_COLOR:
-                                self.tas.BG_COLOR = CC256[sgr.color]["hex"]
+                                # self.tas.BG_COLOR = CC256[sgr.color]["hex"]
+                                self.tas.BG_COLOR = self.get_256_color(sgr.color)
 
                             elif sgr.code == SGR.SET_FG_COLOR_DEFAULT:
                                 self.tas.FG_COLOR = self.DEFAULT_FG_COLOR
@@ -1700,16 +1771,12 @@ class TerminalState(TerminalAttributeState):
 
             if token == Ascii.CR:  # carriage return
                 self.set_pos(x=1)
-                logging.debug(
-                    f"(CR)    Carriage Return                             {self.pos_str()}"
-                )
+                logging.debug(f"(CR)    Carriage Return {self.pos_str()}")
                 continue
 
             if token == Ascii.BS:  # backspace
                 self.set_pos(x=(self.cursor.column - 1))
-                logging.debug(
-                    f"(BS)    Backspace                                   {self.pos_str()}"
-                )
+                logging.debug(f"(BS)    Backspace       {self.pos_str()}")
                 continue
 
             if token == Ascii.LF:  # newline
@@ -1718,9 +1785,7 @@ class TerminalState(TerminalAttributeState):
 
                 self.set_pos(x=1, y=(self.cursor.row + 1))
 
-                logging.debug(
-                    f"(LF)    Linefeed                                     {self.pos_str()}"
-                )
+                logging.debug(f"(LF)    Linefeed        {self.pos_str()}")
                 continue
 
             if token in [Ascii.BEL]:  # bell

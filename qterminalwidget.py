@@ -137,7 +137,7 @@ class QTerminalWidget(QPlainTextEdit):
         color : White;
         background-color: rgb(0, 0, 0);
         font-family:Monospace;
-        font-size:10pt;
+        font-size:12pt;
         line-height:1.0;
         """
         )

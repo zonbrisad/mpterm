@@ -22,6 +22,7 @@
 from enum import Enum
 from mpplugin import MpPlugin
 from escape import Ansi
+from typing import Any
 
 
 # Variables ------------------------------------------------------------------

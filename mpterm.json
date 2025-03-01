@@ -1,7 +1,7 @@
 {
     "alias": "default",
     "port": "ttyUSB0",
-    "bitrate": "9600",
+    "bitrate": "115200",
     "databits": "8",
     "parity": "None",
     "stopbits": "1",
@@ -10,11 +10,11 @@
     "suspend_timeout": 4,
     "ext_program": "bash -i",
     "newline": "LF",
-    "win_x": 1245,
-    "win_y": 948,
+    "win_x": 1614,
+    "win_y": 814,
     "sync_string": "",
     "columns": 50,
-    "plugin": "Dl24",
+    "plugin": "None",
     "macros": [
         {
             "name": "M1",
@@ -39,7 +39,7 @@
         {
             "name": "M5",
             "hex": false,
-            "text": "*IDN?"
+            "text": "ls\\n"
         }
     ]
 }
