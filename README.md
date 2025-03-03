@@ -127,26 +127,30 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 
 ## ToDo
 
-- Terminal functions
-- [x] Rendering: Cursor basic movement
-- [ ] Rendering: Cursor visual presentation
-- [x] Rendering: Color encoding (8 colors)
-- [x] Rendering: 256 color encoding
-- [ ] Rendering: Dim text
-- [ ] Rendering: Blink attribute
-- [ ] Rendering: Truecolor (RGB)
-- [ ] Rendering: Underline style (not supported by Qt QTextEdit/QPlainTextEdit yet)
-- [ ] Rendering: Fix color rendering for basic 16 colors
-- [ ] Rendering: Real bright(bold) colors
-- [x] Rendering: Reverse text
+Terminal functions
+
+- [x] Terminal: Cursor basic movement
+- [ ] Terminal: Cursor visual presentation
+- [x] Terminal: Color encoding (8 colors)
+- [x] Terminal: 256 color encoding
+- [ ] Terminal: Dim text
+- [ ] Terminal: Blink attribute
+- [ ] Terminal: Truecolor (RGB)
+- [ ] Terminal: Underline style (not supported by Qt QTextEdit/QPlainTextEdit yet)
+- [ ] Terminal: Fix color rendering for basic 16 colors
+- [ ] Terminal: Real bright(bold) colors
+- [ ] Terminal: SGR 90-97, 100-107 set color
+- [ ] Terminal: ICH(insert charachter) "\e[n@" n=nr of characters <https://vt100.net/docs/vt510-rm/ICH.html>
+- [x] Terminal: Reverse text
+- [ ] Terminal: VPA Cursor vertical absolute "\e[nd"
 - [x] Button: backspace
 - [x] Button: tab
 - [x] Button: arrow button support
-- [ ] Button: end
-- [ ] Button: home
+- [x] Button: end
+- [x] Button: home
 - [x] Button: delete
-- [ ] Button: FXX
-- Feature
+- [x] Button: F??
+Feature
 - [x] Userdefined quick access macros
 - [x] Hexadecimal macros
 - [ ] auto repeat macros with intervalsetting
@@ -173,15 +177,17 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 - [ ] Add support for 8 bit characters in Hex + Ascii printout
 - [ ] Change from PyQt to PySide.
 - [ ] Change to PyQt6
-- [ ] Enable keyboard interraction when runing external program
+- [x] Enable keyboard interraction when runing external program
 
 ## Known Issues
 
-- [x] Rendering: Error when <> characters are included
-- [x] Rendering: Text lines overlap with one(maybe two) pixel row(s)
-- [x] Rendering: Terminal rendering performance is slow
-- [x] Rendering: Row removal fail
-- [x] Rendering: "bpexample attr" fail when executed via extrnal program
+- [x] Terminal: Error when <> characters are included
+- [x] Terminal: Text lines overlap with one(maybe two) pixel row(s)
+- [x] Terminal: Terminal rendering performance is slow
+- [x] Terminal: Row removal fail
+- [x] Terminal: "bpexample attr" fail when executed via extrnal program
+- [x] Terminal: Missing row when many rows sent
+- [ ] Terminal: Reversed text when meny rows sent
 - [ ] UI: Tab cycling is not correct
 - [x] UI: programing mode does not show output from some external programs
 - [ ] Feature: Reconnecting to port despite avrdude using the port

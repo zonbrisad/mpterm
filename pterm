@@ -186,7 +186,7 @@ class MainForm(QMainWindow):
 
         self.process = QProcess()
         self.process.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
-        self.process.readyReadStandardOutput.connect(self.program_stdout_available)
+        self.process.readyReadStandardOutput.connect(self.stdout_data)
         # self.process.readyReadStandardError.connect(self.program_stderr_available)
         self.process.finished.connect(self.process_finished)
         self.process.start("bash", ["-i"])
@@ -209,9 +209,9 @@ class MainForm(QMainWindow):
 
         return False
 
-    def program_stdout_available(self) -> None:
-        logging.debug("Program received stdout data")
+    def stdout_data(self) -> None:
         data = self.process.readAllStandardOutput()
+        logging.debug(f"Data available from ext. process(stdout): {len(data)}")
         data_str = str(data, "utf-8")
         self.terminal.append_ansi_text(data_str)
         self.terminal.scroll_down()

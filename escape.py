@@ -35,6 +35,8 @@ from enum import Enum
 from dataclasses import dataclass, field
 import logging
 
+from pyparsing import col
+
 
 class Ascii:
     NUL = "\x00"  # Null character
@@ -358,6 +360,11 @@ class C1(Enum):
     DECSC = "7"  # Save cursor position and character attributes
     DECRC = "8"  # Restore cursor and attributes to previously saved position
 
+    DECPAM_NI = (
+        "="  # Application Keypad Mode, switches numeric keypad into appliation mode
+    )
+    DECKPNM_NI = ">"  # Normal Keypad Mode
+
     # RESERVERD = "'"  # Reserved for future standardization
     UNSUPPORTED = "UNSUPPORTED"
 
@@ -385,6 +392,7 @@ class CSI(Enum):
     SCROLL_UP = "S"  # "\e[2S" Move lines up, new lines at bottom
     SCROLL_DOWN = "T"
 
+    CURSOR_VERTICAL_ABSOLUTE = "d"  # VPA
     HVP = "f"  # Horizontal and Vertical Position(depends on PUM=Positioning Unit Mode)
 
     ENABLE = "h"  # Enable/set
@@ -408,6 +416,8 @@ class CSI(Enum):
     # Private sequences
     SAVE_CURSOR_POSITION = "s"  # Save Current Cursor Position
     RESTORE_CURSOR_POSITION = "u"  # Restore Saved Curosr Position
+
+    INSERT_CHARACTER = "@"  # (ICH) <https://vt100.net/docs/vt510-rm/ICH.html>
 
     UNSUPPORTED = "UNSUPPORTED"
     # TEXT = "TEXT"
@@ -489,6 +499,24 @@ class SGR(Enum):
 
     SUPERSCRIPT = 73
     SUBSCRIPT = 74
+
+    FG_COLOR_BR_BLACK = 90
+    FG_COLOR_BR_RED = 91
+    FG_COLOR_BR_GREEN = 92
+    FG_COLOR_BR_YELLOW = 93
+    FG_COLOR_BR_BLUE = 94
+    FG_COLOR_BR_MAGENTA = 95
+    FG_COLOR_BR_CYAN = 96
+    FG_COLOR_BR_WHITE = 97
+
+    BG_COLOR_BR_BLACK = 100
+    BG_COLOR_BR_RED = 101
+    BG_COLOR_BR_GREEN = 102
+    BG_COLOR_BR_YELLOW = 103
+    BG_COLOR_BR_BLUE = 104
+    BG_COLOR_BR_MAGENTA = 105
+    BG_COLOR_BR_CYAN = 106
+    BG_COLOR_BR_WHITE = 107
 
     UNSUPPORTED = 0xFFFF
 
@@ -1030,103 +1058,6 @@ def rgb2str(r: int, g: int, b: int) -> str:
     return f"#{r:02x}{g:02x}{b:02x}"
 
 
-# @dataclass
-# class TColor:
-#     BLACK: str = ""
-#     RED: str = ""
-#     GREEN: str = ""
-#     YELLOW: str = ""
-#     BLUE: str = ""
-#     MAGENTA: str = ""
-#     CYAN: str = ""
-#     WHITE: str = ""
-#     BRIGHT_BLACK: str = ""
-#     BRIGHT_RED: str = ""
-#     BRIGHT_GREEN: str = ""
-#     BRIGHT_YELLOW: str = ""
-#     BRIGHT_BLUE: str = ""
-#     BRIGHT_MAGENTA: str = ""
-#     BRIGHT_CYAN: str = ""
-#     BRIGHT_WHITE: str = ""
-
-
-# PaletteWinXP = TColor(
-#     BLACK="#000000",
-#     RED="#800000",
-#     GREEN="#008000",
-#     YELLOW="#808000",
-#     BLUE="#000080",
-#     MAGENTA="#800080",
-#     CYAN="#008080",
-#     WHITE="#c0c0c0",
-#     BRIGHT_BLACK="#808080",
-#     BRIGHT_RED="#ff0000",
-#     BRIGHT_GREEN="#00ff00",
-#     BRIGHT_YELLOW="#ffff00",
-#     BRIGHT_BLUE="#0000ff",
-#     BRIGHT_MAGENTA="#ff00ff",
-#     BRIGHT_CYAN="#00ffff",
-#     BRIGHT_WHITE="#ffffff",
-# )
-
-
-# PaletteDefault = TColor(
-#     BLACK="#000000",
-#     RED="#cc0000",
-#     GREEN="#4e9a06",
-#     YELLOW="#c4a000",
-#     BLUE="#3465a4",
-#     MAGENTA="#75507b",
-#     CYAN="#06989a",
-#     WHITE="#d3d7cf",
-#     BRIGHT_BLACK="#555753",
-#     BRIGHT_RED="#ef2929",
-#     BRIGHT_GREEN="#8ae234",
-#     BRIGHT_YELLOW="#fce94f",
-#     BRIGHT_BLUE="#729fcf",
-#     BRIGHT_MAGENTA="#ad7fa8",
-#     BRIGHT_CYAN="#34e2e2",
-#     BRIGHT_WHITE="#eeeeec",
-# )
-
-# PaletteXterm = TColor(
-#     BLACK=rgb2str(0, 0, 0),
-#     RED=rgb2str(205, 0, 0),
-#     GREEN=rgb2str(0, 205, 0),
-#     YELLOW=rgb2str(205, 205, 0),
-#     BLUE=rgb2str(0, 0, 238),
-#     MAGENTA=rgb2str(205, 0, 205),
-#     CYAN=rgb2str(0, 205, 205),
-#     WHITE=rgb2str(229, 229, 229),
-#     BRIGHT_BLACK=rgb2str(127, 127, 127),
-#     BRIGHT_RED=rgb2str(255, 0, 0),
-#     BRIGHT_GREEN=rgb2str(0, 255, 0),
-#     BRIGHT_YELLOW=rgb2str(255, 255, 0),
-#     BRIGHT_BLUE=rgb2str(92, 92, 255),
-#     BRIGHT_MAGENTA=rgb2str(255, 0, 255),
-#     BRIGHT_CYAN=rgb2str(0, 255, 255),
-#     BRIGHT_WHITE=rgb2str(255, 255, 255),
-# )
-
-# PaletteVSCode = TColor(
-#     BLACK=rgb2str(0, 0, 0),
-#     RED=rgb2str(205, 49, 49),
-#     GREEN=rgb2str(0, 128, 0),
-#     YELLOW=rgb2str(238, 237, 240),
-#     BLUE=rgb2str(0, 0, 128),
-#     MAGENTA=rgb2str(1, 36, 86),
-#     CYAN=rgb2str(0, 128, 128),
-#     WHITE=rgb2str(192, 192, 192),
-#     BRIGHT_BLACK=rgb2str(128, 128, 128),
-#     BRIGHT_RED=rgb2str(255, 0, 0),
-#     BRIGHT_GREEN=rgb2str(0, 255, 0),
-#     BRIGHT_YELLOW=rgb2str(255, 255, 0),
-#     BRIGHT_BLUE=rgb2str(0, 0, 255),
-#     BRIGHT_MAGENTA=rgb2str(255, 0, 255),
-#     BRIGHT_CYAN=rgb2str(0, 255, 255),
-#     BRIGHT_WHITE=rgb2str(255, 255, 255),
-# )
-
 PaletteXtermL = [
     rgb2str(0, 0, 0),
     rgb2str(205, 0, 0),
@@ -1313,7 +1244,7 @@ class TerminalAttributeState:
 
 class TerminalCharacter:
     def __init__(self, ch: str, tas: TerminalAttributeState):
-        self.tas = TerminalAttributeState(palette=tas.palette)
+        # self.tas = TerminalAttributeState(palette=tas.palette)
         self.tas = copy(tas)
         self.ch = ch
         self.cursor: bool = False
@@ -1329,6 +1260,7 @@ class TerminalLine:
         self.line: list[TerminalCharacter] = []
         # for i in range(0, columns):
         #     self.line.append(TerminalCharacter(" ", tas))
+        self.tas = tas
         self.id: int = id
         self.text: str = ""
         self.changed: bool = False
@@ -1341,9 +1273,10 @@ class TerminalLine:
 
         return " ".join(tchars)
 
-    def clear(self, tas: TerminalAttributeState):
+    # def clear(self, tas: TerminalAttributeState):
+    def clear(self):
         for ch in self.line:
-            ch.tas = tas
+            ch.tas = self.tas
             ch.ch = " "
 
     def reset(self):
@@ -1415,13 +1348,12 @@ class TerminalLine:
             html.append(self.attr_html(text, tas))
 
         html.append("</div>")
-        # print(" ".join(html))
         return "".join(html)
 
-    def append(self, text: str, tas: TerminalAttributeState, pos: int) -> int:
+    def append(self, text: str, pos: int) -> int:
         i = pos - 1
         for ch in text:
-            tc = TerminalCharacter(ch, tas)
+            tc = TerminalCharacter(ch, self.tas)
             try:
                 self.line[i] = tc
             except IndexError:
@@ -1436,13 +1368,20 @@ class TerminalLine:
     #         self.line.append(TerminalCharacter(" ", tas))
     #     self.update()
 
-    def delete_char(self, column: int, n: int):
+    def insert_char(self, column: int, n: int) -> None:
+        """Insert space(s) at position column"""
+        for i in range(n):
+            tc = TerminalCharacter(" ", self.tas)
+            self.line.insert(column - 1, tc)
+        self.update()
+
+    def delete_char(self, column: int, n: int) -> None:
         for i in range(column, column + n):
             # print(f"Deleting: {self.line[i-1].ch}")
             self.line.pop(i - 1)
         self.update()
 
-    def erase_in_line(self, pos: int, tas, mode: int):
+    def erase_in_line(self, pos: int, tas, mode: int) -> None:
         if mode == 0:  # erase after pos
             erange = range(pos - 1, len(self.line))
         elif mode == 1:  # erase before pos
@@ -1460,6 +1399,7 @@ class TerminalLine:
     def update(self):
         self.changed = True
         self.text = str(self)
+        # print(f"XX: {self.text}")
 
 
 class TerminalState(TerminalAttributeState):
@@ -1514,21 +1454,28 @@ class TerminalState(TerminalAttributeState):
         ps = f"{self.cursor}"
         return ps
 
-    def clear_line(self, line: int):
-        self.lines[self.max.row - line].clear(self.tas)
+    def new_line(self) -> TerminalLine:
+        nl = TerminalLine(tas=self.tas, id=self.line_id, columns=self.max.column)
+        nl.append(" ", 0)  # For some reason needed
+        self.line_id += 1
+        self.lines.insert(0, nl)
+        return nl
 
-        # For some reason the following line is needed.
-        # A guess is that it might have with html rendering to do
-        self.lines[self.max.row - line].append(" ", self.tas, 1)
-
-    def delete(self, n: int = 1):
+    def delete_line(self, n: int = 1) -> None:
         for i in range(self.max.row - self.cursor.row, -1, -1):
             self.lines[i].line = self.lines[i - 1].line
             self.lines[i].changed = True
 
         self.clear_line(self.max.row)
 
-    def insert(self, n: int = 1):
+    def clear_line(self, line: int) -> None:
+        self.lines[self.max.row - line].clear()
+
+        # For some reason the following line is needed.
+        # A guess is that it might have with html rendering to do
+        self.lines[self.max.row - line].append(" ", self.tas, 1)
+
+    def insert_line(self, n: int = 1) -> None:
         """insert n row(s) at cursor, existing rows scroll down"""
 
         pos = self.max.row - self.cursor.row
@@ -1540,29 +1487,26 @@ class TerminalState(TerminalAttributeState):
 
         self.clear_line(self.cursor.row)
 
-    def delete_char(self, n: int = 1):
+    def insert_char(self, n: int = 1) -> None:
+        self.lines[self.max.row - self.cursor.row].insert_char(self.cursor.column, n)
+
+    def delete_char(self, n: int = 1) -> None:
         self.lines[self.max.row - self.cursor.row].delete_char(self.cursor.column, n)
 
-    def new_line(self) -> TerminalLine:
-        nl = TerminalLine(tas=self.tas, id=self.line_id, columns=self.max.column)
-        nl.append(" ", self.tas, 0)  # For some reason needed
-        self.line_id += 1
-        self.lines.insert(0, nl)
-
-    def set_pos(self, x=None, y=None):
-        if x is not None:
-            self.cursor.column = x
+    def set_pos(self, column=None, row=None) -> None:
+        if column is not None:
+            self.cursor.column = column
             if self.cursor.column < 1:
                 self.cursor.column = 1
 
-        if y is not None:
-            self.cursor.row = y
+        if row is not None:
+            self.cursor.row = row
             if self.cursor.row < 1:
                 self.cursor.row = 1
             if self.cursor.row > self.max.row:
                 self.cursor.row = self.max.row
 
-    def erase_in_line(self, mode: int):
+    def erase_in_line(self, mode: int) -> None:
         logging.debug(
             f"Erase in line: {self.cursor.row=}  {self.cursor.column=} {mode=}"
         )
@@ -1570,7 +1514,7 @@ class TerminalState(TerminalAttributeState):
             self.cursor.column, self.tas, mode
         )
 
-    def erase_in_display(self, mode: int):
+    def erase_in_display(self, mode: int) -> None:
         if mode == 0:  # Clear from cursor to end of screen
             for line in range(self.cursor.row, self.max.row + 1):
                 self.lines[self.max.row - line].erase_in_line(1, self.tas, 2)
@@ -1581,15 +1525,213 @@ class TerminalState(TerminalAttributeState):
             for line in range(1, self.max.row):
                 self.lines[self.max.row - line].erase_in_line(1, self.tas, 2)
 
-    def append(self, text: str):
+    def append(self, text: str) -> None:
         self.cursor.column = self.lines[self.max.row - self.cursor.row].append(
-            text, self.tas, self.cursor.column
+            text, self.cursor.column
         )
+        # self.cursor.column = self.lines[self.max.row - self.cursor.row].append(
+        #     text, self.tas, self.cursor.column
+        # )
         tok_str = f'"{text}"'
         logging.debug(f"(Text): {tok_str}")
 
-    def update(self, s: str) -> list:
-        self.et.append_string(s)
+    def handle_sgr(self, eo: EscapeObj) -> None:
+        for sgr in eo.sgrs:
+            if sgr.code == SGR.BOLD:
+                self.tas.BOLD = True
+
+            elif sgr.code == SGR.ITALIC:
+                self.tas.ITALIC = True
+
+            elif sgr.code == SGR.NOT_ITALIC:
+                self.tas.ITALIC = False
+
+            elif sgr.code == SGR.UNDERLINE:
+                self.tas.UNDERLINE = True
+
+            elif sgr.code == SGR.NOT_UNDERLINED:
+                self.tas.UNDERLINE = False
+
+            elif sgr.code == SGR.CROSSED:
+                self.tas.CROSSED = True
+
+            elif sgr.code == SGR.NOT_CROSSED:
+                self.tas.CROSSED = False
+
+            elif sgr.code == SGR.SUPERSCRIPT:
+                self.tas.SUPERSCRIPT = True
+
+            elif sgr.code == SGR.SUBSCRIPT:
+                self.tas.SUBSCRIPT = True
+
+            elif sgr.code == SGR.OVERLINE:
+                self.tas.OVERLINE = True
+                self.tas.UNDERLINE = False
+                self.tas.CROSSED = False
+
+            elif sgr.code == SGR.NOT_OVERLINE:
+                self.tas.OVERLINE = False
+
+            elif sgr.code == SGR.NORMAL_INTENSITY:
+                self.tas.BOLD = False
+                self.tas.DIM = False
+
+            elif sgr.code == SGR.REVERSE_VIDEO:
+                self.tas.REVERSE = True
+
+            elif sgr.code == SGR.NOT_REVERSED:
+                self.tas.REVERSE = False
+
+            elif sgr.code == SGR.RESET:
+                self.tas.reset()
+
+            elif sgr.code == SGR.SLOW_BLINK:
+                self.BLINKING = True
+
+            elif sgr.code == SGR.NOT_BLINKING:
+                self.BLINKING = False
+
+            elif sgr.code in [
+                SGR.FG_COLOR_BLACK,
+                SGR.FG_COLOR_RED,
+                SGR.FG_COLOR_GREEN,
+                SGR.FG_COLOR_YELLOW,
+                SGR.FG_COLOR_BLUE,
+                SGR.FG_COLOR_MAGENTA,
+                SGR.FG_COLOR_CYAN,
+                SGR.FG_COLOR_WHITE,
+            ]:
+
+                self.tas.FG_COLOR = self.fg_color(sgr.code)
+
+            elif sgr.code in [
+                SGR.BG_COLOR_BLACK,
+                SGR.BG_COLOR_RED,
+                SGR.BG_COLOR_GREEN,
+                SGR.BG_COLOR_YELLOW,
+                SGR.BG_COLOR_BLUE,
+                SGR.BG_COLOR_MAGENTA,
+                SGR.BG_COLOR_CYAN,
+                SGR.BG_COLOR_WHITE,
+            ]:
+                self.tas.BG_COLOR = self.bg_color(sgr.code)
+
+            elif sgr.code == SGR.SET_FG_COLOR:
+                self.tas.FG_COLOR = self.get_256_color(sgr.color)
+
+            elif sgr.code == SGR.SET_BG_COLOR:
+                self.tas.BG_COLOR = self.get_256_color(sgr.color)
+
+            elif sgr.code == SGR.SET_FG_COLOR_DEFAULT:
+                self.tas.FG_COLOR = self.DEFAULT_FG_COLOR
+
+            elif sgr.code == SGR.SET_BG_COLOR_DEFAULT:
+                self.tas.BG_COLOR = self.DEFAULT_BG_COLOR
+            elif sgr.code in [
+                SGR.FG_COLOR_BR_BLACK,
+                SGR.FG_COLOR_BR_RED,
+                SGR.FG_COLOR_BR_GREEN,
+                SGR.FG_COLOR_BR_YELLOW,
+                SGR.FG_COLOR_BR_BLUE,
+                SGR.FG_COLOR_BR_MAGENTA,
+                SGR.FG_COLOR_BR_CYAN,
+                SGR.FG_COLOR_BR_WHITE,
+            ]:
+                self.tas.FG_COLOR = self.get_256_color(sgr.code.value - 90 + 8)
+            elif sgr.code in [
+                SGR.BG_COLOR_BR_BLACK,
+                SGR.BG_COLOR_BR_RED,
+                SGR.BG_COLOR_BR_GREEN,
+                SGR.BG_COLOR_BR_YELLOW,
+                SGR.BG_COLOR_BR_BLUE,
+                SGR.BG_COLOR_BR_MAGENTA,
+                SGR.BG_COLOR_BR_CYAN,
+                SGR.BG_COLOR_BR_WHITE,
+            ]:
+                self.tas.BG_COLOR = self.get_256_color(sgr.code.value - 100 + 8)
+
+    def handle_csi(self, eo: EscapeObj) -> None:
+        if eo.csi == CSI.CURSOR_UP:
+            self.set_pos(row=(self.cursor.row - eo.n))
+
+        if eo.csi == CSI.CURSOR_DOWN:
+            self.set_pos(row=(self.cursor.row + eo.n))
+
+        if eo.csi == CSI.CURSOR_FORWARD:
+            self.set_pos(column=(self.cursor.column + eo.n))
+
+        if eo.csi == CSI.CURSOR_BACK:
+            self.set_pos(column=(self.cursor.column - eo.n))
+
+        if eo.csi == CSI.CURSOR_NEXT_LINE:
+            self.set_pos(column=1, row=(self.cursor.row + eo.n))
+
+        if eo.csi == CSI.CURSOR_PREVIOUS_LINE:
+            self.set_pos(column=1, row=(self.cursor.row - eo.n))
+
+        if eo.csi == CSI.CURSOR_POSITION:
+            self.set_pos(column=eo.m, row=eo.n)
+
+        if eo.csi == CSI.CURSOR_HORIZONTAL_ABSOLUTE:
+            self.set_pos(column=eo.m)
+
+        if eo.csi == CSI.CURSOR_VERTICAL_ABSOLUTE:
+            self.set_pos(row=eo.m)
+
+        # Horizontal and Vertical Position(depends on PUM)
+        if eo.csi == CSI.HVP:
+            self.set_pos(column=eo.m, row=eo.n)
+
+        if eo.csi == CSI.ERASE_IN_DISPLAY:
+            self.erase_in_display(eo.n)
+
+        if eo.csi == CSI.ERASE_IN_LINE:
+            self.erase_in_line(eo.n)
+
+        if eo.csi == CSI.SAVE_CURSOR_POSITION:
+            self.saved_cursor = copy(self.cursor)
+
+        if eo.csi == CSI.RESTORE_CURSOR_POSITION:
+            self.cursor = copy(self.saved_cursor)
+
+        if eo.csi == CSI.INSERT_LINE:
+            self.insert_line(eo.n)
+
+        if eo.csi == CSI.DELETE_LINE:
+            self.delete_line(eo.n)
+
+        if eo.csi == CSI.DELETE_CHAR:
+            self.delete_char(eo.n)
+
+        if eo.csi == CSI.SET_SCROLLING_REGION:
+            logging.debug(f"{eo.csi.name} is UNSUPPORTED")
+
+        if eo.csi == CSI.INSERT_CHARACTER:
+            self.insert_char(eo.m)
+
+        if eo.csi == CSI.SGR:
+            self.handle_sgr(eo)
+
+        # if eo.c1 == C1.CSI:
+        #     if eo.csi == CSI.SGR:
+        #         for i, s in enumerate(eo.sgr.code):
+        #             if i == 0:
+        #                 logging.debug(f'(SGR):  {str(s):29}  "{str(eo.text)}"')
+        #             else:
+        #                 logging.debug(f"            {str(s):36}")
+        #     else:
+        #         logging.debug(f"{str(eo)}")
+        #         # if eo.csi in (CSI.ENABLE, CSI.DISABLE):
+        #         #     logging.debug(f"(Private sequence):  {str(eo):34} {str(eo.text):12} {self.pos_str()}")
+
+        #         # t = f'"{str(eo.text)}"'
+        #         # logging.debug(f"(CSI):  {str(eo):34} {t:12} {self.pos_str()}")
+        # else:
+        #     logging.debug(f'(C1):   {eo.c1:20}  "{str(eo.text)}"')
+
+    def update(self, data: str) -> list:
+        last_line_id = self.lines[0].id
+        self.et.append_string(data)
         for i in range(0, self.max.row):
             self.lines[i].reset()
 
@@ -1607,175 +1749,17 @@ class TerminalState(TerminalAttributeState):
                     self.tas = copy(self.saved_tas)
 
                 if eo.c1 == C1.CSI:
-                    if eo.csi == CSI.CURSOR_UP:
-                        self.set_pos(y=(self.cursor.row - eo.n))
+                    self.handle_csi(eo)
 
-                    if eo.csi == CSI.CURSOR_DOWN:
-                        self.set_pos(y=(self.cursor.row + eo.n))
-
-                    if eo.csi == CSI.CURSOR_FORWARD:
-                        self.set_pos(x=(self.cursor.column + eo.n))
-
-                    if eo.csi == CSI.CURSOR_BACK:
-                        self.set_pos(x=(self.cursor.column - eo.n))
-
-                    if eo.csi == CSI.CURSOR_NEXT_LINE:
-                        self.set_pos(x=1, y=(self.cursor.row + eo.n))
-
-                    if eo.csi == CSI.CURSOR_PREVIOUS_LINE:
-                        self.set_pos(x=1, y=(self.cursor.row - eo.n))
-
-                    if eo.csi == CSI.CURSOR_POSITION:
-                        self.set_pos(x=eo.m, y=eo.n)
-
-                    # Horizontal and Vertical Position(depends on PUM)
-                    if eo.csi == CSI.HVP:
-                        self.set_pos(x=eo.m, y=eo.n)
-
-                    if eo.csi == CSI.ERASE_IN_DISPLAY:
-                        self.erase_in_display(eo.n)
-
-                    if eo.csi == CSI.ERASE_IN_LINE:
-                        self.erase_in_line(eo.n)
-
-                    if eo.csi == CSI.SAVE_CURSOR_POSITION:
-                        self.saved_cursor = copy(self.cursor)
-
-                    if eo.csi == CSI.RESTORE_CURSOR_POSITION:
-                        self.cursor = copy(self.saved_cursor)
-
-                    if eo.csi == CSI.INSERT_LINE:
-                        self.insert(eo.n)
-
-                    if eo.csi == CSI.DELETE_LINE:
-                        self.delete(eo.n)
-
-                    if eo.csi == CSI.DELETE_CHAR:
-                        self.delete_char(eo.n)
-
-                    if eo.csi == CSI.SET_SCROLLING_REGION:
-                        logging.debug(f"{eo.csi.name} is not implemented")
-
-                    if eo.csi == CSI.SGR:
-                        for sgr in eo.sgrs:
-                            if sgr.code == SGR.BOLD:
-                                self.tas.BOLD = True
-
-                            elif sgr.code == SGR.ITALIC:
-                                self.tas.ITALIC = True
-
-                            elif sgr.code == SGR.NOT_ITALIC:
-                                self.tas.ITALIC = False
-
-                            elif sgr.code == SGR.UNDERLINE:
-                                self.tas.UNDERLINE = True
-
-                            elif sgr.code == SGR.NOT_UNDERLINED:
-                                self.tas.UNDERLINE = False
-
-                            elif sgr.code == SGR.CROSSED:
-                                self.tas.CROSSED = True
-
-                            elif sgr.code == SGR.NOT_CROSSED:
-                                self.tas.CROSSED = False
-
-                            elif sgr.code == SGR.SUPERSCRIPT:
-                                self.tas.SUPERSCRIPT = True
-
-                            elif sgr.code == SGR.SUBSCRIPT:
-                                self.tas.SUBSCRIPT = True
-
-                            elif sgr.code == SGR.OVERLINE:
-                                self.tas.OVERLINE = True
-                                self.tas.UNDERLINE = False
-                                self.tas.CROSSED = False
-
-                            elif sgr.code == SGR.NOT_OVERLINE:
-                                self.tas.OVERLINE = False
-
-                            elif sgr.code == SGR.NORMAL_INTENSITY:
-                                self.tas.BOLD = False
-                                self.tas.DIM = False
-
-                            elif sgr.code == SGR.REVERSE_VIDEO:
-                                self.tas.REVERSE = True
-
-                            elif sgr.code == SGR.NOT_REVERSED:
-                                self.tas.REVERSE = False
-
-                            elif sgr.code == SGR.RESET:
-                                self.tas.reset()
-
-                            elif sgr.code == SGR.SLOW_BLINK:
-                                self.BLINKING = True
-
-                            elif sgr.code == SGR.NOT_BLINKING:
-                                self.BLINKING = False
-
-                            elif sgr.code in [
-                                SGR.FG_COLOR_BLACK,
-                                SGR.FG_COLOR_RED,
-                                SGR.FG_COLOR_GREEN,
-                                SGR.FG_COLOR_YELLOW,
-                                SGR.FG_COLOR_BLUE,
-                                SGR.FG_COLOR_MAGENTA,
-                                SGR.FG_COLOR_CYAN,
-                                SGR.FG_COLOR_WHITE,
-                            ]:
-
-                                self.tas.FG_COLOR = self.fg_color(sgr.code)
-
-                            elif sgr.code in [
-                                SGR.BG_COLOR_BLACK,
-                                SGR.BG_COLOR_RED,
-                                SGR.BG_COLOR_GREEN,
-                                SGR.BG_COLOR_YELLOW,
-                                SGR.BG_COLOR_BLUE,
-                                SGR.BG_COLOR_MAGENTA,
-                                SGR.BG_COLOR_CYAN,
-                                SGR.BG_COLOR_WHITE,
-                            ]:
-                                self.tas.BG_COLOR = self.bg_color(sgr.code)
-
-                            elif sgr.code == SGR.SET_FG_COLOR:
-                                # self.tas.FG_COLOR = CC256[sgr.color]["hex"]
-                                self.tas.FG_COLOR = self.get_256_color(sgr.color)
-
-                            elif sgr.code == SGR.SET_BG_COLOR:
-                                # self.tas.BG_COLOR = CC256[sgr.color]["hex"]
-                                self.tas.BG_COLOR = self.get_256_color(sgr.color)
-
-                            elif sgr.code == SGR.SET_FG_COLOR_DEFAULT:
-                                self.tas.FG_COLOR = self.DEFAULT_FG_COLOR
-
-                            elif sgr.code == SGR.SET_BG_COLOR_DEFAULT:
-                                self.tas.BG_COLOR = self.DEFAULT_BG_COLOR
-
-                # if eo.c1 == C1.CSI:
-                #     if eo.csi == CSI.SGR:
-                #         for i, s in enumerate(eo.sgr.code):
-                #             if i == 0:
-                #                 logging.debug(f'(SGR):  {str(s):29}  "{str(eo.text)}"')
-                #             else:
-                #                 logging.debug(f"            {str(s):36}")
-                #     else:
-                #         logging.debug(f"{str(eo)}")
-                #         # if eo.csi in (CSI.ENABLE, CSI.DISABLE):
-                #         #     logging.debug(f"(Private sequence):  {str(eo):34} {str(eo.text):12} {self.pos_str()}")
-
-                #         # t = f'"{str(eo.text)}"'
-                #         # logging.debug(f"(CSI):  {str(eo):34} {t:12} {self.pos_str()}")
-                # else:
-                #     logging.debug(f'(C1):   {eo.c1:20}  "{str(eo.text)}"')
                 continue
 
             if token == Ascii.CR:  # carriage return
-                self.set_pos(x=1)
+                self.set_pos(column=1)
                 logging.debug(f"(CR)    Carriage Return {self.pos_str()}")
                 continue
 
             if token == Ascii.BS:  # backspace
-                self.set_pos(x=(self.cursor.column - 1))
+                self.set_pos(column=(self.cursor.column - 1))
                 logging.debug(f"(BS)    Backspace       {self.pos_str()}")
                 continue
 
@@ -1783,7 +1767,7 @@ class TerminalState(TerminalAttributeState):
                 if (self.cursor.row) >= self.max.row:
                     self.new_line()
 
-                self.set_pos(x=1, y=(self.cursor.row + 1))
+                self.set_pos(column=1, row=(self.cursor.row + 1))
 
                 logging.debug(f"(LF)    Linefeed        {self.pos_str()}")
                 continue
@@ -1794,17 +1778,31 @@ class TerminalState(TerminalAttributeState):
             # Adding normal text
             self.append(token)
 
-        lul = []
-        for i in range(self.max.row - 1, -1, -1):
+        line_update_list = []
+        # for i in range(self.max.row - 1, -1, -1):
+        #     if (i + 1) == self.cursor.row:
+        #         cur = copy(self.cursor)
+        #         logging.debug(f"Cursor on: {self.cursor}")
+        #     else:
+        #         cur = None
+
+        #     if self.lines[i].has_changed(cur) is True:
+        #         line_update_list.append(self.lines[i])
+        lll = self.lines[0].id - (last_line_id) + 24
+        for i in range(lll - 1, -1, -1):
             if (i + 1) == self.cursor.row:
                 cur = copy(self.cursor)
-                logging.debug(f"Cursor on: {self.cursor}")
+                # logging.debug(f"Cursor on: {self.cursor}")
             else:
                 cur = None
 
             if self.lines[i].has_changed(cur) is True:
-                lul.append(self.lines[i])
-        return lul
+                line_update_list.append(self.lines[i])
+
+        logging.debug(
+            f"Updated lines:{lll:>3} Id={self.line_id:3}  Cursor={self.cursor}"
+        )
+        return line_update_list
 
 
 FLAG_BLUE = "\x1b[48;5;20m"
