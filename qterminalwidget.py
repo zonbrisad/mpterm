@@ -277,6 +277,12 @@ class MainForm(QMainWindow):
         self.add_button("Cursor forward", Ansi.FORWARD)
         self.add_button("Erase in line", "\x1b[K")
         self.add_button("Spacetest", space_test_string)
+        self.add_button("Ö", "Ö")
+        self.add_button("🐍", "🐍")
+        self.add_button("&#8731;", "&#8731;")
+        self.add_button("\xF0\x9F\x90\x8D", "\xF0\x9F\x90\x8D")
+        self.add_button("&#F09F908D;", "&#F09F908D;")
+        self.add_button("&#4036989069;", "&#4036989069;")
 
         self.button_layout.addStretch()
 

@@ -35,8 +35,6 @@ from enum import Enum
 from dataclasses import dataclass, field
 import logging
 
-from pyparsing import col
-
 
 class Ascii:
     NUL = "\x00"  # Null character
@@ -342,6 +340,14 @@ class Ansi:
 
 
 class PrivateSequence(Enum):
+    #  2 - (KAM) Keyboard Action Mode .
+    #  4 - (IRM) Insert Replace Mode , h=insert mode, l=replace mode
+    #  5 - (DECSCNM) Reverse video mode
+    # 12 - (SRM) Send/receive .
+    # 20 - Normal Linefeed (LNM
+    # 25 - cursor visible
+    # 47h - save screen
+    # 47l - restore screen
     AUTO_WRAP = "7"  # default on
     LINES_PER_SCREEN = "9"  # l = 36, h = 24(default)
     CURSOR = "25"
@@ -350,7 +356,7 @@ class PrivateSequence(Enum):
     BRACKEDED_PASTE_MODE = "2004"
 
 
-class C1(Enum):
+class C1Type(Enum):
     CSI = "["  # Control Sequence Introducer
     # OSC = "]"  # Operating System Command
     # Fs (independet function) sequences 0x60-0x7E
@@ -365,11 +371,15 @@ class C1(Enum):
     )
     DECKPNM_NI = ">"  # Normal Keypad Mode
 
+    RESET = (
+        "(B"  # Reset characterset to default ASCII character set (ISO 646 / US-ASCII).
+    )
+
     # RESERVERD = "'"  # Reserved for future standardization
     UNSUPPORTED = "UNSUPPORTED"
 
 
-class CSI(Enum):
+class CSIType(Enum):
     """Control Sequence Introducer
 
     Args:
@@ -397,13 +407,9 @@ class CSI(Enum):
 
     ENABLE = "h"  # Enable/set
     DISABLE = "l"  # Disable/reset
-    #  2 - Keyboard Action Mode (KAM).
-    #  4 - Replace Mode (IRM).
-    # 12 - Send/receive (SRM).
-    # 20 - Normal Linefeed (LNM
-    # 25 - cursor visible
-    # 47h - save screen
-    # 47l - restore screen
+    # Private sequences
+    SAVE_CURSOR_POSITION = "s"  # (SCOSC) Save Current Cursor Position
+    RESTORE_CURSOR_POSITION = "u"  # (SCORC) Restore Saved Cursor Position
 
     SGR = "m"  # Select graphics rendition (SGR)
     # AUX = "i"  # Enable/Disable aux serial port
@@ -413,32 +419,27 @@ class CSI(Enum):
     # \e[12;24r  Set scrolling region between line 12 to 24
     # If sgr.code linefeed is received while on row 24 line 12 is removed and lines 13-24 is scrolled up
 
-    # Private sequences
-    SAVE_CURSOR_POSITION = "s"  # Save Current Cursor Position
-    RESTORE_CURSOR_POSITION = "u"  # Restore Saved Curosr Position
-
     INSERT_CHARACTER = "@"  # (ICH) <https://vt100.net/docs/vt510-rm/ICH.html>
 
     UNSUPPORTED = "UNSUPPORTED"
-    # TEXT = "TEXT"
 
     @staticmethod
-    def decode(s: str) -> CSI:
+    def decode(s: str) -> CSIType:
         if not s[0] == Ascii.ESC:
             return None
 
         tc = s[-1]  # termination character in Escape sequence
 
-        for csi in CSI:
+        for csi in CSIType:
             if tc == csi.value:
                 logging.debug(f'Found: {csi}  "{Ansi.to_str(s)}"')
                 return csi
 
-        logging.debug(f'Found: {CSI.UNSUPPORTED}  "{Ansi.to_str(s)}"')
-        return CSI.UNSUPPORTED
+        logging.debug(f'Found: {CSIType.UNSUPPORTED}  "{Ansi.to_str(s)}"')
+        return CSIType.UNSUPPORTED
 
 
-class SGR(Enum):
+class SGRType(Enum):
     """Select Graphic Rendition
 
     Args:
@@ -527,16 +528,16 @@ class SGR(Enum):
         return False
 
     @staticmethod
-    def find_sgr(sgr_code: str) -> SGR:
-        for e in SGR:
+    def find_sgr(sgr_code: str) -> SGRType:
+        for e in SGRType:
             if sgr_code == e.value:
                 return e
-        return SGR.UNSUPPORTED
+        return SGRType.UNSUPPORTED
 
 
 @dataclass
-class SGRA:
-    code: SGR = SGR.UNSUPPORTED
+class SGR:
+    type: SGRType = SGRType.UNSUPPORTED
     color: str = None
 
     def decode(self, attrs: list[str]) -> int:
@@ -550,20 +551,20 @@ class SGRA:
         """
 
         if len(attrs) == 0:
-            self.code = SGR.RESET
+            self.type = SGRType.RESET
             return 0
 
         if attrs[0] == "":  # If no number present it is sgr.code reset(0)
-            self.code = SGR.RESET
+            self.type = SGRType.RESET
             return 1
 
         attr = int(attrs[0])
         ret = 1
 
-        self.code = SGR.find_sgr(attr)
+        self.type = SGRType.find_sgr(attr)
 
         # Extended(256/Truecolor) color management
-        if self.code in [SGR.SET_BG_COLOR, SGR.SET_FG_COLOR]:
+        if self.type in [SGRType.SET_BG_COLOR, SGRType.SET_FG_COLOR]:
             color_mode = int(attrs[1])
 
             # 256 color mode
@@ -577,11 +578,11 @@ class SGRA:
                 pass
 
         # Handle underline style
-        if self.code == SGR.UNDERLINE:
+        if self.type == SGRType.UNDERLINE:
             pass
 
         # Handle underline color
-        if self.code == SGR.SET_UL_COLOR:
+        if self.type == SGRType.SET_UL_COLOR:
             pass
 
         return ret
@@ -589,49 +590,48 @@ class SGRA:
 
 @dataclass
 class EscapeObj:
-    c1: C1 = C1.UNSUPPORTED
-    csi: CSI = CSI.UNSUPPORTED
-    sgr: SGR = SGR.UNSUPPORTED
-    sgrs: list[SGRA] = field(default_factory=list)
+    type: C1Type = C1Type.UNSUPPORTED
+    csitype: CSIType = CSIType.UNSUPPORTED
+    sgrs: list[SGR] = field(default_factory=list)
     n: int = 1
     m: int = 1
     is_text: bool = False
     text: str = ""
 
-    def decode(self, seq: str) -> CSI:
+    def decode(self, seq: str) -> None:
         if not seq[0] == Ascii.ESC:
             return None
 
         self.text = Ansi.to_str(seq)
 
-        tc = seq[-1]  # termination character in Escape sequence
+        for type in C1Type:
+            if seq[1] == type.value:
+                self.type = type
 
-        for c in C1:
-            if seq[1] == c.value:
-                self.c1 = c
-
-        if self.c1 == C1.UNSUPPORTED:
+        if self.type == C1Type.UNSUPPORTED:
             logging.debug(f"{str(self)}")
             return None
 
-        if seq[1] != "[":
-            self.csi = CSI.UNSUPPORTED
+        if self.type == C1Type.CSI:
+            self.decode_csi(seq)
             return None
 
-        for csi in CSI:
-            if tc == csi.value:
-                self.csi = csi
+    def decode_csi(self, seq: str) -> None:
 
-        if self.csi == CSI.UNSUPPORTED:
+        for csi in CSIType:
+            if seq[-1] == csi.value:
+                self.csitype = csi
+
+        if self.csitype == CSIType.UNSUPPORTED:
             logging.debug(f"{str(self)}")
             return None
 
         # The following CSI's has 0 as default for n
-        if self.csi in [CSI.ERASE_IN_DISPLAY, CSI.ERASE_IN_LINE]:
+        if self.csitype in [CSIType.ERASE_IN_DISPLAY, CSIType.ERASE_IN_LINE]:
             self.n = 0
 
         # remove questionmark "?" if private sequence
-        if self.csi in (CSI.ENABLE, CSI.DISABLE):
+        if self.csitype in (CSIType.ENABLE, CSIType.DISABLE):
             seq = seq.replace("?", "")
 
         params = seq[2:-1].replace(":", ";").split(";")
@@ -643,33 +643,20 @@ class EscapeObj:
             self.m = int(params[1])
 
         # Decode SGR (Select Graphic Rendition)
-        if self.csi == CSI.SGR:
-            self.decode_sgr_new(seq)
+        if self.csitype == CSIType.SGR:
+            self.decode_sgr(seq)
 
         logging.debug(f"{str(self)}")
-        if self.csi == CSI.SGR:
+        if self.csitype == CSIType.SGR:
             for sgr in self.sgrs:
                 logging.debug(f"            {sgr}")
 
-    def __str__(self) -> str:
-        if self.c1 != C1.CSI:
-            return f"{self.c1:20} {str(self.text):12}"
-
-        if self.csi in (CSI.ENABLE, CSI.DISABLE):
-            return f"{self.csi:20} {str(self.text):12} {self.n:<2}"
-
-        if self.csi == CSI.SGR:
-            return f"{self.csi:20} {str(self.text):12}"
-
-        return f"{self.csi:20} {str(self.text):12}n={self.n:<2} m={self.m:<2}"
-        # return f"{self.csi:20} n={self.n:<2} m={self.m:<2}"
-
-    def decode_sgr_new(self, attr_string: str) -> None:
+    def decode_sgr(self, attr_string: str) -> None:
         x = attr_string[2:-1]
         attributes = x.replace(":", ";").split(";")
 
         while len(attributes) > 0:
-            sgr = SGRA()
+            sgr = SGR()
             x = sgr.decode(attributes)
             # print(f"{attributes=}  ")
             for _ in range(x):
@@ -677,6 +664,19 @@ class EscapeObj:
             # print(f"{sgr=}  ")
 
             self.sgrs.append(sgr)
+
+    def __str__(self) -> str:
+        if self.type != C1Type.CSI:
+            return f"{self.type:20} {str(self.text):12}"
+
+        if self.csitype in (CSIType.ENABLE, CSIType.DISABLE):
+            return f"{self.csitype:20} {str(self.text):12} {self.n:<2}"
+
+        if self.csitype == CSIType.SGR:
+            return f"{self.csitype:20} {str(self.text):12}"
+
+        return f"{self.csitype:20} {str(self.text):12}n={self.n:<2} m={self.m:<2}"
+        # return f"{self.csi:20} n={self.n:<2} m={self.m:<2}"
 
 
 class EscapeTokenizer:
@@ -699,7 +699,7 @@ class EscapeTokenizer:
     def is_csi(self) -> bool:
         """Check if sequence string is CSI terminated"""
 
-        if self.seq[1] != C1.CSI.value:
+        if self.seq[1] != C1Type.CSI.value:
             return False
 
         lc = ord(self.seq[-1])
@@ -1244,7 +1244,6 @@ class TerminalAttributeState:
 
 class TerminalCharacter:
     def __init__(self, ch: str, tas: TerminalAttributeState):
-        # self.tas = TerminalAttributeState(palette=tas.palette)
         self.tas = copy(tas)
         self.ch = ch
         self.cursor: bool = False
@@ -1258,8 +1257,8 @@ class TerminalLine:
         self, tas: TerminalAttributeState, id: int = 0, columns: int = 80
     ) -> None:
         self.line: list[TerminalCharacter] = []
-        # for i in range(0, columns):
-        #     self.line.append(TerminalCharacter(" ", tas))
+        for i in range(0, columns):
+            self.line.append(TerminalCharacter(" ", tas))
         self.tas = tas
         self.id: int = id
         self.text: str = ""
@@ -1362,30 +1361,25 @@ class TerminalLine:
         self.update()
         return i + 1
 
-    # def erase(self, tas: TerminalAttributeState):
-    #     self.line = []
-    #     for _ in range(80):
-    #         self.line.append(TerminalCharacter(" ", tas))
-    #     self.update()
-
     def insert_char(self, column: int, n: int) -> None:
-        """Insert space(s) at position column"""
+        """Insert n space(s) at position column"""
         for i in range(n):
             tc = TerminalCharacter(" ", self.tas)
             self.line.insert(column - 1, tc)
         self.update()
 
     def delete_char(self, column: int, n: int) -> None:
+        """Delete n characters at position column"""
         for i in range(column, column + n):
             # print(f"Deleting: {self.line[i-1].ch}")
             self.line.pop(i - 1)
         self.update()
 
-    def erase_in_line(self, pos: int, tas, mode: int) -> None:
+    def erase_in_line(self, column: int, tas, mode: int) -> None:
         if mode == 0:  # erase after pos
-            erange = range(pos - 1, len(self.line))
+            erange = range(column - 1, len(self.line))
         elif mode == 1:  # erase before pos
-            erange = range(0, pos)
+            erange = range(0, column)
         elif mode == 2:  # erase entire line
             erange = range(0, len(self.line))
 
@@ -1404,7 +1398,7 @@ class TerminalLine:
 
 class TerminalState(TerminalAttributeState):
     def __init__(self, rows: int = 24, columns: int = 80) -> None:
-        self.et = EscapeTokenizer()
+        self.tokenizer = EscapeTokenizer()
         self.line_id: int = 0
         # self.palette = PaletteVSCodeL
         # self.palette = PaletteXtermL
@@ -1416,14 +1410,14 @@ class TerminalState(TerminalAttributeState):
         self.set_terminal(rows, columns)
         self.reset()
 
-    def fg_color(self, color: SGR) -> str:
+    def fg_color(self, color: SGRType) -> str:
         color_id = color.value - 30
         if self.BOLD is True:
             color_id += 8
 
         return self.palette[color_id]
 
-    def bg_color(self, color: SGR) -> str:
+    def bg_color(self, color: SGRType) -> str:
         return self.palette[color.value - 40]
 
     def get_256_color(self, color: int) -> str:
@@ -1443,14 +1437,13 @@ class TerminalState(TerminalAttributeState):
         self.lines: list[TerminalLine] = []
         for _ in range(0, self.max.row):
             self.new_line()
-        self.et.clear()
+        self.tokenizer.clear()
         self.reset_attr()
 
     def reset_attr(self):
         self.tas.reset()
 
     def pos_str(self) -> str:
-        # ps = f"{self.cursor.row=} {self.cursor.column=}"
         ps = f"{self.cursor}"
         return ps
 
@@ -1473,7 +1466,7 @@ class TerminalState(TerminalAttributeState):
 
         # For some reason the following line is needed.
         # A guess is that it might have with html rendering to do
-        self.lines[self.max.row - line].append(" ", self.tas, 1)
+        self.lines[self.max.row - line].append(" ", 1)
 
     def insert_line(self, n: int = 1) -> None:
         """insert n row(s) at cursor, existing rows scroll down"""
@@ -1537,218 +1530,201 @@ class TerminalState(TerminalAttributeState):
 
     def handle_sgr(self, eo: EscapeObj) -> None:
         for sgr in eo.sgrs:
-            if sgr.code == SGR.BOLD:
+            if sgr.type == SGRType.BOLD:
                 self.tas.BOLD = True
 
-            elif sgr.code == SGR.ITALIC:
+            elif sgr.type == SGRType.ITALIC:
                 self.tas.ITALIC = True
 
-            elif sgr.code == SGR.NOT_ITALIC:
+            elif sgr.type == SGRType.NOT_ITALIC:
                 self.tas.ITALIC = False
 
-            elif sgr.code == SGR.UNDERLINE:
+            elif sgr.type == SGRType.UNDERLINE:
                 self.tas.UNDERLINE = True
 
-            elif sgr.code == SGR.NOT_UNDERLINED:
+            elif sgr.type == SGRType.NOT_UNDERLINED:
                 self.tas.UNDERLINE = False
 
-            elif sgr.code == SGR.CROSSED:
+            elif sgr.type == SGRType.CROSSED:
                 self.tas.CROSSED = True
 
-            elif sgr.code == SGR.NOT_CROSSED:
+            elif sgr.type == SGRType.NOT_CROSSED:
                 self.tas.CROSSED = False
 
-            elif sgr.code == SGR.SUPERSCRIPT:
+            elif sgr.type == SGRType.SUPERSCRIPT:
                 self.tas.SUPERSCRIPT = True
 
-            elif sgr.code == SGR.SUBSCRIPT:
+            elif sgr.type == SGRType.SUBSCRIPT:
                 self.tas.SUBSCRIPT = True
 
-            elif sgr.code == SGR.OVERLINE:
+            elif sgr.type == SGRType.OVERLINE:
                 self.tas.OVERLINE = True
                 self.tas.UNDERLINE = False
                 self.tas.CROSSED = False
 
-            elif sgr.code == SGR.NOT_OVERLINE:
+            elif sgr.type == SGRType.NOT_OVERLINE:
                 self.tas.OVERLINE = False
 
-            elif sgr.code == SGR.NORMAL_INTENSITY:
+            elif sgr.type == SGRType.NORMAL_INTENSITY:
                 self.tas.BOLD = False
                 self.tas.DIM = False
 
-            elif sgr.code == SGR.REVERSE_VIDEO:
+            elif sgr.type == SGRType.REVERSE_VIDEO:
                 self.tas.REVERSE = True
 
-            elif sgr.code == SGR.NOT_REVERSED:
+            elif sgr.type == SGRType.NOT_REVERSED:
                 self.tas.REVERSE = False
 
-            elif sgr.code == SGR.RESET:
+            elif sgr.type == SGRType.RESET:
                 self.tas.reset()
 
-            elif sgr.code == SGR.SLOW_BLINK:
+            elif sgr.type == SGRType.SLOW_BLINK:
                 self.BLINKING = True
 
-            elif sgr.code == SGR.NOT_BLINKING:
+            elif sgr.type == SGRType.NOT_BLINKING:
                 self.BLINKING = False
 
-            elif sgr.code in [
-                SGR.FG_COLOR_BLACK,
-                SGR.FG_COLOR_RED,
-                SGR.FG_COLOR_GREEN,
-                SGR.FG_COLOR_YELLOW,
-                SGR.FG_COLOR_BLUE,
-                SGR.FG_COLOR_MAGENTA,
-                SGR.FG_COLOR_CYAN,
-                SGR.FG_COLOR_WHITE,
+            elif sgr.type in [
+                SGRType.FG_COLOR_BLACK,
+                SGRType.FG_COLOR_RED,
+                SGRType.FG_COLOR_GREEN,
+                SGRType.FG_COLOR_YELLOW,
+                SGRType.FG_COLOR_BLUE,
+                SGRType.FG_COLOR_MAGENTA,
+                SGRType.FG_COLOR_CYAN,
+                SGRType.FG_COLOR_WHITE,
             ]:
 
-                self.tas.FG_COLOR = self.fg_color(sgr.code)
+                self.tas.FG_COLOR = self.fg_color(sgr.type)
 
-            elif sgr.code in [
-                SGR.BG_COLOR_BLACK,
-                SGR.BG_COLOR_RED,
-                SGR.BG_COLOR_GREEN,
-                SGR.BG_COLOR_YELLOW,
-                SGR.BG_COLOR_BLUE,
-                SGR.BG_COLOR_MAGENTA,
-                SGR.BG_COLOR_CYAN,
-                SGR.BG_COLOR_WHITE,
+            elif sgr.type in [
+                SGRType.BG_COLOR_BLACK,
+                SGRType.BG_COLOR_RED,
+                SGRType.BG_COLOR_GREEN,
+                SGRType.BG_COLOR_YELLOW,
+                SGRType.BG_COLOR_BLUE,
+                SGRType.BG_COLOR_MAGENTA,
+                SGRType.BG_COLOR_CYAN,
+                SGRType.BG_COLOR_WHITE,
             ]:
-                self.tas.BG_COLOR = self.bg_color(sgr.code)
+                self.tas.BG_COLOR = self.bg_color(sgr.type)
 
-            elif sgr.code == SGR.SET_FG_COLOR:
+            elif sgr.type == SGRType.SET_FG_COLOR:
                 self.tas.FG_COLOR = self.get_256_color(sgr.color)
 
-            elif sgr.code == SGR.SET_BG_COLOR:
+            elif sgr.type == SGRType.SET_BG_COLOR:
                 self.tas.BG_COLOR = self.get_256_color(sgr.color)
 
-            elif sgr.code == SGR.SET_FG_COLOR_DEFAULT:
+            elif sgr.type == SGRType.SET_FG_COLOR_DEFAULT:
                 self.tas.FG_COLOR = self.DEFAULT_FG_COLOR
 
-            elif sgr.code == SGR.SET_BG_COLOR_DEFAULT:
+            elif sgr.type == SGRType.SET_BG_COLOR_DEFAULT:
                 self.tas.BG_COLOR = self.DEFAULT_BG_COLOR
-            elif sgr.code in [
-                SGR.FG_COLOR_BR_BLACK,
-                SGR.FG_COLOR_BR_RED,
-                SGR.FG_COLOR_BR_GREEN,
-                SGR.FG_COLOR_BR_YELLOW,
-                SGR.FG_COLOR_BR_BLUE,
-                SGR.FG_COLOR_BR_MAGENTA,
-                SGR.FG_COLOR_BR_CYAN,
-                SGR.FG_COLOR_BR_WHITE,
+            elif sgr.type in [
+                SGRType.FG_COLOR_BR_BLACK,
+                SGRType.FG_COLOR_BR_RED,
+                SGRType.FG_COLOR_BR_GREEN,
+                SGRType.FG_COLOR_BR_YELLOW,
+                SGRType.FG_COLOR_BR_BLUE,
+                SGRType.FG_COLOR_BR_MAGENTA,
+                SGRType.FG_COLOR_BR_CYAN,
+                SGRType.FG_COLOR_BR_WHITE,
             ]:
-                self.tas.FG_COLOR = self.get_256_color(sgr.code.value - 90 + 8)
-            elif sgr.code in [
-                SGR.BG_COLOR_BR_BLACK,
-                SGR.BG_COLOR_BR_RED,
-                SGR.BG_COLOR_BR_GREEN,
-                SGR.BG_COLOR_BR_YELLOW,
-                SGR.BG_COLOR_BR_BLUE,
-                SGR.BG_COLOR_BR_MAGENTA,
-                SGR.BG_COLOR_BR_CYAN,
-                SGR.BG_COLOR_BR_WHITE,
+                self.tas.FG_COLOR = self.get_256_color(sgr.type.value - 90 + 8)
+            elif sgr.type in [
+                SGRType.BG_COLOR_BR_BLACK,
+                SGRType.BG_COLOR_BR_RED,
+                SGRType.BG_COLOR_BR_GREEN,
+                SGRType.BG_COLOR_BR_YELLOW,
+                SGRType.BG_COLOR_BR_BLUE,
+                SGRType.BG_COLOR_BR_MAGENTA,
+                SGRType.BG_COLOR_BR_CYAN,
+                SGRType.BG_COLOR_BR_WHITE,
             ]:
-                self.tas.BG_COLOR = self.get_256_color(sgr.code.value - 100 + 8)
+                self.tas.BG_COLOR = self.get_256_color(sgr.type.value - 100 + 8)
 
     def handle_csi(self, eo: EscapeObj) -> None:
-        if eo.csi == CSI.CURSOR_UP:
+        if eo.csitype == CSIType.CURSOR_UP:
             self.set_pos(row=(self.cursor.row - eo.n))
 
-        if eo.csi == CSI.CURSOR_DOWN:
+        if eo.csitype == CSIType.CURSOR_DOWN:
             self.set_pos(row=(self.cursor.row + eo.n))
 
-        if eo.csi == CSI.CURSOR_FORWARD:
+        if eo.csitype == CSIType.CURSOR_FORWARD:
             self.set_pos(column=(self.cursor.column + eo.n))
 
-        if eo.csi == CSI.CURSOR_BACK:
+        if eo.csitype == CSIType.CURSOR_BACK:
             self.set_pos(column=(self.cursor.column - eo.n))
 
-        if eo.csi == CSI.CURSOR_NEXT_LINE:
+        if eo.csitype == CSIType.CURSOR_NEXT_LINE:
             self.set_pos(column=1, row=(self.cursor.row + eo.n))
 
-        if eo.csi == CSI.CURSOR_PREVIOUS_LINE:
+        if eo.csitype == CSIType.CURSOR_PREVIOUS_LINE:
             self.set_pos(column=1, row=(self.cursor.row - eo.n))
 
-        if eo.csi == CSI.CURSOR_POSITION:
+        if eo.csitype == CSIType.CURSOR_POSITION:
             self.set_pos(column=eo.m, row=eo.n)
 
-        if eo.csi == CSI.CURSOR_HORIZONTAL_ABSOLUTE:
-            self.set_pos(column=eo.m)
+        if eo.csitype == CSIType.CURSOR_HORIZONTAL_ABSOLUTE:
+            self.set_pos(column=eo.n)
 
-        if eo.csi == CSI.CURSOR_VERTICAL_ABSOLUTE:
-            self.set_pos(row=eo.m)
+        if eo.csitype == CSIType.CURSOR_VERTICAL_ABSOLUTE:
+            self.set_pos(row=eo.n)
 
         # Horizontal and Vertical Position(depends on PUM)
-        if eo.csi == CSI.HVP:
+        if eo.csitype == CSIType.HVP:
             self.set_pos(column=eo.m, row=eo.n)
 
-        if eo.csi == CSI.ERASE_IN_DISPLAY:
+        if eo.csitype == CSIType.ERASE_IN_DISPLAY:
             self.erase_in_display(eo.n)
 
-        if eo.csi == CSI.ERASE_IN_LINE:
+        if eo.csitype == CSIType.ERASE_IN_LINE:
             self.erase_in_line(eo.n)
 
-        if eo.csi == CSI.SAVE_CURSOR_POSITION:
+        if eo.csitype == CSIType.SAVE_CURSOR_POSITION:
             self.saved_cursor = copy(self.cursor)
 
-        if eo.csi == CSI.RESTORE_CURSOR_POSITION:
+        if eo.csitype == CSIType.RESTORE_CURSOR_POSITION:
             self.cursor = copy(self.saved_cursor)
 
-        if eo.csi == CSI.INSERT_LINE:
+        if eo.csitype == CSIType.INSERT_LINE:
             self.insert_line(eo.n)
 
-        if eo.csi == CSI.DELETE_LINE:
+        if eo.csitype == CSIType.DELETE_LINE:
             self.delete_line(eo.n)
 
-        if eo.csi == CSI.DELETE_CHAR:
+        if eo.csitype == CSIType.DELETE_CHAR:
             self.delete_char(eo.n)
 
-        if eo.csi == CSI.SET_SCROLLING_REGION:
-            logging.debug(f"{eo.csi.name} is UNSUPPORTED")
+        if eo.csitype == CSIType.SET_SCROLLING_REGION:
+            logging.debug(f"{eo.csitype.name} is UNSUPPORTED")
 
-        if eo.csi == CSI.INSERT_CHARACTER:
+        if eo.csitype == CSIType.INSERT_CHARACTER:
             self.insert_char(eo.m)
 
-        if eo.csi == CSI.SGR:
+        if eo.csitype == CSIType.SGR:
             self.handle_sgr(eo)
-
-        # if eo.c1 == C1.CSI:
-        #     if eo.csi == CSI.SGR:
-        #         for i, s in enumerate(eo.sgr.code):
-        #             if i == 0:
-        #                 logging.debug(f'(SGR):  {str(s):29}  "{str(eo.text)}"')
-        #             else:
-        #                 logging.debug(f"            {str(s):36}")
-        #     else:
-        #         logging.debug(f"{str(eo)}")
-        #         # if eo.csi in (CSI.ENABLE, CSI.DISABLE):
-        #         #     logging.debug(f"(Private sequence):  {str(eo):34} {str(eo.text):12} {self.pos_str()}")
-
-        #         # t = f'"{str(eo.text)}"'
-        #         # logging.debug(f"(CSI):  {str(eo):34} {t:12} {self.pos_str()}")
-        # else:
-        #     logging.debug(f'(C1):   {eo.c1:20}  "{str(eo.text)}"')
 
     def update(self, data: str) -> list:
         last_line_id = self.lines[0].id
-        self.et.append_string(data)
+        self.tokenizer.append_string(data)
         for i in range(0, self.max.row):
             self.lines[i].reset()
 
-        for token in self.et:
+        for token in self.tokenizer:
             if Ansi.is_escape_seq(token):
                 eo = EscapeObj()
                 eo.decode(token)
 
-                if eo.c1 == C1.DECSC:  # Save cursor and attributes
+                if eo.type == C1Type.DECSC:  # Save cursor and attributes
                     self.saved_cursor = copy(self.cursor)
                     self.saved_tas = copy(self.tas)
 
-                if eo.c1 == C1.DECRC:  # Restore cursor and attributes
+                if eo.type == C1Type.DECRC:  # Restore cursor and attributes
                     self.cursor = copy(self.saved_cursor)
                     self.tas = copy(self.saved_tas)
 
-                if eo.c1 == C1.CSI:
+                if eo.type == C1Type.CSI:
                     self.handle_csi(eo)
 
                 continue
@@ -1778,21 +1754,12 @@ class TerminalState(TerminalAttributeState):
             # Adding normal text
             self.append(token)
 
+        # Find rows that need to be updated
         line_update_list = []
-        # for i in range(self.max.row - 1, -1, -1):
-        #     if (i + 1) == self.cursor.row:
-        #         cur = copy(self.cursor)
-        #         logging.debug(f"Cursor on: {self.cursor}")
-        #     else:
-        #         cur = None
-
-        #     if self.lines[i].has_changed(cur) is True:
-        #         line_update_list.append(self.lines[i])
-        lll = self.lines[0].id - (last_line_id) + 24
-        for i in range(lll - 1, -1, -1):
+        lines_to_update = self.lines[0].id - (last_line_id) + 24
+        for i in range(lines_to_update - 1, -1, -1):
             if (i + 1) == self.cursor.row:
                 cur = copy(self.cursor)
-                # logging.debug(f"Cursor on: {self.cursor}")
             else:
                 cur = None
 
@@ -1800,7 +1767,7 @@ class TerminalState(TerminalAttributeState):
                 line_update_list.append(self.lines[i])
 
         logging.debug(
-            f"Updated lines:{lll:>3} Id={self.line_id:3}  Cursor={self.cursor}"
+            f"Updated lines:{lines_to_update:>3} Id={self.line_id:3}  Cursor={self.cursor}"
         )
         return line_update_list
 
