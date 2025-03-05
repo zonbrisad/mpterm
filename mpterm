@@ -69,10 +69,7 @@ except ModuleNotFoundError:
     exit(0)
 
 from dataclasses import dataclass, field
-from escape import (
-    Ansi,
-    Ascii,
-)
+from escape import Ansi, Ascii
 from qterminalwidget import QTerminalWidget, get_key
 from serialport import SerialPort
 from aboutdialog import AboutDialog

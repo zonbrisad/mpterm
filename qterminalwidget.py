@@ -19,12 +19,10 @@ import logging
 import sys
 from typing import Callable
 
-from escape import (
-    Ansi,
-    Ascii,
-    TerminalState,
-    TerminalLine,
-)
+
+from escape import Ansi, Ascii
+from terminal import TerminalState, TerminalLine
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import (
     QTextCursor,
