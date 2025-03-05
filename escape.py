@@ -21,11 +21,12 @@
 #   https://github.com/zobrisad/pyplate.git
 #
 # ---------------------------------------------------------------------------
-#
+# References:
 # https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit
 # https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
 # https://www.ditig.com/256-colors-cheat-sheet
 # https://michurin.github.io/xterm256-color-picker/
+# https://vt100.net/docs/vt510-rm/contents.html
 #
 #
 
@@ -1272,7 +1273,6 @@ class TerminalLine:
 
         return " ".join(tchars)
 
-    # def clear(self, tas: TerminalAttributeState):
     def clear(self):
         for ch in self.line:
             ch.tas = self.tas
@@ -1349,8 +1349,8 @@ class TerminalLine:
         html.append("</div>")
         return "".join(html)
 
-    def append(self, text: str, pos: int) -> int:
-        i = pos - 1
+    def append(self, text: str, column: int) -> int:
+        i = column - 1
         for ch in text:
             tc = TerminalCharacter(ch, self.tas)
             try:
@@ -1375,28 +1375,35 @@ class TerminalLine:
             self.line.pop(i - 1)
         self.update()
 
-    def erase_in_line(self, column: int, tas, mode: int) -> None:
-        if mode == 0:  # erase after pos
-            erange = range(column - 1, len(self.line))
-        elif mode == 1:  # erase before pos
-            erange = range(0, column)
-        elif mode == 2:  # erase entire line
-            erange = range(0, len(self.line))
+    def erase_in_line(self, column: int, mode: int) -> None:
+        """Remove characters in line.
 
-        for i in erange:
+        Args:
+            column (int): Position in line
+            mode (int): erasemode 0 = erase after column
+                                  1 = erase before column
+                                  3 = erase entire line
+        """
+        if mode == 0:  # erase after column
+            erase_range = range(column - 1, len(self.line))
+        elif mode == 1:  # erase before column
+            erase_range = range(0, column)
+        elif mode == 2:  # erase entire line
+            erase_range = range(0, len(self.line))
+
+        for i in erase_range:
             try:
-                self.line[i] = TerminalCharacter(" ", tas)
+                self.line[i] = TerminalCharacter(" ", self.tas)
             except IndexError:
-                self.line.append(TerminalCharacter(" ", tas))
+                self.line.append(TerminalCharacter(" ", self.tas))
         self.update()
 
     def update(self):
         self.changed = True
         self.text = str(self)
-        # print(f"XX: {self.text}")
 
 
-class TerminalState(TerminalAttributeState):
+class TerminalState:
     def __init__(self, rows: int = 24, columns: int = 80) -> None:
         self.tokenizer = EscapeTokenizer()
         self.line_id: int = 0
@@ -1404,15 +1411,13 @@ class TerminalState(TerminalAttributeState):
         # self.palette = PaletteXtermL
         # self.palette = PaletteWinXPL
         self.palette = PalettePutty
-        self.default_fg_color = self.palette[7]
-        self.default_bg_color = self.palette[0]
         self.tas = TerminalAttributeState(palette=self.palette)
         self.set_terminal(rows, columns)
         self.reset()
 
     def fg_color(self, color: SGRType) -> str:
         color_id = color.value - 30
-        if self.BOLD is True:
+        if self.tas.BOLD is True:
             color_id += 8
 
         return self.palette[color_id]
@@ -1504,27 +1509,25 @@ class TerminalState(TerminalAttributeState):
             f"Erase in line: {self.cursor.row=}  {self.cursor.column=} {mode=}"
         )
         self.lines[self.max.row - self.cursor.row].erase_in_line(
-            self.cursor.column, self.tas, mode
+            self.cursor.column, mode
         )
 
     def erase_in_display(self, mode: int) -> None:
         if mode == 0:  # Clear from cursor to end of screen
             for line in range(self.cursor.row, self.max.row + 1):
-                self.lines[self.max.row - line].erase_in_line(1, self.tas, 2)
+                self.lines[self.max.row - line].erase_in_line(1, 2)
         elif mode == 1:  # Clear from cursor to beginning of screen
             for line in range(1, self.cursor.row):
-                self.lines[self.max.row - line].erase_in_line(1, self.tas, 2)
+                self.lines[self.max.row - line].erase_in_line(1, 2)
         elif mode == 2:  # Clear entire screen
             for line in range(1, self.max.row):
-                self.lines[self.max.row - line].erase_in_line(1, self.tas, 2)
+                self.lines[self.max.row - line].erase_in_line(1, 2)
+        # elif mode == 3:  # Clear saved lines
 
     def append(self, text: str) -> None:
         self.cursor.column = self.lines[self.max.row - self.cursor.row].append(
             text, self.cursor.column
         )
-        # self.cursor.column = self.lines[self.max.row - self.cursor.row].append(
-        #     text, self.tas, self.cursor.column
-        # )
         tok_str = f'"{text}"'
         logging.debug(f"(Text): {tok_str}")
 
@@ -1616,10 +1619,10 @@ class TerminalState(TerminalAttributeState):
                 self.tas.BG_COLOR = self.get_256_color(sgr.color)
 
             elif sgr.type == SGRType.SET_FG_COLOR_DEFAULT:
-                self.tas.FG_COLOR = self.DEFAULT_FG_COLOR
+                self.tas.FG_COLOR = self.tas.DEFAULT_FG_COLOR
 
             elif sgr.type == SGRType.SET_BG_COLOR_DEFAULT:
-                self.tas.BG_COLOR = self.DEFAULT_BG_COLOR
+                self.tas.BG_COLOR = self.tas.DEFAULT_BG_COLOR
             elif sgr.type in [
                 SGRType.FG_COLOR_BR_BLACK,
                 SGRType.FG_COLOR_BR_RED,

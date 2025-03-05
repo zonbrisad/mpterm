@@ -139,7 +139,7 @@ Terminal functions
 - [ ] Terminal: Underline style (not supported by Qt QTextEdit/QPlainTextEdit yet)
 - [ ] Terminal: Fix color rendering for basic 16 colors
 - [ ] Terminal: Real bright(bold) colors
-- [ ] Terminal: UTF-8 character support
+- [x] Terminal: UTF-8 character support
 - [x] Terminal: SGR 90-97, 100-107 set bright color
 - [x] Terminal: ICH(insert charachter) "\e[n@" n=nr of characters <https://vt100.net/docs/vt510-rm/ICH.html>
 - [x] Terminal: Reverse text
