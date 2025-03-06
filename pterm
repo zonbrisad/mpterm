@@ -48,6 +48,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
+from terminal import EscapeObj
 from qterminalwidget import QTerminalWidget, get_key
 
 # Settings ------------------------------------------------------------------
@@ -214,8 +215,13 @@ class MainForm(QMainWindow):
     def stdout_data(self) -> None:
         data = self.process.readAllStandardOutput()
         logging.debug(f"Data available from ext. process(stdout): {len(data)}")
-        data_str = str(data, "utf-8")
-        self.terminal.append_ansi_text(data_str)
+
+        msg: EscapeObj = self.terminal.append_ansi_text(str(data, "utf-8"))
+        while msg is not None:
+            print(msg)
+            self.process.write(msg.text.encode())
+            msg = self.terminal.append_ansi_text(None)
+
         self.terminal.scroll_down()
         self.ui_handler()
 

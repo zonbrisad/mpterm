@@ -240,8 +240,14 @@ sgrcolor() { ##D Test colorfunctions if different SGR codes
   done
 }
 
-lines() { ##D Print lines
-  for i in {0..50}; do
+l50() { ##D Print 50 lines
+  for i in {1..50}; do
+    echo "$i"
+  done
+}
+
+l1000() { ##D Print 1000 lines
+  for i in {1..1000}; do
     echo "$i"
   done
 }

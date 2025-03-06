@@ -19,9 +19,8 @@ import logging
 import sys
 from typing import Callable
 
-
 from escape import Ansi, Ascii
-from terminal import TerminalState, TerminalLine
+from terminal import EscapeObj, TerminalState, TerminalLine
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import (
@@ -112,7 +111,7 @@ class QTerminalWidget(QPlainTextEdit):
         self.cur = QTextCursor(self.document())
         self.terminal_state = TerminalState(rows=24, columns=80)
         # self.terminal_state = TerminalState(rows=50, columns=120)
-
+        self.data_list = []
         self.setCursorWidth(2)
         self.ensureCursorVisible()
         self.setReadOnly(True)
@@ -190,31 +189,39 @@ class QTerminalWidget(QPlainTextEdit):
         self.limit_lines()
 
     def append_ansi_text(self, data: str) -> None:
-        lines = self.terminal_state.update(data)
 
-        for line in lines:
-            if type(line) is TerminalLine:
-                if line.id > self.last_id:  # a new line detected
-                    self.last_id = line.id
+        if type(data) is str:
+            lines = self.terminal_state.update(data)
+            self.data_list.extend(lines)
+
+        for i in range(len(self.data_list)):
+            obj = self.data_list.pop(0)
+            if type(obj) is TerminalLine:
+                if obj.id > self.last_id:  # a new line detected
+                    self.last_id = obj.id
                     self.move(QTextCursor.End, QTextCursor.MoveAnchor)
                     self.cur.insertHtml("<br>")
 
-                if line.id == self.last_id:  # last row
+                if obj.id == self.last_id:  # last row
                     self.move(QTextCursor.End, QTextCursor.MoveAnchor)
                     self.move(QTextCursor.StartOfLine, QTextCursor.KeepAnchor)
 
-                if line.id < self.last_id:
+                if obj.id < self.last_id:
                     self.move(QTextCursor.End, QTextCursor.MoveAnchor)
                     self.move(
-                        QTextCursor.Up, QTextCursor.MoveAnchor, self.last_id - line.id
+                        QTextCursor.Up, QTextCursor.MoveAnchor, self.last_id - obj.id
                     )
                     self.move(QTextCursor.StartOfLine, QTextCursor.MoveAnchor)
                     self.move(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
 
-                self.cur.insertHtml(line.line_to_html())
+                self.cur.insertHtml(obj.line_to_html())
                 # print(f"HTML {line.line_to_html()}")
 
+            if type(obj) is EscapeObj:
+                return obj
+
         self.limit_lines()
+        return None
 
     def scroll_down(self) -> None:
         vsb = self.verticalScrollBar()

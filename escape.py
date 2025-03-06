@@ -118,6 +118,8 @@ class Ascii:
 
 
 class Ansi:
+    CSI = "\x1b["  # CSI introducer
+
     """ANSI foreground colors codes"""
 
     BLACK = "\x1b[30m"  # Black

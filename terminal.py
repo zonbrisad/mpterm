@@ -35,6 +35,7 @@ from copy import copy
 from enum import Enum
 from dataclasses import dataclass, field
 import logging
+from typing import Any
 
 from escape import Ascii, Ansi
 from terminal_colors import (
@@ -64,6 +65,22 @@ class PrivateSequence(Enum):
     BRACKEDED_PASTE_MODE = "2004"
 
 
+class TextType(Enum):
+    TEXT = 0
+    C0 = 1
+    C1 = 2  # Escape sequences
+
+
+class C0Type(Enum):
+    BELL = Ascii.BEL
+    BACKSPACE = Ascii.BS
+    TAB = Ascii.TAB
+    LINEFEED = Ascii.LF
+    FORMFEED = Ascii.FF
+    CARRIAGE_RETURN = Ascii.CR
+    ESCAPE = Ascii.ESC
+
+
 class C1Type(Enum):
     CSI = "["  # Control Sequence Introducer
     # OSC = "]"  # Operating System Command
@@ -82,6 +99,7 @@ class C1Type(Enum):
     # RESET = (
     #     "(B"  # Reset characterset to default ASCII character set (ISO 646 / US-ASCII).
     # )
+    RESPONSE = "RESPONSE"  # Special response message (not in standard)
 
     # RESERVERD = "'"  # Reserved for future standardization
     UNSUPPORTED = "UNSUPPORTED"
@@ -110,8 +128,10 @@ class CSIType(Enum):
     SCROLL_UP = "S"  # "\e[2S" Move lines up, new lines at bottom
     SCROLL_DOWN = "T"
 
-    CURSOR_VERTICAL_ABSOLUTE = "d"  # VPA
-    HVP = "f"  # Horizontal and Vertical Position(depends on PUM=Positioning Unit Mode)
+    PRIMARY_DEVICE_ATTRIBUTES = "c"  # (DA1) <https://vt100.net/docs/vt510-rm/DA1.html>
+
+    CURSOR_VERTICAL_ABSOLUTE = "d"  # (VPA)
+    HORIZONTAL_VERTICAL_POSITIONING = "f"  # (HVP) Horizontal and Vertical Position(depends on PUM=Positioning Unit Mode)
 
     ENABLE = "h"  # Enable/set
     DISABLE = "l"  # Disable/reset
@@ -597,9 +617,10 @@ class TerminalLine:
     def __str__(self) -> str:
         tchars = []
         for tc in self.line:
-            tchars.append(str(tc))
+            # tchars.append(str(tc))
+            tchars.append(tc.ch)
 
-        return " ".join(tchars)
+        return f"Id={self.id} {"".join(tchars)}"
 
     def clear(self):
         for ch in self.line:
@@ -740,6 +761,7 @@ class TerminalState:
         # self.palette = PaletteWinXPL
         self.palette = PalettePutty
         self.tas = TerminalAttributeState(palette=self.palette)
+        self.terminal_response_list: list[Any] = []
         self.set_terminal(rows, columns)
         self.reset()
 
@@ -975,6 +997,7 @@ class TerminalState:
                 self.tas.BG_COLOR = self.get_256_color(sgr.type.value - 100 + 8)
 
     def handle_csi(self, eo: EscapeObj) -> None:
+
         if eo.csitype == CSIType.CURSOR_UP:
             self.set_pos(row=(self.cursor.row - eo.n))
 
@@ -1003,7 +1026,7 @@ class TerminalState:
             self.set_pos(row=eo.n)
 
         # Horizontal and Vertical Position(depends on PUM)
-        if eo.csitype == CSIType.HVP:
+        if eo.csitype == CSIType.HORIZONTAL_VERTICAL_POSITIONING:
             self.set_pos(column=eo.m, row=eo.n)
 
         if eo.csitype == CSIType.ERASE_IN_DISPLAY:
@@ -1036,11 +1059,19 @@ class TerminalState:
         if eo.csitype == CSIType.SGR:
             self.handle_sgr(eo)
 
+        if eo.csitype == CSIType.PRIMARY_DEVICE_ATTRIBUTES:
+            rsp = f"{Ansi.CSI}?64;c"  # 64 = service class for VT510
+            response = EscapeObj(type=C1Type.RESPONSE, text=rsp)
+            self.terminal_response_list.append(response)
+
     def update(self, data: str) -> list:
+        self.terminal_response_list.clear()
         last_line_id = self.lines[0].id
         self.tokenizer.append_string(data)
-        for i in range(0, self.max.row):
-            self.lines[i].reset()
+        for line in self.lines:
+            line.reset()
+        # for i in range(0, self.max.row):
+        #     self.lines[i].reset()
 
         for token in self.tokenizer:
             if Ansi.is_escape_seq(token):
@@ -1086,7 +1117,6 @@ class TerminalState:
             self.append(token)
 
         # Find rows that need to be updated
-        line_update_list = []
         lines_to_update = self.lines[0].id - (last_line_id) + 24
         for i in range(lines_to_update - 1, -1, -1):
             if (i + 1) == self.cursor.row:
@@ -1095,12 +1125,12 @@ class TerminalState:
                 cur = None
 
             if self.lines[i].has_changed(cur) is True:
-                line_update_list.append(self.lines[i])
+                self.terminal_response_list.append(self.lines[i])
 
         logging.debug(
             f"Updated lines:{lines_to_update:>3} Id={self.line_id:3}  Cursor={self.cursor}"
         )
-        return line_update_list
+        return self.terminal_response_list
 
 
 def main() -> None:
@@ -1127,17 +1157,6 @@ def main() -> None:
     ts.update(Ansi.RESET)
     ts.update(Ansi.END)
     ts.update(Ansi.RED)
-
-    # ts = TerminalState()
-    # ts.update(test_string)
-    # print(escape_attribute_test.replace("\x1b", "\\x1b").replace("\x0a", "\\n").replace("\x0d", '\\c'))
-
-    # res = subprocess.Popen(["pmg"], shell=False, stdout=subprocess.PIPE)
-    # out, err = res.communicate()
-    # dec3 = EscapeDecoder()
-    # dec3.append_bytearray(out)
-    # #for x in dec3:
-    # #    pass
 
     # dec4 = EscapeDecoder()
     # dec4.append_string(incomplete_escape_sequence)
