@@ -35,6 +35,7 @@ from copy import copy
 from enum import Enum
 from dataclasses import dataclass, field
 import logging
+from tkinter import NO
 from typing import Any
 
 from escape import Ascii, Ansi
@@ -265,6 +266,8 @@ class SGRType(Enum):
 
 @dataclass
 class SGR:
+    """Select Graphic Rendition"""
+
     type: SGRType = SGRType.UNSUPPORTED
     color: str = None
 
@@ -318,6 +321,8 @@ class SGR:
 
 @dataclass
 class EscapeObj:
+    """Escape object"""
+
     type: C1Type = C1Type.UNSUPPORTED
     csitype: CSIType = CSIType.UNSUPPORTED
     sgrs: list[SGR] = field(default_factory=list)
@@ -408,7 +413,7 @@ class EscapeObj:
 
 
 class EscapeTokenizer:
-    """EscapeTokenizer"""
+    """Tokenize escape sequences"""
 
     def __init__(self):
         self.clear()
@@ -623,19 +628,32 @@ class TerminalLine:
         return f"Id={self.id} {"".join(tchars)}"
 
     def clear(self):
+        """Clear all character to " " and set attributes do default"""
         for ch in self.line:
             ch.tas = self.tas
             ch.ch = " "
 
     def reset(self):
         self.changed = False
+        self.cursor = None
+
+        for ch in self.line:
+            ch.tas.CURSOR = False
+
+    def set_cursor(self, cursor: TerminalCoordinate) -> None:
+        """Calling set_cursor indicates that the cursor i located on this perticular line"""
+        print(f"Cursor on id: {self.id} line: {cursor}")
+        self.cursor = cursor
+        self.line[cursor.column - 1].tas.CURSOR = True
+        self.changed = True
 
     def has_changed(self, cursor: TerminalCoordinate = None) -> bool:
         # if cursor is not None it means that the cursor is present on this particular row
-        self.cursor = cursor
+        # self.cursor = cursor
         return self.changed
 
     def is_reversed(self, tas: TerminalAttributeState) -> bool:
+        print(f"Cursor on id: {self.id} line: {self.cursor}")
         if tas.CURSOR is True:
             return not tas.REVERSE
 
@@ -696,6 +714,10 @@ class TerminalLine:
             html.append(self.attr_html(text, tas))
 
         html.append("</div>")
+
+        if self.cursor is not None:
+            print(f"Cursor on id: {self.id} line: {self.cursor}")
+
         return "".join(html)
 
     def append(self, text: str, column: int) -> int:
@@ -766,6 +788,7 @@ class TerminalState:
         self.reset()
 
     def fg_color(self, color: SGRType) -> str:
+        """Return foreground color"""
         color_id = color.value - 30
         if self.tas.BOLD is True:
             color_id += 8
@@ -773,15 +796,18 @@ class TerminalState:
         return self.palette[color_id]
 
     def bg_color(self, color: SGRType) -> str:
+        """Return background color"""
         return self.palette[color.value - 40]
 
     def get_256_color(self, color: int) -> str:
+        """Return 256 color"""
         if color < 16:
             return self.palette[color]
 
         return Palette256[color]["hex"]
 
     def set_terminal(self, rows: int, columns: int) -> None:
+        """Set terminal size"""
         self.rows = rows
         self.columns = columns
 
@@ -799,10 +825,12 @@ class TerminalState:
         self.tas.reset()
 
     def pos_str(self) -> str:
+        """Return cursor position as string"""
         ps = f"{self.cursor}"
         return ps
 
     def new_line(self) -> TerminalLine:
+
         nl = TerminalLine(tas=self.tas, id=self.line_id, columns=self.max.column)
         nl.append(" ", 0)  # For some reason needed
         self.line_id += 1
@@ -810,6 +838,7 @@ class TerminalState:
         return nl
 
     def delete_line(self, n: int = 1) -> None:
+        """Delete n row(s) at cursor, existing rows scroll up"""
         for i in range(self.max.row - self.cursor.row, -1, -1):
             self.lines[i].line = self.lines[i - 1].line
             self.lines[i].changed = True
@@ -817,6 +846,7 @@ class TerminalState:
         self.clear_line(self.max.row)
 
     def clear_line(self, line: int) -> None:
+        """Clear line at position line"""
         self.lines[self.max.row - line].clear()
 
         # For some reason the following line is needed.
@@ -836,12 +866,15 @@ class TerminalState:
         self.clear_line(self.cursor.row)
 
     def insert_char(self, n: int = 1) -> None:
+        """Insert n characters at cursor position"""
         self.lines[self.max.row - self.cursor.row].insert_char(self.cursor.column, n)
 
     def delete_char(self, n: int = 1) -> None:
+        """Delete n characters at cursor position"""
         self.lines[self.max.row - self.cursor.row].delete_char(self.cursor.column, n)
 
-    def set_pos(self, column=None, row=None) -> None:
+    def set_cursor(self, column=None, row=None) -> None:
+        """Set cursor position"""
         if column is not None:
             self.cursor.column = column
             if self.cursor.column < 1:
@@ -854,7 +887,23 @@ class TerminalState:
             if self.cursor.row > self.max.row:
                 self.cursor.row = self.max.row
 
+    def set_cursor_rel(self, column=None, row=None) -> None:
+        """Set cursor with relative cursor movements"""
+
+        if column is not None:
+            new_column = self.cursor.column + column
+        else:
+            new_column = None
+
+        if row is not None:
+            new_row = self.cursor.row + row
+        else:
+            new_row = None
+
+        self.set_cursor(column=new_column, row=new_row)
+
     def erase_in_line(self, mode: int) -> None:
+        """Erase in line"""
         logging.debug(
             f"Erase in line: {self.cursor.row=}  {self.cursor.column=} {mode=}"
         )
@@ -872,7 +921,8 @@ class TerminalState:
         elif mode == 2:  # Clear entire screen
             for line in range(1, self.max.row):
                 self.lines[self.max.row - line].erase_in_line(1, 2)
-        # elif mode == 3:  # Clear saved lines
+        elif mode == 3:  # Clear saved lines
+            logging.debug(f"UNSUPPORTED: Erase in display mode 3 not implemented")
 
     def append(self, text: str) -> None:
         self.cursor.column = self.lines[self.max.row - self.cursor.row].append(
@@ -882,6 +932,7 @@ class TerminalState:
         logging.debug(f"(Text): {tok_str}")
 
     def handle_sgr(self, eo: EscapeObj) -> None:
+        """Handle Select Graphic Rendition"""
         for sgr in eo.sgrs:
             if sgr.type == SGRType.BOLD:
                 self.tas.BOLD = True
@@ -997,37 +1048,37 @@ class TerminalState:
                 self.tas.BG_COLOR = self.get_256_color(sgr.type.value - 100 + 8)
 
     def handle_csi(self, eo: EscapeObj) -> None:
-
+        """Handle Control Sequence Introducer"""
         if eo.csitype == CSIType.CURSOR_UP:
-            self.set_pos(row=(self.cursor.row - eo.n))
+            self.set_cursor(row=(self.cursor.row - eo.n))
 
         if eo.csitype == CSIType.CURSOR_DOWN:
-            self.set_pos(row=(self.cursor.row + eo.n))
+            self.set_cursor(row=(self.cursor.row + eo.n))
 
         if eo.csitype == CSIType.CURSOR_FORWARD:
-            self.set_pos(column=(self.cursor.column + eo.n))
+            self.set_cursor(column=(self.cursor.column + eo.n))
 
         if eo.csitype == CSIType.CURSOR_BACK:
-            self.set_pos(column=(self.cursor.column - eo.n))
+            self.set_cursor(column=(self.cursor.column - eo.n))
 
         if eo.csitype == CSIType.CURSOR_NEXT_LINE:
-            self.set_pos(column=1, row=(self.cursor.row + eo.n))
+            self.set_cursor(column=1, row=(self.cursor.row + eo.n))
 
         if eo.csitype == CSIType.CURSOR_PREVIOUS_LINE:
-            self.set_pos(column=1, row=(self.cursor.row - eo.n))
+            self.set_cursor(column=1, row=(self.cursor.row - eo.n))
 
         if eo.csitype == CSIType.CURSOR_POSITION:
-            self.set_pos(column=eo.m, row=eo.n)
+            self.set_cursor(column=eo.m, row=eo.n)
 
         if eo.csitype == CSIType.CURSOR_HORIZONTAL_ABSOLUTE:
-            self.set_pos(column=eo.n)
+            self.set_cursor(column=eo.n)
 
         if eo.csitype == CSIType.CURSOR_VERTICAL_ABSOLUTE:
-            self.set_pos(row=eo.n)
+            self.set_cursor(row=eo.n)
 
         # Horizontal and Vertical Position(depends on PUM)
         if eo.csitype == CSIType.HORIZONTAL_VERTICAL_POSITIONING:
-            self.set_pos(column=eo.m, row=eo.n)
+            self.set_cursor(column=eo.m, row=eo.n)
 
         if eo.csitype == CSIType.ERASE_IN_DISPLAY:
             self.erase_in_display(eo.n)
@@ -1065,6 +1116,7 @@ class TerminalState:
             self.terminal_response_list.append(response)
 
     def update(self, data: str) -> list:
+        """Update terminal state with data"""
         self.terminal_response_list.clear()
         last_line_id = self.lines[0].id
         self.tokenizer.append_string(data)
@@ -1092,12 +1144,12 @@ class TerminalState:
                 continue
 
             if token == Ascii.CR:  # carriage return
-                self.set_pos(column=1)
+                self.set_cursor(column=1)
                 logging.debug(f"(CR)    Carriage Return {self.pos_str()}")
                 continue
 
             if token == Ascii.BS:  # backspace
-                self.set_pos(column=(self.cursor.column - 1))
+                self.set_cursor(column=(self.cursor.column - 1))
                 logging.debug(f"(BS)    Backspace       {self.pos_str()}")
                 continue
 
@@ -1105,7 +1157,7 @@ class TerminalState:
                 if (self.cursor.row) >= self.max.row:
                     self.new_line()
 
-                self.set_pos(column=1, row=(self.cursor.row + 1))
+                self.set_cursor(column=1, row=(self.cursor.row + 1))
 
                 logging.debug(f"(LF)    Linefeed        {self.pos_str()}")
                 continue
@@ -1118,17 +1170,24 @@ class TerminalState:
 
         # Find rows that need to be updated
         lines_to_update = self.lines[0].id - (last_line_id) + 24
+        cnt_changed: int = 0
         for i in range(lines_to_update - 1, -1, -1):
-            if (i + 1) == self.cursor.row:
-                cur = copy(self.cursor)
-            else:
-                cur = None
+            # if (i + 1) == self.cursor.row:
+            #     cur = copy(self.cursor)
+            # else:
+            #     cur = None
 
-            if self.lines[i].has_changed(cur) is True:
+            if self.lines[i].has_changed(None) is True:
                 self.terminal_response_list.append(self.lines[i])
+                cnt_changed += 1
+
+        # self.lines[24 - self.cursor.row].cursor = self.cursor
+        self.lines[24 - self.cursor.row].set_cursor(self.cursor)
+        self.lines[24 - self.cursor.row].changed = True
+        self.terminal_response_list.append(self.lines[24 - self.cursor.row])
 
         logging.debug(
-            f"Updated lines:{lines_to_update:>3} Id={self.line_id:3}  Cursor={self.cursor}"
+            f"Changed lines:{cnt_changed}  Last Id={self.line_id-1}  Cursor={self.cursor}"
         )
         return self.terminal_response_list
 

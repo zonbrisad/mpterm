@@ -175,7 +175,7 @@ class QTerminalWidget(QPlainTextEdit):
 
     def limit_lines(self) -> None:
         lines = self.document().lineCount()
-        logging.debug(f"Lines: {lines}  Maxlines: {self.max_lines}")
+        # logging.debug(f"Lines: {lines}  Maxlines: {self.max_lines}")
         if lines > self.max_lines:
             self.remove_rows_alt(lines - self.max_lines)
 
@@ -215,7 +215,7 @@ class QTerminalWidget(QPlainTextEdit):
                     self.move(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
 
                 self.cur.insertHtml(obj.line_to_html())
-                # print(f"HTML {line.line_to_html()}")
+                # print(f"HTML {obj.line_to_html()}")
 
             if type(obj) is EscapeObj:
                 return obj
@@ -285,7 +285,7 @@ class MainForm(QMainWindow):
         self.add_button("Ö", "Ö")
         self.add_button("🐍", "🐍")
         self.add_button("&#8731;", "&#8731;")
-        self.add_button("\xF0\x9F\x90\x8D", "\xF0\x9F\x90\x8D")
+        self.add_button("\xf0\x9f\x90\x8d", "\xf0\x9f\x90\x8d")
         self.add_button("&#F09F908D;", "&#F09F908D;")
         self.add_button("&#4036989069;", "&#4036989069;")
 

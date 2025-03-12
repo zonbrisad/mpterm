@@ -85,6 +85,8 @@ class MpPlugin:
 
     def __init__(self) -> None:
         self.name: str = ""
+        self.manufacturer: str = ""
+        self.model: str = ""
         self.description: str = ""
         self.date: str = ""
         self.author: str = ""
@@ -214,7 +216,7 @@ class MpPlugin:
         return [widget.widget for widget in self.widgets]
 
     def __str__(self) -> str:
-        return f"{self.name:14} {self.date:12} {self.description}  <{self.description}>"
+        return f"{self.name:14} {self.date:12} {self.manufacturer:12} {self.model:12} {self.description}  <{self.description}>"
 
 
 def main() -> None:

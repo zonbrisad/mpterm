@@ -72,7 +72,7 @@ from dataclasses import dataclass, field
 from terminal import EscapeObj
 from escape import Ansi, Ascii
 from qterminalwidget import QTerminalWidget, get_key
-from serialport import SerialPort
+from serialport import SerialPort, bitrates
 from aboutdialog import AboutDialog
 from qedit import QHexEdit, QNumberEdit
 from mppluginframe import MpPluginFrame
@@ -103,6 +103,8 @@ class App:
 
 
 class MpState(enum.Enum):
+    """Enumeration for terminal state machine"""
+
     DISCONNECTED = 0
     CONNECTED = 1
     SUSPENDED = 2
@@ -165,7 +167,7 @@ about_html = f"""
     </td>
     <td>
       {App.AUTHOR}
-    </td/
+    </td>
   </tr>
   <tr>
     <td>
@@ -192,6 +194,8 @@ about_html = f"""
 
 @dataclass
 class Macro:
+    """Class for handling macros"""
+
     name: str = ""
     text: str = ""
     hex: bool = False
@@ -220,6 +224,7 @@ class Macro:
         return lst
 
     def data(self) -> bytearray:
+        """Return macro data as bytearray"""
         if self.hex is True:
             tokens = self.text.strip().split(" ")
             hs = []
@@ -243,6 +248,8 @@ class Macro:
 
 @dataclass
 class mpProfile:
+    """Class for handling profile settings"""
+
     alias: str = "default"
     port: str = ""
     bitrate: str = "38400"
@@ -314,7 +321,6 @@ class mpProfile:
             mc.name = md["name"]
             mc.text = md["text"]
             mc.hex = md["hex"]
-            # print(md)
 
     def write(self):
         with open(self.filename, "w") as outfile:
@@ -337,6 +343,7 @@ class HexMode(enum.Enum):
 
 
 class HexFormater:
+
     def __init__(self) -> None:
         self.end = "<br>"
         self.sync_string = []
@@ -454,6 +461,70 @@ QToolTip{
 """
 
 
+class QSPins(QWidget):
+    """Class for handling DTR and RTS pins"""
+
+    def __init__(self, serial_port: SerialPort = None, parent=None):
+        super().__init__(parent=parent)
+
+        self.serial_port = serial_port
+        self.setWindowTitle("Pins")
+        self.setMinimumWidth(100)
+        self.main_layout = QVBoxLayout()
+        # self.main_layout.setSpacing(2)
+        self.setLayout(self.main_layout)
+
+        self.dtrLabel = QLabel("\u26d4 DTR")
+        self.main_layout.addWidget(self.dtrLabel)
+
+        self.rtsLabel = QLabel("\u26d4 RTS")
+        self.main_layout.addWidget(self.rtsLabel)
+
+        self.cbRTS = QCheckBox(text="RTS")
+        self.main_layout.addWidget(self.cbRTS)
+        self.cbRTS.clicked.connect(self.handle_rts)
+
+        self.cbDTR = QCheckBox(text="DTR")
+        self.cbDTR.setCheckable(True)
+        self.cbDTR.setChecked(False)
+        self.cbDTR.setTristate(False)
+        self.main_layout.addWidget(self.cbDTR)
+        self.cbDTR.clicked.connect(self.handle_dtr)
+
+    def handle_dtr(self) -> None:
+        logging.debug("DTR")
+        if self.cbDTR.isChecked():
+            self.cbDTR.setChecked(True)
+            self.serial_port.setDataTerminalReady(True)
+        else:
+            self.cbDTR.setChecked(False)
+            self.serial_port.setDataTerminalReady(False)
+
+    def handle_rts(self) -> None:
+        logging.debug("RTS")
+        if self.cbRTS.isChecked():
+            self.cbRTS.setChecked(True)
+            self.serial_port.setRequestToSend(True)
+        else:
+            self.cbRTS.setChecked(False)
+            self.serial_port.setRequestToSend(False)
+
+    def update(self) -> None:
+        if self.serial_port.isDataTerminalReady():
+            self.dtrLabel.setText("\u26aa  DTR")
+        else:
+            self.dtrLabel.setText("\u26ab  DTR")
+
+        if self.serial_port.isRequestToSend():
+            self.rtsLabel.setText("\u26aa  RTS")
+        else:
+            self.rtsLabel.setText("\u26ab  RTS")
+
+        logging.debug(
+            f"DTR: {self.serial_port.isDataTerminalReady()}  RTS: {self.serial_port.isRequestToSend()}"
+        )
+
+
 class QMacroButton(QWidget):
     def __init__(self, macro: Macro, parent=None):
         super().__init__()
@@ -568,14 +639,15 @@ class MacroDialog(QDialog):
 
 
 class MainForm(QMainWindow):
-    # Handle windows close event
     def closeEvent(self, a0: QCloseEvent) -> None:
+        """Handle windows close event"""
         self.process.setProcessState(QProcess.NotRunning)
         self.serial_port.close()
         self.save_settings()
         return super().closeEvent(a0)
 
     def add_label_combobox(self, label_text: str) -> QComboBox:
+        """Add a label and a combobox to the port layout"""
         label = QLabel(self.central_widget)
         label.setText(f"<b>{label_text}:</b>")
         label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
@@ -594,6 +666,7 @@ class MainForm(QMainWindow):
         tip: str = "",
         shortcut: str = "",
     ) -> QAction:
+
         action = QAction(name, self)
         action.triggered.connect(trig)
         action.setStatusTip(tip)
@@ -602,6 +675,7 @@ class MainForm(QMainWindow):
         return action
 
     def __init__(self, args, parent=None) -> None:
+
         super(MainForm, self).__init__(parent)
 
         self.prof = mpProfile(filename=App.SETTINGS_FILE)
@@ -655,16 +729,9 @@ class MainForm(QMainWindow):
         # Port layout widgets
         self.cb_port = self.add_label_combobox("Port")
         self.cb_bitrate = self.add_label_combobox("Bitrate")
-        self.cb_bitrate.addItem("300", 300)
-        self.cb_bitrate.addItem("600", 600)
-        self.cb_bitrate.addItem("1200", 1200)
-        self.cb_bitrate.addItem("2400", 2400)
-        self.cb_bitrate.addItem("4800", 4800)
-        self.cb_bitrate.addItem("9600", 9600)
-        self.cb_bitrate.addItem("19200", 19200)
-        self.cb_bitrate.addItem("28400", 28400)
-        self.cb_bitrate.addItem("57600", 57600)
-        self.cb_bitrate.addItem("115200", 115200)
+        for br in self.serial_port.bitrates():
+            self.cb_bitrate.addItem(str(br), br)
+
         self.cb_bitrate.setCurrentIndex(5)
         self.cb_bitrate.activated.connect(self.set_sp)
 
@@ -742,25 +809,12 @@ class MainForm(QMainWindow):
         self.plugin_widget = MpPluginFrame(
             self.central_widget, self.serial_port, self.terminal
         )
-        # self.plugin_widget = MpPluginFrame(
-        #     self.central_widget, self.serial_port, self.terminal
-        # )
+
         self.button_layout.addWidget(self.plugin_widget)
         self.button_layout.addStretch()
 
-        # self.dtrLabel = QLabel("\u26D4 DTR")
-        # self.rtsLabel = QLabel("\u26D4 RTS")
-
-        # self.cbRTS = QCheckBox(self.central_widget)
-        # self.cbRTS.setText("RTS")
-        # self.cbRTS.clicked.connect(self.handle_rts)
-
-        # self.cbDTR = QCheckBox(self.central_widget)
-        # self.cbDTR.setText("DTR")
-        # self.cbDTR.setCheckable(True)
-        # self.cbDTR.setChecked(False)
-        # self.cbDTR.setTristate(False)
-        # self.cbDTR.clicked.connect(self.handle_dtr)
+        self.pins = QSPins(serial_port=self.serial_port, parent=self.central_widget)
+        self.button_layout.addWidget(self.pins)
 
         self.pb_external = QPushButton("External", self.central_widget)
         self.pb_external.pressed.connect(self.external_program)
@@ -779,10 +833,6 @@ class MainForm(QMainWindow):
         # self.cbProfiles.addItem("New...", 3)
         # self.cbProfiles.hide()
         # self.button_layout.addWidget(self.cbNewline)
-        # self.button_layout.addWidget(self.cbRTS)
-        # self.button_layout.addWidget(self.cbDTR)
-        # self.button_layout.addWidget(self.dtrLabel)
-        # self.button_layout.addWidget(self.rtsLabel)
 
         # Macro layout widgets
         #
@@ -793,9 +843,6 @@ class MainForm(QMainWindow):
                 pressed=lambda m=macro: self.serial_port.send(m.data()),
             )
             self.macro_layout.addWidget(macro_button)
-
-            # macro_button = QMacroButton(macro=macro)
-            # self.macro_layout.addWidget(macro_button)
 
         self.macro_dialog = MacroDialog(self, self.prof.macros)
         self.macro_set = QPushButton("Edit macro's", self.central_widget)
@@ -979,7 +1026,7 @@ class MainForm(QMainWindow):
         self.init_port()
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
-
+        """Event filter for terminal widget"""
         if event.type() == QEvent.KeyPress:
             keyEvent = QKeyEvent(event)
             if keyEvent.key() in [Qt.Key_Enter, Qt.Key_Return]:
@@ -992,6 +1039,7 @@ class MainForm(QMainWindow):
         return False
 
     def set_state(self, new_state: MpState, timeout=-1) -> None:
+        """Set new state and handle state change"""
         logging.debug(f"Set state: {new_state}")
         # traceback.print_exc()
         # if new_state == MpState.EXTERNAL:
@@ -1046,6 +1094,7 @@ class MainForm(QMainWindow):
             self.prof.suspend_timeout = val
 
     def set_ext_program(self) -> None:
+        """Set external program to run"""
         dlg = QInputDialog()
         val, ok = dlg.getText(
             self,
@@ -1078,9 +1127,6 @@ class MainForm(QMainWindow):
         logging.debug(f"Data available from ext. process(stdout): {len(data)}")
 
         self.update_terminal_widget(str(data, "utf-8"))
-
-        # self.terminal.scroll_down()
-        # self.ui_handler()
 
     def external_program(self) -> None:
 
@@ -1225,105 +1271,12 @@ class MainForm(QMainWindow):
             self.ed_line_length.setEnabled(False)
             self.ed_synch_string.setEnabled(False)
 
-        # if self.serial_port.isDataTerminalReady():
-        #     self.dtrLabel.setText("\u26AA  DTR")
-        # else:
-        #     self.dtrLabel.setText("\u26AB  DTR")
-
-        # if self.serial_port.isRequestToSend():
-        #     self.rtsLabel.setText("\u26AA  RTS")
-        # else:
-        #     self.rtsLabel.setText("\u26AB  RTS")
-
-        # logging.debug(f"DTR: {self.sp.serial_port.isDataTerminalReady()}  RTS: {self.sp.serial_port.isRequestToSend()}")
-
-    # def update_ui(self) -> None:
-
-    #     if self.serial_port.state == State.DISCONNECTED:
-    #         self.setWindowTitle("MpTerm")
-    #         self.pb_open.setText("Open")
-    #         self.cb_port.setEnabled(True)
-    #     else:
-    #         self.setWindowTitle(
-    #             f"MpTerm  /dev/{self.cb_port.currentText()} {self.cb_bitrate.currentText()}"
-    #         )
-    #         self.pb_open.setText("Close")
-    #         self.cb_port.setEnabled(False)
-
-    #     self.label_rx.setText(
-    #         f'<span style="color:Black">RX:</span> <span style="color:Purple">{self.serial_port.cnt_rx:06d}</span> '
-    #     )
-    #     self.label_tx.setText(
-    #         f'<span style="color:Black">TX:</span> <span style="color:Purple">{self.serial_port.cnt_tx:06d}</span> '
-    #     )
-    #     self.label_dimensions.setText(
-    #         f'<span style="color:Black">{self.terminal.terminal_state.max.column:3d}x{self.terminal.terminal_state.max.row:2d}</span> '
-    #     )
-
-    #     states = {
-    #         State.DISCONNECTED: f"""<span style="color:Black">Disconected</span>""",
-    #         State.CONNECTED: f"""<span style="color:Green">Connected  </span>""",
-    #         State.SUSPENDED: f"""<span style="color:Red">Suspended {self.serial_port.suspend_timer.remainingTime()/1000:.0f}</span>""",
-    #         State.RECONNECTING: f"""<span style="color:Magenta">Reconnecting {self.serial_port.cntReconnect}</span>""",
-    #     }
-    #     self.label_state.setText(f"{states[self.serial_port.state]}")
-
-    #     if self.terminal_paused is True:
-    #         self.bp_pause.setText("Paused")
-    #     else:
-    #         self.bp_pause.setText("Pause")
-
-    #     self.formater.set_columns(self.ed_line_length.get_value())
-    #     self.formater.set_sync_string(self.ed_synch_string.get_value())
-
-    #     if self.plugin_widget.current_plugin() is None:
-    #         self.cb_echo_mode.setEnabled(True)
-    #         self.cb_display_mode.setEnabled(True)
-    #         self.cb_line_mode.setEnabled(True)
-    #         self.ed_line_length.setEnabled(True)
-    #         self.ed_synch_string.setEnabled(True)
-    #     else:
-    #         self.cb_echo_mode.setEnabled(False)
-    #         self.cb_display_mode.setEnabled(False)
-    #         self.cb_line_mode.setEnabled(False)
-    #         self.ed_line_length.setEnabled(False)
-    #         self.ed_synch_string.setEnabled(False)
-
-    #     # if self.serial_port.isDataTerminalReady():
-    #     #     self.dtrLabel.setText("\u26AA  DTR")
-    #     # else:
-    #     #     self.dtrLabel.setText("\u26AB  DTR")
-
-    #     # if self.serial_port.isRequestToSend():
-    #     #     self.rtsLabel.setText("\u26AA  RTS")
-    #     # else:
-    #     #     self.rtsLabel.setText("\u26AB  RTS")
-
-    #     # logging.debug(f"DTR: {self.sp.serial_port.isDataTerminalReady()}  RTS: {self.sp.serial_port.isRequestToSend()}")
+        self.pins.update()
 
     def update_ports(self) -> None:
         ports = QSerialPortInfo.availablePorts()
         for port in ports:
             self.cb_port.addItem(port.portName())
-
-    def handle_dtr(self) -> None:
-        # self.ui.cbDTR.clicked.connect(self.handle_dtr)
-        logging.debug("DTR")
-        if self.cbDTR.isChecked():
-            self.cbDTR.setChecked(True)
-            self.serial_port.setDataTerminalReady(True)
-        else:
-            self.cbDTR.setChecked(False)
-            self.serial_port.setDataTerminalReady(False)
-
-    def handle_rts(self) -> None:
-        logging.debug("RTS")
-        if self.cbRTS.isChecked():
-            self.cbRTS.setChecked(True)
-            self.serial_port.setRequestToSend(True)
-        else:
-            self.cbRTS.setChecked(False)
-            self.serial_port.setRequestToSend(False)
 
     def terminal_clear(self) -> None:
         self.terminal.clear()
@@ -1444,6 +1397,7 @@ class MainForm(QMainWindow):
         self.serial_port.setPortName(f"/dev/{self.cb_port.currentText()}")
 
     def set_sp(self) -> None:
+        """Set serial port settings"""
         self.serial_port.setBaudRate(self.cb_bitrate.currentData())
         self.serial_port.setStopBits(self.cb_stop_bits.currentData())
         self.serial_port.setDataBits(self.cb_bits.currentData())
@@ -1452,6 +1406,7 @@ class MainForm(QMainWindow):
         logging.debug(self.cb_bitrate.currentData())
 
     def save_settings(self) -> None:
+        """Save settings to profile"""
         self.prof.port = self.cb_port.currentText()
         self.prof.bitrate = self.cb_bitrate.currentText()
         self.prof.databits = self.cb_bits.currentText()

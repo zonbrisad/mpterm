@@ -241,7 +241,7 @@ sgrcolor() { ##D Test colorfunctions if different SGR codes
 }
 
 l50() { ##D Print 50 lines
-  for i in {1..50}; do
+  for i in {1..36}; do
     echo "$i"
   done
 }

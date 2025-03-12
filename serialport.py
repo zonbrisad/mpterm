@@ -39,6 +39,20 @@ errors = {
     QSerialPort.UnknownError: "Unknown",
 }
 
+bitrates = [
+    300,
+    600,
+    1200,
+    2400,
+    4800,
+    9600,
+    19200,
+    28400,
+    57600,
+    115200,
+    256000,
+]
+
 
 class SerialPort(QSerialPort):
     def __init__(self) -> None:
@@ -150,6 +164,10 @@ class SerialPort(QSerialPort):
 
     # def write(self, data) -> None:
     #     super().__write__()
+
+    def bitrates(self):
+        """Return a list of supported bitrates"""
+        return bitrates
 
 
 def main() -> None:

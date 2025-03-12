@@ -23,16 +23,11 @@ from mpframe import MpFrame
 
 # Variables ------------------------------------------------------------------
 plugin_name = "FY3200S"
-plugin_description = "FeelTech FY3200S Dual channel function generator"
+plugin_manufacturer = "FeelTech"
+plugin_model = "FY3200S"
+plugin_description = "Dual channel function generator"
 plugin_date = "2024-07-25"
 plugin_author = "Peter Malmberg <peter.malmberg@gmail.com>"
-
-# plugin_info = MpPluginInfo(
-#     name="FY3200S",
-#     description="FeelTech FY3200S Dual channel function generator",
-#     date="2024-07-25",
-#     author="Peter Malmberg <peter.malmberg@gmail.com>",
-# )
 
 
 # Code -----------------------------------------------------------------------
@@ -97,6 +92,8 @@ class MpTermPlugin(MpPlugin):
     def __init__(self) -> None:
         super().__init__()
         self.name = plugin_name
+        self.manufacturer = plugin_manufacturer
+        self.model = plugin_model
         self.description = plugin_description
         self.date = plugin_date
         self.author = plugin_author

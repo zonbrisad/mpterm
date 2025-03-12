@@ -28,7 +28,9 @@ from typing import Any
 # Variables ------------------------------------------------------------------
 
 plugin_name = "KAxxxxP"
-plugin_description = "KAxxxP power supply"
+plugin_manufacturer = "Korad"
+plugin_model = "KA3005P"
+plugin_description = "Programmable power supply"
 plugin_date = "2025-02-27"
 plugin_author = "Peter Malmberg <peter.malmberg@gmail.com>"
 
@@ -63,6 +65,8 @@ class MpTermPlugin(MpPlugin):
     def __init__(self) -> None:
         super().__init__()
         self.name = plugin_name
+        self.manufacturer = plugin_manufacturer
+        self.model = plugin_model
         self.description = plugin_description
         self.date = plugin_date
         self.author = plugin_author

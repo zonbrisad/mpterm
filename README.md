@@ -142,6 +142,7 @@ Terminal functions
 - [x] Terminal: UTF-8 character support
 - [x] Terminal: SGR 90-97, 100-107 set bright color
 - [x] Terminal: ICH(insert charachter) "\e[n@" n=nr of characters <https://vt100.net/docs/vt510-rm/ICH.html>
+- [ ] Terminal: (DA1) Primary Device Attributes <https://vt100.net/docs/vt510-rm/DA1.html>
 - [x] Terminal: Reverse text
 - [x] Terminal: VPA Cursor vertical absolute "\e[nd"
 - [x] Button: backspace
