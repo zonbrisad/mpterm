@@ -31,6 +31,7 @@
 #
 
 from __future__ import annotations
+from dataclasses import dataclass, field
 import logging
 
 
@@ -294,10 +295,37 @@ Palette256 = [
 ]
 
 
+@dataclass
+class Palette:
+    name: str = ""
+    colors: list[str] = field(default_factory=list)
+
+
 def rgb2str(r: int, g: int, b: int) -> str:
     return f"#{r:02x}{g:02x}{b:02x}"
 
 
+XXPaletteXtermL = Palette(
+    name="xterm",
+    colors=[
+        rgb2str(0, 0, 0),
+        rgb2str(205, 0, 0),
+        rgb2str(0, 205, 0),
+        rgb2str(205, 205, 0),
+        rgb2str(0, 0, 238),
+        rgb2str(205, 0, 205),
+        rgb2str(0, 205, 205),
+        rgb2str(229, 229, 229),
+        rgb2str(127, 127, 127),
+        rgb2str(255, 0, 0),
+        rgb2str(0, 255, 0),
+        rgb2str(255, 255, 0),
+        rgb2str(92, 92, 255),
+        rgb2str(255, 0, 255),
+        rgb2str(0, 255, 255),
+        rgb2str(255, 255, 255),
+    ],
+)
 PaletteXtermL = [
     rgb2str(0, 0, 0),
     rgb2str(205, 0, 0),

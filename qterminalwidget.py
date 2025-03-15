@@ -103,7 +103,7 @@ def get_key(key: QKeyEvent) -> str:
 
 
 class QTerminalWidget(QPlainTextEdit):
-    """QTerminalWidget implements a partial ANSI terminal into a QPlainTextEdit."""
+    """QTerminalWidget implements a limited ANSI terminal into a QPlainTextEdit widget."""
 
     def __init__(self, parent=None, init="") -> None:
         super().__init__(parent)
@@ -174,6 +174,7 @@ class QTerminalWidget(QPlainTextEdit):
         self.setTextCursor(cursor)
 
     def limit_lines(self) -> None:
+        """Limit the number of lines in the terminal widget."""
         lines = self.document().lineCount()
         # logging.debug(f"Lines: {lines}  Maxlines: {self.max_lines}")
         if lines > self.max_lines:
@@ -189,6 +190,7 @@ class QTerminalWidget(QPlainTextEdit):
         self.limit_lines()
 
     def append_ansi_text(self, data: str) -> None:
+        """Append ANSI text to the terminal. Return EscapeObj if escape sequence detected."""
 
         if type(data) is str:
             lines = self.terminal_state.update(data)
@@ -215,7 +217,7 @@ class QTerminalWidget(QPlainTextEdit):
                     self.move(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
 
                 self.cur.insertHtml(obj.line_to_html())
-                # print(f"HTML {obj.line_to_html()}")
+                # print(f"HTML id={obj.id}")
 
             if type(obj) is EscapeObj:
                 return obj
@@ -224,6 +226,7 @@ class QTerminalWidget(QPlainTextEdit):
         return None
 
     def scroll_down(self) -> None:
+        """Scroll down to the last line."""
         vsb = self.verticalScrollBar()
         vsb.setValue(vsb.maximum())
 

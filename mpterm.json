@@ -1,7 +1,7 @@
 {
     "alias": "default",
-    "port": "ttyUSB1",
-    "bitrate": "9600",
+    "port": "ttyUSB0",
+    "bitrate": "115200",
     "databits": "8",
     "parity": "None",
     "stopbits": "1",
@@ -10,7 +10,7 @@
     "suspend_timeout": 5,
     "ext_program": "bash -i",
     "newline": "LF",
-    "win_x": 1649,
+    "win_x": 1320,
     "win_y": 1070,
     "sync_string": "",
     "columns": 50,
@@ -33,8 +33,8 @@
         },
         {
             "name": "M4",
-            "hex": false,
-            "text": "STATUS?"
+            "hex": true,
+            "text": "23 0x42"
         },
         {
             "name": "M5",

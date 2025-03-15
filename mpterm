@@ -520,9 +520,9 @@ class QSPins(QWidget):
         else:
             self.rtsLabel.setText("\u26ab  RTS")
 
-        logging.debug(
-            f"DTR: {self.serial_port.isDataTerminalReady()}  RTS: {self.serial_port.isRequestToSend()}"
-        )
+        # logging.debug(
+        #     f"DTR: {self.serial_port.isDataTerminalReady()}  RTS: {self.serial_port.isRequestToSend()}"
+        # )
 
 
 class QMacroButton(QWidget):
@@ -683,7 +683,7 @@ class MainForm(QMainWindow):
 
         self.serial_port = SerialPort()
         self.serial_port.setReadBufferSize(256)
-        self.serial_port.readyRead.connect(self.read)
+        self.serial_port.readyRead.connect(self.data_avail)
 
         self.state = MpState.DISCONNECTED
         self.old_state = MpState.DISCONNECTED
@@ -733,7 +733,7 @@ class MainForm(QMainWindow):
             self.cb_bitrate.addItem(str(br), br)
 
         self.cb_bitrate.setCurrentIndex(5)
-        self.cb_bitrate.activated.connect(self.set_sp)
+        self.cb_bitrate.activated.connect(self.set_port_settings)
 
         self.cb_bits = self.add_label_combobox("Bits")
         self.cb_bits.addItem("5", QSerialPort.Data5)
@@ -741,28 +741,28 @@ class MainForm(QMainWindow):
         self.cb_bits.addItem("7", QSerialPort.Data7)
         self.cb_bits.addItem("8", QSerialPort.Data8)
         self.cb_bits.setCurrentIndex(3)
-        self.cb_bits.activated.connect(self.set_sp)
+        self.cb_bits.activated.connect(self.set_port_settings)
 
         self.cb_stop_bits = self.add_label_combobox("StopBit")
         self.cb_stop_bits.addItem("1", QSerialPort.OneStop)
         self.cb_stop_bits.addItem("1.5", QSerialPort.OneAndHalfStop)
         self.cb_stop_bits.addItem("2", QSerialPort.TwoStop)
         self.cb_stop_bits.setCurrentIndex(0)
-        self.cb_stop_bits.activated.connect(self.set_sp)
+        self.cb_stop_bits.activated.connect(self.set_port_settings)
 
         self.cb_parity = self.add_label_combobox("Parity")
         self.cb_parity.addItem("None", QSerialPort.NoParity)
         self.cb_parity.addItem("Odd", QSerialPort.OddParity)
         self.cb_parity.addItem("Even", QSerialPort.EvenParity)
         self.cb_parity.setCurrentIndex(0)
-        self.cb_parity.activated.connect(self.set_sp)
+        self.cb_parity.activated.connect(self.set_port_settings)
 
         self.cb_flow_control = self.add_label_combobox("HwFlow")
         self.cb_flow_control.addItem("None", QSerialPort.NoFlowControl)
         self.cb_flow_control.addItem("Hardware", QSerialPort.HardwareControl)
         self.cb_flow_control.addItem("Software", QSerialPort.SoftwareControl)
         self.cb_flow_control.setCurrentIndex(0)
-        self.cb_flow_control.activated.connect(self.set_sp)
+        self.cb_flow_control.activated.connect(self.set_port_settings)
         self.port_layout.addStretch()
 
         # Middle layout widgets
@@ -789,7 +789,7 @@ class MainForm(QMainWindow):
         self.cb_display_mode.addItem("Hex", MpTerm.Hex)
         self.cb_display_mode.addItem("Hex + Ascii", MpTerm.AsciiHex)
         self.cb_display_mode.currentIndexChanged.connect(self.mode_change)
-        self.cb_display_mode.activated.connect(self.set_sp)
+        self.cb_display_mode.activated.connect(self.set_port_settings)
         self.button_layout.addWidget(self.cb_display_mode)
 
         self.cb_line_mode = QComboBox(self.central_widget)
@@ -817,7 +817,7 @@ class MainForm(QMainWindow):
         self.button_layout.addWidget(self.pins)
 
         self.pb_external = QPushButton("External", self.central_widget)
-        self.pb_external.pressed.connect(self.external_program)
+        self.pb_external.pressed.connect(self.external_program_run)
         self.pb_external.setToolTip("Run external program")
         self.button_layout.addWidget(self.pb_external)
 
@@ -890,7 +890,7 @@ class MainForm(QMainWindow):
 
         # Settings menu
         menu_settings = menubar.addMenu("Settings")
-        self.add_action("Ext. Program", menu_settings, self.set_ext_program)
+        self.add_action("Ext. Program", menu_settings, self.external_program_set)
         self.add_action("Suspend timeout", menu_settings, self.set_suspend_timeout)
 
         # Action menu
@@ -1013,8 +1013,7 @@ class MainForm(QMainWindow):
 
         self.process = QProcess()
         self.process.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
-        self.process.readyReadStandardOutput.connect(self.program_stdout_available)
-        # self.process.readyReadStandardError.connect(self.program_stderr_available)
+        self.process.readyReadStandardOutput.connect(self.external_program_stdout)
         self.process.finished.connect(self.external_program_finished)
 
         self.terminal_paused = False
@@ -1093,21 +1092,6 @@ class MainForm(QMainWindow):
         if ok is True:
             self.prof.suspend_timeout = val
 
-    def set_ext_program(self) -> None:
-        """Set external program to run"""
-        dlg = QInputDialog()
-        val, ok = dlg.getText(
-            self,
-            "External program",
-            "Commandline:",
-            text=self.prof.ext_program,
-        )
-        if ok is True:
-            self.prof.ext_program = val
-
-    def send_macro(self, macro: Macro) -> None:
-        self.serial_port.send(macro.data())
-
     def terminal_pause(self) -> None:
         if self.terminal_paused is True:
             self.terminal_paused = False
@@ -1122,13 +1106,27 @@ class MainForm(QMainWindow):
         self.set_state(MpState.SUSPENDED, timeout=self.prof.suspend_timeout * 1000)
         self.ui_handler()
 
-    def program_stdout_available(self) -> None:
+    def external_program_set(self) -> None:
+        """Set external program to run"""
+        dlg = QInputDialog()
+        val, ok = dlg.getText(
+            self,
+            "External program",
+            "Commandline:",
+            text=self.prof.ext_program,
+        )
+        if ok is True:
+            self.prof.ext_program = val
+
+    def external_program_stdout(self) -> None:
+        """Read data from external program"""
         data = self.process.readAllStandardOutput()
         logging.debug(f"Data available from ext. process(stdout): {len(data)}")
 
         self.update_terminal_widget(str(data, "utf-8"))
 
-    def external_program(self) -> None:
+    def external_program_run(self) -> None:
+        """Run external program"""
 
         if self.state in (MpState.SUSPENDED, MpState.EXTERNAL):
             return
@@ -1155,6 +1153,8 @@ class MainForm(QMainWindow):
         self.terminal.scroll_down()
 
     def external_program_finished(self) -> None:
+        """External program has finished executing"""
+
         logging.debug("External program finnished executing")
         self.terminal.append_html_text("<br>")
         if self.old_state == MpState.CONNECTED:
@@ -1165,12 +1165,14 @@ class MainForm(QMainWindow):
         self.ui_handler()
 
     def signal_usr1(self, signum, frame) -> None:
+        """Signal handler for USR1, suspend port"""
         logging.debug("USR1 signal received")
         self.terminal_suspend()
 
     def signal_usr2(self, signum, frame) -> None:
+        """Signal handler for USR2, run external program"""
         logging.debug("USR2 signal received")
-        self.external_program()
+        self.external_program_run()
 
     def timer_5_timeout(self) -> None:
         self.update_terminal_widget(None)
@@ -1202,7 +1204,7 @@ class MainForm(QMainWindow):
         self.port_handler()
 
     def ui_handler(self) -> None:
-
+        """Update user interface"""
         if self.state == MpState.DISCONNECTED:
             self.pb_open.setText("Open")
 
@@ -1274,28 +1276,33 @@ class MainForm(QMainWindow):
         self.pins.update()
 
     def update_ports(self) -> None:
+        """Update list of available ports"""
         ports = QSerialPortInfo.availablePorts()
         for port in ports:
             self.cb_port.addItem(port.portName())
 
     def terminal_clear(self) -> None:
+        """Clear terminal"""
         self.terminal.clear()
         self.formater.clear()
         self.serial_port.clear_counters()
         self.update()
 
     def _message(self, name: str) -> None:
+        """Show message in status bar"""
         self.statusbar.showMessage(name, 4000)
         self.statusbar.show
 
     # Show message in status bar
     def message(self, name: str) -> None:
+        """Show message in status bar with normal style"""
         self.statusbar.setStyleSheet(StyleS.normal)
         self._message(name)
         logging.debug(name)
 
     # Show error message in status bar
     def message_error(self, name: str) -> None:
+        """Show message in status bar with error style"""
         self.statusbar.setStyleSheet(StyleS.error)
         self._message(name)
         logging.error(name)
@@ -1306,6 +1313,7 @@ class MainForm(QMainWindow):
         logging.debug(f"Setting display mode {self.cb_display_mode.currentData()}")
 
     def append_html_text(self, text: str) -> None:
+        """Append text to terminal widget, with html formatting"""
         self.terminal.append_html_text(text)
         self.terminal.scroll_down()
 
@@ -1320,7 +1328,8 @@ class MainForm(QMainWindow):
         self.terminal.scroll_down()
         self.ui_handler()
 
-    def read(self) -> None:
+    def data_avail(self) -> None:
+        """Data available on serial port"""
         data = self.serial_port.read()
         try:
             data_str = str(data, "utf-8")
@@ -1354,6 +1363,7 @@ class MainForm(QMainWindow):
             self.serial_port.send(data)
 
     def send(self, data: bytearray) -> None:
+        """Send data to serial port, and update terminal widget"""
         self.serial_port.send(data)
         self.ui_handler()
 
@@ -1391,12 +1401,13 @@ class MainForm(QMainWindow):
 
     def init_port(self) -> None:
         self.set_port()
-        self.set_sp()
+        self.set_port_settings()
 
     def set_port(self) -> None:
+        """Set serial port"""
         self.serial_port.setPortName(f"/dev/{self.cb_port.currentText()}")
 
-    def set_sp(self) -> None:
+    def set_port_settings(self) -> None:
         """Set serial port settings"""
         self.serial_port.setBaudRate(self.cb_bitrate.currentData())
         self.serial_port.setStopBits(self.cb_stop_bits.currentData())
@@ -1443,10 +1454,12 @@ class MainForm(QMainWindow):
         self.plugin_widget.set_plugin(self.prof.plugin)
 
     def exit_program(self, e) -> None:
+        """Handle windows close event"""
         self.serial_port.close()
         self.close()
 
     def port_info(self) -> None:
+        """List available serial ports, and show in terminal"""
         self.append_html_text("<br>")
         self.append_html_text(
             "<b><pre> Port      Location      Vendor id  Product id  Manufacturer  Description<br></pre></b>"
@@ -1460,6 +1473,7 @@ class MainForm(QMainWindow):
         self.append_html_text("<br>")
 
     def new_terminal(self) -> None:
+        """Open new terminal window"""
         subprocess.Popen([f"{self_dir}/mpterm"], shell=False)
 
 

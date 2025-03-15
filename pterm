@@ -35,7 +35,7 @@ from PyQt5.QtCore import (
     QEvent,
     QObject,
 )
-from PyQt5.QtGui import QIcon, QKeyEvent, QCloseEvent
+from PyQt5.QtGui import QFont, QIcon, QKeyEvent, QCloseEvent, QFontMetrics
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -47,6 +47,7 @@ from PyQt5.QtWidgets import (
     QStatusBar,
     QWidget,
 )
+from py import log
 
 from terminal import EscapeObj
 from qterminalwidget import QTerminalWidget, get_key
@@ -140,6 +141,7 @@ class MainForm(QMainWindow):
 
         self.central_widget = QWidget(self)
         self.setCentralWidget(self.central_widget)
+
         # Layouts
         self.main_layout = QVBoxLayout(self.central_widget)
         self.main_layout.setSpacing(2)
@@ -149,9 +151,7 @@ class MainForm(QMainWindow):
 
         # Terminal layout (middle)
         self.terminal_layout = QVBoxLayout()
-
         self.middle_layout.addLayout(self.terminal_layout)
-
         self.main_layout.addLayout(self.middle_layout)
 
         # Middle layout widgets
@@ -179,6 +179,12 @@ class MainForm(QMainWindow):
         # Action menu
         menu_action = menubar.addMenu("&Action")
         self.add_action("Clear", menu_action, self.terminal_clear)
+        self.add_action(
+            "TERM=xterm-256color",
+            menu_action,
+            lambda: self.cmd("TERM=xterm-256color\n"),
+            tip="Set terminal type to xterm-256color",
+        )
 
         self.timer_5 = QTimer()
         self.timer_5.setInterval(200)
@@ -212,6 +218,14 @@ class MainForm(QMainWindow):
 
         return False
 
+    def resizeEvent(self, a0):
+        super().resizeEvent(a0)
+
+        font_metrics = QFontMetrics(self.terminal.font())
+        char_width = font_metrics.width("X")
+        t_width = self.terminal.width()
+        logging.debug(f"Resize: {char_width=}, {t_width=}")
+
     def stdout_data(self) -> None:
         data = self.process.readAllStandardOutput()
         logging.debug(f"Data available from ext. process(stdout): {len(data)}")
@@ -224,6 +238,9 @@ class MainForm(QMainWindow):
 
         self.terminal.scroll_down()
         self.ui_handler()
+
+    def cmd(self, cmd: str) -> None:
+        self.process.write(cmd.encode())
 
     def process_finished(self) -> None:
         self.process.setProcessState(QProcess.NotRunning)

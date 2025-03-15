@@ -252,6 +252,14 @@ l1000() { ##D Print 1000 lines
   done
 }
 
+curenable() { ##D Enable cursor
+  echo -e "${E_SHOW}"
+}
+
+curdisable() { ##D Disable cursor
+  echo -e "${E_HIDE}"
+}
+
 #---------------------------------------------------------------------
 # Bashplate settings
 #---------------------------------------------------------------------

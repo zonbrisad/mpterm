@@ -93,6 +93,7 @@ class QNumberEdit(QLineEdit):
 
 
 class QHexEdit(QLineEdit):
+
     def __init__(self, parent=None):
         super().__init__()
         self.textChanged.connect(self.changed)
