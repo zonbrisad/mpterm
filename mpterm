@@ -72,7 +72,7 @@ from dataclasses import dataclass, field
 from terminal import EscapeObj
 from escape import Ansi, Ascii
 from qterminalwidget import QTerminalWidget, get_key
-from serialport import SerialPort, bitrates
+from serialport import SerialPort
 from aboutdialog import AboutDialog
 from qedit import QHexEdit, QNumberEdit
 from mppluginframe import MpPluginFrame
@@ -1180,7 +1180,7 @@ class MainForm(QMainWindow):
         self.state_handler()
 
     def port_handler(self) -> None:
-        port_names = [port.portName() for port in QSerialPortInfo.availablePorts()]
+        port_names = [port.portName() for port in SerialPort.availablePorts()]
 
         # Check if current port is still connecter (USB to serial adapters), if not close port
         if self.serial_port.isOpen():
@@ -1277,7 +1277,7 @@ class MainForm(QMainWindow):
 
     def update_ports(self) -> None:
         """Update list of available ports"""
-        ports = QSerialPortInfo.availablePorts()
+        ports = SerialPort.availablePorts()
         for port in ports:
             self.cb_port.addItem(port.portName())
 
@@ -1464,7 +1464,7 @@ class MainForm(QMainWindow):
         self.append_html_text(
             "<b><pre> Port      Location      Vendor id  Product id  Manufacturer  Description<br></pre></b>"
         )
-        ports = QSerialPortInfo.availablePorts()
+        ports = SerialPort.availablePorts()
         for port in ports:
             self.append_html_text(
                 f"<pre> {port.portName():8}  {port.systemLocation():13} {str(port.vendorIdentifier()):10} {str(port.productIdentifier()):10}  {port.manufacturer():12}  {port.description()}<br></pre>"
@@ -1477,10 +1477,13 @@ class MainForm(QMainWindow):
         subprocess.Popen([f"{self_dir}/mpterm"], shell=False)
 
 
-def list_ports() -> None:
-    spi = QSerialPortInfo.availablePorts()
-    for p in spi:
-        print(f"{p.portName():<10}{p.description():<20}{p.systemLocation()}")
+def print_ports() -> None:
+    ports = SerialPort.availablePorts()
+    print(f"{Ansi.BOLD}Port      Manufacturer   Product Id   Description{Ansi.RESET}")
+    for port in ports:
+        print(
+            f"{port.portName():<10}{port.manufacturer():<13}  {port.productIdentifier():>8}     {port.description()}"
+        )
 
 
 def main() -> None:
@@ -1519,7 +1522,7 @@ def main() -> None:
         logging.basicConfig(format=logging_format, level=logging.DEBUG)
 
     if args.list:
-        list_ports()
+        print_ports()
         sys.exit()
 
     if args.suspend:

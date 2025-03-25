@@ -14,8 +14,10 @@
 # ----------------------------------------------------------------------------
 import enum
 import logging
+from turtle import st
 from PyQt5.QtCore import QTimer, QIODevice
 from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
+from sympy import Li
 
 
 # class State(enum.Enum):
@@ -168,6 +170,17 @@ class SerialPort(QSerialPort):
     def bitrates(self):
         """Return a list of supported bitrates"""
         return bitrates
+
+    @staticmethod
+    def availablePorts() -> list[QSerialPortInfo]:
+        """Return a list of available ports, excluding virtual ports"""
+        ports = [
+            port
+            for port in QSerialPortInfo.availablePorts()
+            if port.productIdentifier() != 0
+        ]
+
+        return ports
 
 
 def main() -> None:

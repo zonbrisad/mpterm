@@ -224,7 +224,8 @@ class MainForm(QMainWindow):
         font_metrics = QFontMetrics(self.terminal.font())
         char_width = font_metrics.width("X")
         t_width = self.terminal.width()
-        logging.debug(f"Resize: {char_width=}, {t_width=}")
+        characters = t_width // char_width
+        logging.debug(f"Resize: {char_width=}, {t_width=} {characters=}")
 
     def stdout_data(self) -> None:
         data = self.process.readAllStandardOutput()
