@@ -35,10 +35,7 @@ from copy import copy
 from enum import Enum
 from dataclasses import dataclass, field
 import logging
-from tkinter import NO
 from typing import Any
-
-from py import log
 
 from escape import Ascii, Ansi
 from terminal_colors import (
