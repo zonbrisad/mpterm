@@ -50,7 +50,7 @@ from PyQt5.QtWidgets import (
     QLineEdit,
     QComboBox,
 )
-from sympy import im
+from sympy import N, im
 
 try:
     import RPi.GPIO as GPIO
@@ -123,17 +123,49 @@ class AboutDialog(QDialog):
 
 @dataclass
 class GPIOX:
-    name: str = ""
-    id: int = 0
     id_p1: int = 0
-    altx: str = ""
+    id: int = 0
+    alternative: str = ""
+
+    def __str__(self):
+        if self.alternative == "":
+            return f"{self.id_p1:02d} GPIO{self.id:2d}"
+        return f"{self.id_p1:02d} GPIO{self.id:2d} ({self.alternative})"
+
+    def label(self) -> str:
+        return f'<span style="color:Blue">{self.id_p1:02d}</span> <span style="color:Green">GPIO{self.id:2d}</span> <span style="color:Purple">{self.alternative}</span> '
+
+    def __post_init__(self):
+        pass
 
 
 gpio_list = [
-    GPIOX("GPIO 1", 1, 1, "ALT0"),
-    GPIOX("GPIO 2", 2, 2, "ALT1"),
-    GPIOX("GPIO 3", 3, 3, "ALT2"),
-    GPIOX("GPIO 4", 4, 4, "ALT3"),
+    GPIOX(3, 2, "SDA"),
+    GPIOX(5, 3, "SCL"),
+    GPIOX(7, 3, "GPCLK"),
+    GPIOX(8, 14, "TXD"),
+    GPIOX(10, 15, "RXD"),
+    GPIOX(11, 17, ""),
+    GPIOX(12, 18, "PCM_CLK"),
+    GPIOX(13, 27, ""),
+    GPIOX(15, 22, ""),
+    GPIOX(16, 23, ""),
+    GPIOX(18, 24, ""),
+    GPIOX(19, 10, "SPI_MOSI"),
+    GPIOX(21, 9, "SPI_MISO"),
+    GPIOX(22, 25, ""),
+    GPIOX(23, 11, "SPI_SCLK"),
+    GPIOX(24, 8, "SPI_CE0"),
+    GPIOX(26, 7, "SPI_CE1"),
+    GPIOX(29, 5, ""),
+    GPIOX(31, 6, ""),
+    GPIOX(32, 12, ""),
+    GPIOX(33, 13, ""),
+    GPIOX(35, 19, ""),
+    GPIOX(36, 16, ""),
+    GPIOX(37, 26, ""),
+    GPIOX(38, 20, ""),
+    GPIOX(40, 21, ""),
 ]
 
 
@@ -146,8 +178,10 @@ class GPIOWidget(QWidget):
         # self.layout.setSpacing(2)
         self.setLayout(self.layout)
 
-        self.name = QLabel(gpio.name)
-        self.macro_edit = QLineEdit("aaaa")
+        self.name = QLabel(gpio.label())
+        self.layout.addWidget(self.name)
+        # self.macro_edit = QLineEdit("aaaa")
+        self.layout.addStretch()
 
         self.iomode = QComboBox()
         self.iomode.addItem("Input")
@@ -163,21 +197,13 @@ class GPIOWidget(QWidget):
         self.buttibox = QPushButton("OK")
         self.buttibox.setCheckable(True)
         self.layout.addWidget(self.buttibox)
-        # self.hexModeCb = QCheckBox("Hex")
-        # self.hexModeCb.stateChanged.connect(self.macroChanged)
-        # self.repeatCb = QCheckBox("Repeat")
 
-        # self.intervallEdit = QLineEdit(str(macro.intervallEdit))
-        # self.intervallEdit.textChanged.connect(self.intervallChanged)
-        # self.intervallEdit.setMaximumWidth(40)
-        # self.setMaxLength(4)
-        # self.setSizePolicy(5)
+        self.state = QLabel(" 0 ")
+        self.layout.addWidget(self.state)
 
-        self.layout.addWidget(self.name)
-        self.layout.addWidget(self.macro_edit)
-        # self.layout.addWidget(self.hexModeCb)
-        # self.layout.addWidget(self.repeatCb)
-        # self.layout.addWidget(self.intervallEdit)
+    def gpio_update(self) -> None:
+        # self.macro_edit.setText(self.macro.get_macro())
+        pass
 
 
 class MainWindow(QMainWindow):
@@ -198,8 +224,12 @@ class MainWindow(QMainWindow):
         # TextEdit
         # self.textEdit = QTextEdit(self.centralwidget)
         # self.verticalLayout.addWidget(self.textEdit)
+        self.gpiowidgets = []
         for gpio in gpio_list:
-            self.verticalLayout.addWidget(GPIOWidget(gpio, self.centralwidget))
+            gw = GPIOWidget(gpio, self.centralwidget)
+            self.gpiowidgets.append(gw)
+            self.verticalLayout.addWidget(gw)
+            # self.verticalLayout.addWidget(GPIOWidget(gpio, self.centralwidget))
         # self.verticalLayout.addSpacing(4)
         # x = GPIOWidget(self.centralwidget)
         # self.verticalLayout.addWidget(x)
@@ -247,6 +277,11 @@ class MainWindow(QMainWindow):
         # self.statusbar.showMessage(
         #     f"Board: {GPIO.RPI_INFO['TYPE']}  CPU: {GPIO.RPI_INFO['PROCESSOR']} {GPIO.RPI_INFO['RAM']} P1:{GPIO.RPI_INFO["P1_REVISION"]}"
         # )
+
+    def update(self) -> None:
+        for gw in self.gpiowidgets:
+            # gw.update()
+            pass
 
     def exit(self):
         self.close()
