@@ -1,3 +1,5 @@
+
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QDialog,
@@ -8,13 +10,13 @@ from PyQt5.QtWidgets import (
 
 class InfoDialog(QDialog):
     # def __init__(self, parent=None):
-    def __init__(self, text: str, parent=None):
+    def __init__(self, text: str, title: str="", x: int=400, y: int=300, parent=None):
         super(InfoDialog, self).__init__(parent)
 
-        #self.setWindowTitle(App.NAME)
+        self.setWindowTitle(title)
         self.setWindowModality(Qt.ApplicationModal)
-        self.resize(400, 300)
-
+        self.resize(x,y)
+        
         self.verticalLayout = QVBoxLayout(self)
         self.verticalLayout.setSpacing(2)
         self.setLayout(self.verticalLayout)
@@ -24,7 +26,6 @@ class InfoDialog(QDialog):
         self.textEdit.setReadOnly(True)
         self.verticalLayout.addWidget(self.textEdit)
         self.textEdit.insertHtml(text)
-        #self.textEdit.insertHtml(about_html)
 
         # Buttonbox
         self.buttonBox = QDialogButtonBox(self)
@@ -34,7 +35,8 @@ class InfoDialog(QDialog):
         self.verticalLayout.addWidget(self.buttonBox)
 
     @staticmethod
-    def show(text:str, parent=None):
-        dialog = InfoDialog(text, parent)
+    def show(text:str, title: str="", x=400, y=300, parent=None):
+        
+        dialog = InfoDialog(text, title=title,x=x, y=y, parent=parent)
         result = dialog.exec_()
         return result == QDialog.Accepted

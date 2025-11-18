@@ -18,8 +18,6 @@
 # https://pypi.org/project/RPi.GPIO/
 # https://gpiozero.readthedocs.io/en/latest/migrating_from_rpigpio.html
 
-from curses.ascii import alt
-from email.charset import QP
 import traceback
 import os
 import sys
@@ -31,26 +29,24 @@ from PyQt5.QtGui import QIcon, QCloseEvent
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
+    QWidget,
     QMenu,
     QMenuBar,
     QAction,
     QStatusBar,
     QDialog,
+    QDialogButtonBox,
+    QMessageBox,
     QVBoxLayout,
     QHBoxLayout,
-    QTextEdit,
-    QDialogButtonBox,
-    QPushButton,
-    QMessageBox,
-    QWidget,
     QLabel,
-    QFileDialog,
-    QSpacerItem,
-    QSizePolicy,
+    QPushButton,
+    QTextEdit,
     QLineEdit,
+    QCheckBox,
     QComboBox,
 )
-from sympy import N, im
+from infodialog import InfoDialog
 
 try:
     import RPi.GPIO as GPIO
@@ -75,9 +71,49 @@ class App:
 win_title = App.NAME
 win_x_size = 420
 win_y_size = 240
-about_html = f"""
+
+css = """
+    body {
+        font-family: Courier New, monospace;
+        }
+"""
+    
+def board_info() -> None:
+    board_info=f"""<center><h2>System information</h2></center>
+<center>
+<table>
+<tr>
+<td><b>Board:</b></td><td>{GPIO.RPI_INFO['TYPE']}</td>
+</tr>
+<tr>
+<td><b>CPU:</b></td><td>{GPIO.RPI_INFO['PROCESSOR']}</td>
+</tr>
+<tr>
+<td><b>RAM:</b></td><td>{GPIO.RPI_INFO['RAM']}</td>
+</tr>
+<tr>
+<td><b>Revision:</b></td><td>{GPIO.RPI_INFO['REVISION']}</td>
+</tr>
+<tr>
+<td><b>P1 Revision:</b></td><td>{GPIO.RPI_INFO['P1_REVISION']}</td>
+</tr>
+</table>
+</center>
+"""
+    InfoDialog.show(board_info, title="System info", y=200)
+
+
+def program_info() -> None:
+    about_html = f"""
 <center><h2>{App.NAME}</h2></center>
 <br>
+
+<style>hr {{
+  border: 0;
+  height: 1px;
+  background: #eee;
+}}
+</style>
 <b>Version: </b>{App.VERSION}
 <br>
 <b>Author: </b>{App.AUTHOR}
@@ -87,53 +123,22 @@ about_html = f"""
 {App.DESCRIPTION}
 <br>
 """
-
-
-class AboutDialog(QDialog):
-    def __init__(self, parent=None):
-        super(AboutDialog, self).__init__(parent)
-
-        self.setWindowTitle(App.NAME)
-        self.setWindowModality(Qt.ApplicationModal)
-        self.resize(400, 300)
-
-        self.verticalLayout = QVBoxLayout(self)
-        self.verticalLayout.setSpacing(2)
-        self.setLayout(self.verticalLayout)
-
-        # TextEdit
-        self.textEdit = QTextEdit(self)
-        self.textEdit.setReadOnly(True)
-        self.verticalLayout.addWidget(self.textEdit)
-        self.textEdit.insertHtml(about_html)
-
-        # Buttonbox
-        self.buttonBox = QDialogButtonBox(self)
-        self.buttonBox.setStandardButtons(QDialogButtonBox.Ok)
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.setCenterButtons(True)
-        self.verticalLayout.addWidget(self.buttonBox)
-
-    @staticmethod
-    def about(parent=None):
-        dialog = AboutDialog(parent)
-        result = dialog.exec_()
-        return result == QDialog.Accepted
-
+    InfoDialog.show(about_html, title="About")
+    
 
 @dataclass
 class GPIOX:
     id_p1: int = 0
-    id: int = 0
+    id_cpu: int = 0
     alternative: str = ""
 
     def __str__(self):
         if self.alternative == "":
-            return f"{self.id_p1:02d} GPIO{self.id:2d}"
-        return f"{self.id_p1:02d} GPIO{self.id:2d} ({self.alternative})"
+            return f"{self.id_p1:02d} GPIO{self.id_cpu:2d}"
+        return f"{self.id_p1:02d} GPIO{self.id_cpu:12d} ({self.alternative})"
 
     def label(self) -> str:
-        return f'<span style="color:Blue">{self.id_p1:02d}</span> <span style="color:Green">GPIO{self.id:2d}</span> <span style="color:Purple">{self.alternative}</span> '
+        return f'<pre><span style="color:Blue">{self.id_p1:02d}</span> <span style="color:Green">GPIO{self.id_cpu:2d}</span> <span style="color:Purple">{self.alternative}</span></pre>'
 
     def __post_init__(self):
         pass
@@ -172,38 +177,113 @@ gpio_list = [
 class GPIOWidget(QWidget):
     def __init__(self, gpio: GPIOX, parent=None):
         super().__init__()
-        # self.macro = macro
+        
+        self.gpio = gpio
+        self.gpio_direction = GPIO.IN
+        
         self.layout = QHBoxLayout()
         self.layout.setContentsMargins(2, 2, 2, 2)
         # self.layout.setSpacing(2)
         self.setLayout(self.layout)
 
-        self.name = QLabel(gpio.label())
-        self.layout.addWidget(self.name)
-        # self.macro_edit = QLineEdit("aaaa")
+        self.gpio_enable = QCheckBox()
+        self.gpio_enable.clicked.connect(self.set_enable)
+        self.layout.addWidget(self.gpio_enable)
+        
+        self.pin_name = QLabel(gpio.label())
+        self.pin_name.setStyleSheet(css)
+        self.layout.addWidget(self.pin_name)
         self.layout.addStretch()
 
-        self.iomode = QComboBox()
-        self.iomode.addItem("Input")
-        self.iomode.addItem("Output")
-        self.layout.addWidget(self.iomode)
+        self.pin_direction = QComboBox()
+        self.pin_direction.addItem("Input", GPIO.IN)
+        self.pin_direction.addItem("Output", GPIO.OUT)
+        self.layout.addWidget(self.pin_direction)
+        self.pin_direction.activated.connect(self.change_dir)
 
-        self.mode = QComboBox()
-        self.mode.addItem("Pullup")
-        self.mode.addItem("Pulldown")
-        self.mode.addItem("None")
-        self.layout.addWidget(self.mode)
+        self.pin_pullup_mode = QComboBox()
+        self.pin_pullup_mode.addItem("Pullup", GPIO.PUD_UP)
+        self.pin_pullup_mode.addItem("Pulldown", GPIO.PUD_DOWN)
+        self.pin_pullup_mode.addItem("None", GPIO.PUD_OFF)
+        self.pin_pullup_mode.activated.connect(self.change_dir)
+        self.layout.addWidget(self.pin_pullup_mode)
 
-        self.buttibox = QPushButton("OK")
-        self.buttibox.setCheckable(True)
-        self.layout.addWidget(self.buttibox)
+        self.pin_toggle = QPushButton("Toggle")
+        self.pin_toggle.setCheckable(True)
+        self.layout.addWidget(self.pin_toggle)
+        self.pin_toggle.clicked.connect(self.set_output)
 
-        self.state = QLabel(" 0 ")
-        self.layout.addWidget(self.state)
-
-    def gpio_update(self) -> None:
-        # self.macro_edit.setText(self.macro.get_macro())
-        pass
+        self.pin_state = QLabel()
+        self.pin_state.setStyleSheet("font-family: monospace;")
+        self.layout.addWidget(self.pin_state)
+        
+        self.update_state()
+        
+    def update_gpio(self) -> None:
+        if self.pin_is_enabled() is True:
+            xin = GPIO.input(self.gpio.id_cpu)
+            self.pin_state.setText(f" {xin} ")
+        else:
+            self.pin_state.setText("N/A")
+        
+    def update_state(self) -> None:
+        if self.pin_is_enabled() is False:
+            self.pin_direction.setEnabled(False)
+            self.pin_pullup_mode.setEnabled(False)
+            self.pin_toggle.setEnabled(False)
+            return
+        
+        if self.gpio_direction == GPIO.IN:
+            self.pin_direction.setEnabled(True)
+            self.pin_pullup_mode.setEnabled(True)
+            self.pin_toggle.setEnabled(False)
+            return
+        
+        self.pin_direction.setEnabled(True)
+        self.pin_pullup_mode.setEnabled(True)
+        self.pin_toggle.setEnabled(True)
+        
+    def set_output(self) -> None:
+        if self.gpio_direction == GPIO.IN:
+            return
+        
+        xin = GPIO.input(self.gpio.id_cpu)
+        if xin == 0:
+            GPIO.output(self.gpio.id_cpu, GPIO.HIGH)
+        else: 
+            GPIO.output(self.gpio.id_cpu, GPIO.LOW)
+         
+    def gpio_setup(self, direction, pull_upp) -> None:
+        if self.pin_is_enabled() is False:
+            return
+            
+        try:
+            if direction == GPIO.IN:
+                self.pin = GPIO.setup(self.gpio.id_cpu, direction, pull_up_down=pull_upp)
+            else:
+                self.pin = GPIO.setup(self.gpio.id_cpu, direction)
+        except: 
+            logging.error(f"Pin: {self.gpio.id_cpu} busy")
+            self.gpio_enable.setChecked(False)
+            return
+        
+        self.gpio_direction = direction
+    
+    def pin_is_enabled(self) -> bool:
+        return self.gpio_enable.isChecked()
+            
+    def change_dir(self) -> None:
+        self.gpio_setup(self.pin_direction.currentData(), self.pin_pullup_mode.currentData())
+        self.update_state()
+    
+    def set_enable(self) -> None:
+        if self.pin_is_enabled() is not True:
+            GPIO.cleanup(self.gpio.id_cpu)
+            logging.debug(f"Releasing pin: {self.gpio.id_cpu}")
+        else:
+            self.gpio_setup(self.pin_direction.currentData(), self.pin_pullup_mode.currentData())
+            
+        self.update_state()
 
 
 class MainWindow(QMainWindow):
@@ -224,19 +304,16 @@ class MainWindow(QMainWindow):
         # TextEdit
         # self.textEdit = QTextEdit(self.centralwidget)
         # self.verticalLayout.addWidget(self.textEdit)
-        self.gpiowidgets = []
+        
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setwarnings(False)
+        
+        self.gpiowidgets: list[GPIOWidget] = []
         for gpio in gpio_list:
             gw = GPIOWidget(gpio, self.centralwidget)
             self.gpiowidgets.append(gw)
             self.verticalLayout.addWidget(gw)
-            # self.verticalLayout.addWidget(GPIOWidget(gpio, self.centralwidget))
-        # self.verticalLayout.addSpacing(4)
-        # x = GPIOWidget(self.centralwidget)
-        # self.verticalLayout.addWidget(x)
-        # x = GPIOWidget(self.centralwidget)
-        # self.verticalLayout.addWidget(x)
-        # x = GPIOWidget(self.centralwidget)
-        # self.verticalLayout.addWidget(x)
+            
         self.verticalLayout.addStretch()
 
         # Menubar
@@ -250,13 +327,6 @@ class MainWindow(QMainWindow):
         self.menuHelp = QMenu("Help", self.menubar)
         self.menubar.addAction(self.menuHelp.menuAction())
 
-        # self.actionOpen = QAction("Open", self)
-        # self.actionOpen.setStatusTip("Open file")
-        # self.actionOpen.setShortcut("Ctrl+O")
-        # self.actionOpen.triggered.connect(self.open)
-        # self.menuFile.addAction(self.actionOpen)
-        # self.menuFile.addSeparator()
-
         self.actionQuit = QAction("Quit", self)
         self.actionQuit.setStatusTip("Quit application")
         self.actionQuit.setShortcut("Ctrl+Q")
@@ -265,8 +335,13 @@ class MainWindow(QMainWindow):
 
         self.actionAbout = QAction("About", self)
         self.actionAbout.setStatusTip("About")
-        self.actionAbout.triggered.connect(lambda: AboutDialog.about())
+        self.actionAbout.triggered.connect(lambda: program_info())
         self.menuHelp.addAction(self.actionAbout)
+        
+        self.actionSysInfo = QAction("Sys info")
+        self.actionSysInfo.setStatusTip("System information")
+        self.actionSysInfo.triggered.connect(lambda: board_info())
+        self.menuHelp.addAction(self.actionSysInfo)
 
         # Statusbar
         self.statusbar = QStatusBar(self)
@@ -275,12 +350,21 @@ class MainWindow(QMainWindow):
         self.setStatusBar(self.statusbar)
 
         # self.statusbar.showMessage(
-        #     f"Board: {GPIO.RPI_INFO['TYPE']}  CPU: {GPIO.RPI_INFO['PROCESSOR']} {GPIO.RPI_INFO['RAM']} P1:{GPIO.RPI_INFO["P1_REVISION"]}"
+        #     f"Board: {GPIO.RPI_INFO['TYPE']}  CPU: {GPIO.RPI_INFO['PROCESSOR']} {GPIO.RPI_INFO['RAM']} P1:{GPIO.RPI_INFO['P1_REVISION']}"
         # )
-
+        
+        self.statusbar.addPermanentWidget(
+            QLabel(f"{GPIO.RPI_INFO['TYPE']}"),
+            stretch=0
+        )
+        
+        self.update_timer = QTimer(self)
+        self.update_timer.timeout.connect(self.update)
+        self.update_timer.start(100)
+        
     def update(self) -> None:
         for gw in self.gpiowidgets:
-            # gw.update()
+            gw.update_gpio()
             pass
 
     def exit(self):
