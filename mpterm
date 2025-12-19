@@ -32,40 +32,45 @@ import json
 # from datetime import datetime, date, time
 from typing import Callable
 
-from PyQt5.QtCore import (
-    Qt,
-    QTimer,
-    QProcess,
-    QEvent,
-    QObject,
-)
-from PyQt5.QtGui import QIcon, QKeyEvent, QCloseEvent
-from PyQt5.QtWidgets import (
-    QApplication,
-    QCheckBox,
-    QMainWindow,
-    QInputDialog,
-    QDialog,
-    QVBoxLayout,
-    QHBoxLayout,
-    QMenu,
-    QMenuBar,
-    QAction,
-    QStatusBar,
-    QLabel,
-    QDialogButtonBox,
-    QPushButton,
-    QComboBox,
-    QWidget,
-    QLineEdit,
-    QSizePolicy,
-)
+try:
+    from PyQt5.QtCore import (
+        Qt,
+        QTimer,
+        QProcess,
+        QEvent,
+        QObject,
+    )
+    from PyQt5.QtGui import QIcon, QKeyEvent, QCloseEvent
+    from PyQt5.QtWidgets import (
+        QApplication,
+        QCheckBox,
+        QMainWindow,
+        QInputDialog,
+        QDialog,
+        QVBoxLayout,
+        QHBoxLayout,
+        QMenu,
+        QMenuBar,
+        QAction,
+        QStatusBar,
+        QLabel,
+        QDialogButtonBox,
+        QPushButton,
+        QComboBox,
+        QWidget,
+        QLineEdit,
+        QSizePolicy,
+    )
+except ModuleNotFoundError:
+    print("\nPyQt5 not installed.")
+    print("\n>sudo apt install python3-pyqt5")
+    exit(0)
 
 try:
     from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
 except ModuleNotFoundError:
-    print("Lib qtserialport not installed")
-    print(">apt install python3-pyqt5.qtserialport")
+    print("\nQtSerialPort not installed")
+    print("\n>apt install python3-pyqt5.qtserialport")
     exit(0)
 
 from dataclasses import dataclass, field
@@ -700,7 +705,7 @@ class MainForm(QMainWindow):
         self.main_layout = QVBoxLayout(self.central_widget)
         self.main_layout.setSpacing(2)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
-
+        
         self.middle_layout = QHBoxLayout()
 
         # Port settings layout (above)
@@ -798,11 +803,11 @@ class MainForm(QMainWindow):
         self.cb_line_mode.addItem("CRLF", "\r\n")
         self.button_layout.addWidget(self.cb_line_mode)
 
-        self.ed_line_length = QNumberEdit(self.centralWidget)
+        self.ed_line_length = QNumberEdit()
         self.ed_line_length.set_value(self.prof.columns)
         self.button_layout.addWidget(self.ed_line_length)
 
-        self.ed_synch_string = QHexEdit(self.centralWidget)
+        self.ed_synch_string = QHexEdit(self.central_widget)
         self.ed_synch_string.setText(self.prof.sync_string)
         self.button_layout.addWidget(self.ed_synch_string)
 

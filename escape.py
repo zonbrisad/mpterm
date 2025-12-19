@@ -229,8 +229,16 @@ class Ansi:
         return f"\x1b[38;5;{c}m"
 
     @staticmethod
+    def fg_24bit_color(r: int, g: int, b: int) -> str:
+        return f"\x1b[38;2;{r};{g};{b}m"
+
+    @staticmethod
     def bg_8bit_color(c: int) -> str:
         return f"\x1b[48;5;{c}m"
+
+    @staticmethod
+    def bg_24bit_color(r: int, g: int, b: int) -> str:
+        return f"\x1b[48;2;{r};{g};{b}m"
 
     @staticmethod
     def findEnd(data, idx):
