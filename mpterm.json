@@ -1,7 +1,7 @@
 {
     "alias": "default",
-    "port": "ttyUSB0",
-    "bitrate": "57600",
+    "port": "ttyUSB1",
+    "bitrate": "115200",
     "databits": "8",
     "parity": "None",
     "stopbits": "1",
@@ -10,36 +10,36 @@
     "suspend_timeout": 5,
     "ext_program": "bash -i",
     "newline": "LF",
-    "win_x": 2560,
-    "win_y": 847,
+    "win_x": 1701,
+    "win_y": 923,
     "sync_string": "",
     "columns": 50,
-    "plugin": "None",
+    "plugin": "XDM1041",
     "macros": [
         {
             "name": "M1",
             "hex": false,
-            "text": "VSET1:12.34"
+            "text": "*IDN?\\n"
         },
         {
             "name": "M2",
             "hex": false,
-            "text": "OUT1?"
+            "text": "*RST\\n"
         },
         {
             "name": "M3",
             "hex": false,
-            "text": "VOUT1?"
+            "text": "MEAS?\\n"
         },
         {
             "name": "M4",
-            "hex": true,
-            "text": "23 0x42"
+            "hex": false,
+            "text": "SYSTem:BEEPer:STATe{ON}\\n"
         },
         {
             "name": "M5",
             "hex": false,
-            "text": "ls\\n"
+            "text": "SYSTem:REMote\\n"
         }
     ]
 }

@@ -439,7 +439,7 @@ class HexFormater:
 class StyleS:
     normal = """
     QLineEdit:enabled {
-    color:Blask;
+    color:Black;
     }
     QLineEdit:disabled {
     color:gray;
@@ -1293,24 +1293,23 @@ class MainForm(QMainWindow):
         self.serial_port.clear_counters()
         self.update()
 
-    def _message(self, name: str) -> None:
+    def _message(self, msg: str) -> None:
         """Show message in status bar"""
-        self.statusbar.showMessage(name, 4000)
-        self.statusbar.show
+        self.statusbar.showMessage(msg, 4000)
 
     # Show message in status bar
-    def message(self, name: str) -> None:
+    def message(self, msg: str) -> None:
         """Show message in status bar with normal style"""
         self.statusbar.setStyleSheet(StyleS.normal)
-        self._message(name)
-        logging.debug(name)
+        self._message(msg)
+        logging.debug(msg)
 
     # Show error message in status bar
-    def message_error(self, name: str) -> None:
+    def message_error(self, msg: str) -> None:
         """Show message in status bar with error style"""
         self.statusbar.setStyleSheet(StyleS.error)
-        self._message(name)
-        logging.error(name)
+        self._message(msg)
+        logging.error(msg)
 
     def mode_change(self) -> None:
         self.terminal.clear()

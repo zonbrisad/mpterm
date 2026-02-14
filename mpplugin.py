@@ -57,6 +57,7 @@ class MpPluginWidget:
     combo_data: Any = None
     widget: QWidget = None
     value: Any = None
+    data: Any = None
     min: int = None
     max: int = None
 
@@ -158,9 +159,13 @@ class MpPlugin:
         return widget
 
     def add_button(
-        self, text: str, description: str, action: Callable
+        self, text: str, description: str, action: Callable, data: Any = None
     ) -> MpPluginWidget:
-        widget = MpPluginWidget(MpPluginWidgetType.Button, text, description, action)
+        widget = MpPluginWidget(type=MpPluginWidgetType.Button,
+                                name=text,
+                                description=description,
+                                action=action,
+                                data=data)
         self.add_widget(widget)
         return widget
 
@@ -173,6 +178,10 @@ class MpPlugin:
         self.add_widget(widget)
         return widget
 
+    def _widget_action(self, widget: MpPluginWidget) -> None:
+        if widget.action is not None:
+            widget.action(widget.get_value())
+
     def _create_widget(self, widget: MpPluginWidget) -> None:
         if widget.type == MpPluginWidgetType.Label:
             mpw = QLabel()
@@ -181,7 +190,9 @@ class MpPlugin:
             mpw = QPushButton()
             mpw.setText(widget.name)
             if widget.action is not None:
-                mpw.pressed.connect(widget.action)
+                # mpw.pressed.connect(widget.action)
+                mpw.pressed.connect(lambda: widget.action(widget))
+                
         if widget.type == MpPluginWidgetType.ComboBox:
             mpw = QComboBox()
             if widget.action is not None:
