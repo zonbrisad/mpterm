@@ -29,19 +29,12 @@ doc = """
 <br>
 """
 
-plugin_name = "XDM1041"
-plugin_manufacturer = "OWON"
-plugin_model = "XDM1041"
-plugin_description = "OWON XDM1041 Digital Multimeter" 
-plugin_date = "2026-02-14"
-plugin_author = "Peter Malmberg <peter.malmberg@gmail.com>"
-
-# Code -----------------------------------------------------------------------
-
+# Code -----------------------------------------------------------------------E
 # OWON XDM1041 protocol documentation
 #
 # https://www.owon.com.cn/upload/2020/09/24/1600964418.pdf
-
+# https://files.owon.com.cn/software/Application/XDM1000_Digital_Multimeter_Programming_Manual.pdf
+#
 
 class SCPI_CMDS(Enum):
     ReadID = "*IDN?"  # Unit id
@@ -64,17 +57,23 @@ class SCPI_CMDS(Enum):
     ReadVoltDC = "MEAS:VOLT:DC?"  # Read DC voltage
     ReadCurrDC = "MEAS:CURR:DC?"  # Read DC current
     ReadRes2 = "MEAS:RES2?"  # Read resistance 2
+    
+    LocalMode = "SYSTem:LOCal"  # Set local mode
+    RemoteMode = "SYSTem:REMote"  # Set remote mode
+    BeeperOn = "SYSTem:BEEPer ON"  # Turn buzzer on
+    BeeperOff = "SYSTem:BEEPer OFF"  # Turn buzzer off
+    BeeperState = "SYSTem:BEEPer?"  # Query buzzer state
 
 
 class MpTermPlugin(MpPlugin):
     def __init__(self) -> None:
         super().__init__()
-        self.name = plugin_name
-        self.manufacturer = plugin_manufacturer
-        self.model = plugin_model
-        self.description = plugin_description
-        self.date = plugin_date
-        self.author = plugin_author
+        self.name = "XDM1041"
+        self.manufacturer = "OWON"
+        self.model = "XDM1041"
+        self.description = "OWON XDM1041 Digital Multimeter"
+        self.date = "2026-02-14"
+        self.author = "Peter Malmberg <peter.malmberg@gmail.com>"
         self.cnt = 0
 
         self.add_button("Read Id", "Read unit ID string", self.send_scpi,
@@ -82,10 +81,24 @@ class MpTermPlugin(MpPlugin):
 
         self.add_button("Reset", "Reset unit", self.send_scpi,
                         data=SCPI_CMDS.Reset.value)
-        
-        self.add_button("Measure", "Measure voltage, current, resistance, etc.", self.send_scpi,
+
+        self.add_button("Measure", "Measure voltage, current, resistance, etc.",
+                        self.send_scpi,
                         data=SCPI_CMDS.Meas.value)
+
+        self.add_button("Local Mode", "Set local mode", self.send_scpi,
+                        data=SCPI_CMDS.LocalMode.value)
+
+        self.add_button("Remote Mode", "Set remote mode", self.send_scpi,
+                        data=SCPI_CMDS.RemoteMode.value)
         
+        self.add_button("Beeper On", "Turn beeper on", self.send_scpi,
+                        data=SCPI_CMDS.BeeperOn.value)
+        self.add_button("Beeper Off", "Turn beeper off", self.send_scpi,
+                        data=SCPI_CMDS.BeeperOff.value)
+        self.add_button("Beeper State", "Query beeper state", self.send_scpi,
+                        data=SCPI_CMDS.BeeperState.value)
+
     def data(self, data: bytearray) -> str:
         ret = ""
         self.append_ansi_text(f"[{Ansi.BR_GREEN}Recv{Ansi.RESET}] {data}\n")
@@ -95,7 +108,8 @@ class MpTermPlugin(MpPlugin):
         self.send_string(widget.data+"\n")
         self.append_ansi_text(f"Send SCPI command: {widget.data}\n")
 
-def main() -> None: ...
+
+    def main() -> None: ...
 
 
 if __name__ == "__main__":

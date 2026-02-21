@@ -1,45 +1,70 @@
 {
     "alias": "default",
-    "port": "ttyUSB1",
-    "bitrate": "115200",
+    "port": "ttyUSB0",
+    "bitrate": "9600",
     "databits": "8",
     "parity": "None",
     "stopbits": "1",
     "flowcontrol": "None",
     "mode": "Ascii",
-    "suspend_timeout": 5,
-    "ext_program": "bash -i",
+    "suspend_timeout": 8,
+    "ext_program": "",
     "newline": "LF",
-    "win_x": 1701,
-    "win_y": 923,
+    "win_x": 1559,
+    "win_y": 841,
     "sync_string": "",
-    "columns": 50,
-    "plugin": "XDM1041",
+    "columns": 10,
+    "plugin": "None",
     "macros": [
         {
             "name": "M1",
             "hex": false,
-            "text": "*IDN?\\n"
+            "text": ""
         },
         {
             "name": "M2",
             "hex": false,
-            "text": "*RST\\n"
+            "text": ""
         },
         {
             "name": "M3",
             "hex": false,
-            "text": "MEAS?\\n"
+            "text": ""
         },
         {
             "name": "M4",
             "hex": false,
-            "text": "SYSTem:BEEPer:STATe{ON}\\n"
+            "text": ""
         },
         {
             "name": "M5",
             "hex": false,
-            "text": "SYSTem:REMote\\n"
+            "text": ""
+        },
+        {
+            "name": "M6",
+            "hex": false,
+            "text": ""
+        },
+        {
+            "name": "M7",
+            "hex": false,
+            "text": ""
+        },
+        {
+            "name": "M8",
+            "hex": false,
+            "text": ""
+        },
+        {
+            "name": "M9",
+            "hex": false,
+            "text": ""
+        },
+        {
+            "name": "M10",
+            "hex": false,
+            "text": ""
         }
     ]
 }

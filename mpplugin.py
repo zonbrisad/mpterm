@@ -192,7 +192,7 @@ class MpPlugin:
             if widget.action is not None:
                 # mpw.pressed.connect(widget.action)
                 mpw.pressed.connect(lambda: widget.action(widget))
-                
+
         if widget.type == MpPluginWidgetType.ComboBox:
             mpw = QComboBox()
             if widget.action is not None:
