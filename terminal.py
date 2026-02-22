@@ -35,7 +35,7 @@ from copy import copy
 from enum import Enum
 from dataclasses import dataclass, field
 import logging
-from typing import Any
+from typing import List, Any
 
 from escape import Ascii, Ansi
 from terminal_colors import (

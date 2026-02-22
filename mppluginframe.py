@@ -17,7 +17,7 @@ import os
 import importlib
 import logging
 
-from mpplugin import MpPlugin, MpPluginWidget, MpPluginWidgetType
+from mpplugin import MpPlugin, MpPluginWidget
 
 from PyQt5.QtWidgets import (
     QVBoxLayout,
@@ -25,7 +25,6 @@ from PyQt5.QtWidgets import (
     QComboBox,
     QWidget,
 )
-from qedit import QHexEdit, QNumberEdit
 
 
 class MpPluginFrame(QWidget):
@@ -34,7 +33,7 @@ class MpPluginFrame(QWidget):
         self.serial_port = serial_port
         self.terminal = terminal
 
-        self.layout: QVBoxLayout = QVBoxLayout(parent)
+        self.layout: QVBoxLayout = QVBoxLayout()
         self.layout.setContentsMargins(2, 2, 2, 2)
         self.layout.setSpacing(2)
         # self.setMaxLength(4)
