@@ -1,39 +1,39 @@
 {
     "alias": "default",
-    "port": "ttyUSB1",
-    "bitrate": "57600",
+    "port": "ttyUSB2",
+    "bitrate": "9600",
     "databits": "8",
     "parity": "None",
     "stopbits": "1",
     "flowcontrol": "None",
-    "mode": "Ascii",
+    "mode": "Hex",
     "suspend_timeout": 8,
     "ext_program": "bash -i",
     "newline": "LF",
-    "win_x": 1559,
-    "win_y": 1130,
+    "win_x": 1469,
+    "win_y": 1131,
     "sync_string": "",
     "columns": 10,
     "plugin": "None",
     "macros": [
         {
             "name": "M1",
-            "hex": false,
-            "text": ""
+            "hex": true,
+            "text": "01 01 00 00 00 02 BD CB"
         },
         {
             "name": "M2",
-            "hex": false,
+            "hex": true,
             "text": ""
         },
         {
             "name": "M3",
-            "hex": false,
-            "text": ""
+            "hex": true,
+            "text": "01 03 00 00 00 02 C4 0B"
         },
         {
             "name": "M4",
-            "hex": false,
+            "hex": true,
             "text": ""
         },
         {

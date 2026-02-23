@@ -1,3 +1,15 @@
+# Version 0.5x
+- Added cursor rendering
+- Added OWON multimeter plugin
+- Added dl24 electronic load plugin
+- Added Korad PSU plugin
+- Added support for ICH + others
+- Increased nr of macros to 10
+- Several files removed
+- QDialog error output removed
+- Refactoring of several modules including macro, terminal
+- Cursor movement bugs fixed
+
 # Version 0.51
 
 - Added experimental plugin support

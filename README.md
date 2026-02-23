@@ -204,6 +204,10 @@ Feature
 
 ## Future ideas
 
+### Modbus
+
+Ability to run communicate with modbus terminals
+
 ### Plugin system
 
 Enable user to add custom features like:
