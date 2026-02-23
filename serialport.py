@@ -12,12 +12,9 @@
 # Python:   >= 3.0
 #
 # ----------------------------------------------------------------------------
-import enum
 import logging
-from turtle import st
-from PyQt5.QtCore import QTimer, QIODevice
+from PyQt5.QtCore import QIODevice
 from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
-from sympy import Li
 
 
 # class State(enum.Enum):

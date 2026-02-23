@@ -716,7 +716,7 @@ class MainForm(QMainWindow):
         self.add_action(
             "List plugins",
             menu_plugins,
-            lambda: self.append_html_text(self.plugin_widget.plugins_to_str()),
+            lambda: self.terminal_append_html(self.plugin_widget.plugins_to_str()),
         )
 
         # Help menu
@@ -868,7 +868,7 @@ class MainForm(QMainWindow):
         data = self.process.readAllStandardOutput()
         logging.debug(f"Data available from ext. process(stdout): {len(data)}")
 
-        self.update_terminal_widget(str(data, "utf-8"))
+        self.terminal_append_ansi(str(data, "utf-8"))
 
     def external_program_run(self) -> None:
         """Run external program"""
@@ -920,7 +920,7 @@ class MainForm(QMainWindow):
         self.external_program_run()
 
     def timer_5_timeout(self) -> None:
-        self.update_terminal_widget(None)
+        self.terminal_append_ansi(None)
         self.ui_handler()
         self.state_handler()
 
@@ -1026,12 +1026,6 @@ class MainForm(QMainWindow):
         for port in ports:
             self.cb_port.addItem(port.portName())
 
-    def terminal_clear(self) -> None:
-        """Clear terminal"""
-        self.terminal.clear()
-        self.formater.clear()
-        self.serial_port.clear_counters()
-        self.update()
 
     def _message(self, msg: str) -> None:
         """Show message in status bar"""
@@ -1056,15 +1050,24 @@ class MainForm(QMainWindow):
         self.formater.set_mode(self.cb_display_mode.currentData())
         logging.debug(f"Setting display mode {self.cb_display_mode.currentData()}")
 
-    def append_html_text(self, text: str) -> None:
+    def terminal_clear(self) -> None:
+        """Clear terminal"""
+        self.terminal.clear()
+        self.formater.clear()
+        self.serial_port.clear_counters()
+        self.update()
+        
+    def terminal_append_html(self, text: str) -> None:
         """Append text to terminal widget, with html formatting"""
         self.terminal.append_html_text(text)
         self.terminal.scroll_down()
 
-    def update_terminal_widget(self, data: str) -> None:
+    def terminal_append_ansi(self, data: str) -> None:
+        """Append text to terminal widget, with ANSI escape code processing"""
 
         msg: EscapeObj = self.terminal.append_ansi_text(data)
 
+        # If data is not None, it means that there is an ANSI message to process, and we need to update the terminal widget until all messages are processed    
         while msg is not None:
             self.send_string(msg.text)
             msg = self.terminal.append_ansi_text(None)
@@ -1093,15 +1096,15 @@ class MainForm(QMainWindow):
             DisplayMode = self.cb_display_mode.currentData()
             if DisplayMode == MpTerm.Ascii:  # Standard ascii display mode
                 # self.terminal.append_ansi_text(data_str)
-                self.update_terminal_widget(data_str)
+                self.terminal_append_ansi(data_str)
 
             if DisplayMode == MpTerm.AsciiHex:  # Ascii + Hex display mode
                 # self.terminal.append_html_text(self.formater.format(data))
-                self.update_terminal_widget(self.formater.format(data))
+                self.terminal_append_html(self.formater.format(data))
 
             if DisplayMode == MpTerm.Hex:  # Hexadecimal display mode
                 # self.terminal.append_html_text(self.formater.format(data))
-                self.update_terminal_widget(self.formater.format(data))
+                self.terminal_append_html(self.formater.format(data))
 
         if self.cb_echo_mode.currentData() == Mode.Echo:
             self.serial_port.send(data)
@@ -1204,17 +1207,17 @@ class MainForm(QMainWindow):
 
     def port_info(self) -> None:
         """List available serial ports, and show in terminal"""
-        self.append_html_text("<br>")
-        self.append_html_text(
+        self.terminal_append_html("<br>")
+        self.terminal_append_html(
             "<b><pre> Port      Location      Vendor id  Product id  Manufacturer  Description<br></pre></b>"
         )
         ports = SerialPort.availablePorts()
         for port in ports:
-            self.append_html_text(
+            self.terminal_append_html(
                 f"<pre> {port.portName():8}  {port.systemLocation():13} {str(port.vendorIdentifier()):10} {str(port.productIdentifier()):10}  {port.manufacturer():12}  {port.description()}<br></pre>"
             )
 
-        self.append_html_text("<br>")
+        self.terminal_append_html("<br>")
 
     def new_terminal(self) -> None:
         """Open new terminal window"""
