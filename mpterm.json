@@ -10,11 +10,11 @@
     "suspend_timeout": 8,
     "ext_program": "bash -i",
     "newline": "LF",
-    "win_x": 1449,
-    "win_y": 1059,
+    "win_x": 1642,
+    "win_y": 1058,
     "sync_string": "0x01 0x04",
     "columns": 30,
-    "plugin": "None",
+    "plugin": "PZEM-004T",
     "macros": [
         {
             "name": "M1",
