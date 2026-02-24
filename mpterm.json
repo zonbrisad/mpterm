@@ -10,10 +10,10 @@
     "suspend_timeout": 8,
     "ext_program": "bash -i",
     "newline": "LF",
-    "win_x": 1469,
-    "win_y": 1131,
-    "sync_string": "01",
-    "columns": 10,
+    "win_x": 1449,
+    "win_y": 1059,
+    "sync_string": "0x01 0x04",
+    "columns": 30,
     "plugin": "None",
     "macros": [
         {
@@ -34,22 +34,22 @@
         {
             "name": "M4",
             "hex": true,
-            "text": ""
+            "text": "01 03 00 00 00 10 44 06"
         },
         {
             "name": "M5",
-            "hex": false,
-            "text": ""
+            "hex": true,
+            "text": "01 04 00 00 00 10 F1 C6"
         },
         {
             "name": "M6",
-            "hex": false,
-            "text": ""
+            "hex": true,
+            "text": "01 04 00 02 00 0A D1 CD"
         },
         {
             "name": "M7",
-            "hex": false,
-            "text": ""
+            "hex": true,
+            "text": "01 04 00 00 00 0A 70 0D"
         },
         {
             "name": "M8",

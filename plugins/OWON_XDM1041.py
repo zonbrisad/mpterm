@@ -91,7 +91,7 @@ class MpTermPlugin(MpPlugin):
 
         self.add_button("Remote Mode", "Set remote mode", self.send_scpi,
                         data=SCPI_CMDS.RemoteMode.value)
-        
+
         self.add_button("Beeper On", "Turn beeper on", self.send_scpi,
                         data=SCPI_CMDS.BeeperOn.value)
         self.add_button("Beeper Off", "Turn beeper off", self.send_scpi,
@@ -109,7 +109,7 @@ class MpTermPlugin(MpPlugin):
         self.append_ansi_text(f"Send SCPI command: {widget.data}\n")
 
 
-    def main() -> None: ...
+def main() -> None: ...
 
 
 if __name__ == "__main__":

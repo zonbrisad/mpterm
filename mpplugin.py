@@ -17,6 +17,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable
+from escape import Ansi
 from serialport import SerialPort
 from qterminalwidget import QTerminalWidget
 from PyQt5.QtWidgets import (
@@ -30,6 +31,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import QTimer, Qt
 from qedit import QNumberEdit
+import binascii
 
 
 class MpPluginWidgetType(Enum):
@@ -96,6 +98,7 @@ class MpPlugin:
 
         self.serial_port: SerialPort = None
         self.terminal: QTerminalWidget = None
+        self.print_data: bool = False
 
         self.timer = QTimer()
         self.timer.setSingleShot(True)
@@ -113,11 +116,13 @@ class MpPlugin:
 
     def receive(self, data: bytearray) -> None:
         if self.mode == MpReceiveMode.Continous:
+            self.print_recv_data(data)
             self.data(data)
         elif self.mode == MpReceiveMode.Message:
             self.buf.extend(data)
 
     def receive_timeout(self) -> None:
+        self.print_recv_data(self.buf)
         self.data(self.buf)
 
     def start_timer(self, timeout: int) -> None:
@@ -127,19 +132,30 @@ class MpPlugin:
 
     def send(self, data: bytearray) -> None:
         self.serial_port.send(data)
+        self.print_send_data(data)
 
     def send_string(self, data: str) -> None:
         self.serial_port.send_string(data)
 
     def send_msg(self, data: bytearray, timeout: int) -> None:
         self.buf.clear()
-        self.serial_port.send(data)
+        self.send(data)
         if timeout > 0:
             self.mode = MpReceiveMode.Message
             self.start_timer(timeout)
 
     def send_msg_string(self, data: str, timeout: int) -> None:
         self.send_msg(bytearray(data.encode()), timeout)
+
+    def print_send_data(self, data: bytearray) -> None:
+        if self.print_data is True:
+            x = binascii.hexlify(data, " ")
+            self.append_ansi_text(f"[{Ansi.BR_RED}Send{Ansi.RESET}] {Ansi.CYAN}{len(data):>3}{Ansi.RESET} {x}\n")
+
+    def print_recv_data(self, data: bytearray) -> None:
+        if self.print_data is True:
+            x = binascii.hexlify(data, " ")
+            self.append_ansi_text(f"[{Ansi.BR_GREEN}Recv{Ansi.RESET}] {Ansi.CYAN}{len(data):>3}{Ansi.RESET} {x}\n")
 
     def append_html_text(self, html: str) -> None:
         self.terminal.append_html_text(html)

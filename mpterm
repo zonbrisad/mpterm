@@ -1056,7 +1056,7 @@ class MainForm(QMainWindow):
         self.formater.clear()
         self.serial_port.clear_counters()
         self.update()
-        
+
     def terminal_append_html(self, text: str) -> None:
         """Append text to terminal widget, with html formatting"""
         self.terminal.append_html_text(text)
