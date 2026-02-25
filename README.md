@@ -130,7 +130,7 @@ When plugging and unplugging USB<>serial adapters devicenames have a habit of ch
 Terminal functions
 
 - [x] Terminal: Cursor basic movement
-- [ ] Terminal: Cursor visual presentation
+- [x] Terminal: Cursor visual presentation
 - [x] Terminal: Color encoding (8 colors)
 - [x] Terminal: 256 color encoding
 - [ ] Terminal: Dim text

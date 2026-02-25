@@ -3,12 +3,15 @@
 - Added OWON multimeter plugin
 - Added dl24 electronic load plugin
 - Added Korad PSU plugin
+- Added PZEM-004 plugin
 - Added support for ICH + others
 - Increased nr of macros to 10
 - Several files removed
 - QDialog error output removed
 - Refactoring of several modules including macro, terminal
 - Cursor movement bugs fixed
+- Fixed hex formated output bug
+- Serial port listing filter
 
 # Version 0.51
 
