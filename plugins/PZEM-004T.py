@@ -18,9 +18,8 @@
 
 # Imports --------------------------------------------------------------------
 
-from enum import Enum
-from mpplugin import MpPlugin, MpPluginWidget, MpPluginWidgetType
-from escape import Ansi
+from mpplugin import MpPlugin
+
 # Variables ------------------------------------------------------------------
 
 doc = """
@@ -38,9 +37,9 @@ class MpTermPlugin(MpPlugin):
     def __init__(self) -> None:
         super().__init__()
         self.name = "PZEM-004T"
-        self.manufacturer = ""
+        self.manufacturer = "Peacefair"
         self.model = "PZEM-004T"
-        self.description = "PZEM-004T Power Monitor"
+        self.description = "PZEM-004T AC power monitor"
         self.date = "2026-02-24"
         self.author = "Peter Malmberg <peter.malmberg@gmail.com>"
         self.cnt = 0
@@ -69,11 +68,9 @@ class MpTermPlugin(MpPlugin):
             ret += f"Power Factor: {power_factor:.2f}\n"
         else:
             ret += "Invalid data length\n"
-        
-        # print(ret)
+
         self.append_ansi_text(ret)
         return ret
-
 
 
 def main() -> None: ...

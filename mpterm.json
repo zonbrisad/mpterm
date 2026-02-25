@@ -1,12 +1,12 @@
 {
     "alias": "default",
-    "port": "ttyUSB2",
-    "bitrate": "9600",
+    "port": "ttyUSB1",
+    "bitrate": "57600",
     "databits": "8",
     "parity": "None",
     "stopbits": "1",
     "flowcontrol": "None",
-    "mode": "Hex",
+    "mode": "Ascii",
     "suspend_timeout": 8,
     "ext_program": "bash -i",
     "newline": "LF",
@@ -14,7 +14,7 @@
     "win_y": 1058,
     "sync_string": "0x01 0x04",
     "columns": 30,
-    "plugin": "PZEM-004T",
+    "plugin": "None",
     "macros": [
         {
             "name": "M1",
