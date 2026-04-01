@@ -141,6 +141,13 @@ class QTerminalWidget(QPlainTextEdit):
 
         self.max_lines = 100
         self.last_id = 0
+        
+        # Performance tuning
+        self.setMaximumBlockCount(5000) # limit number of blocks
+        self.setUndoRedoEnabled(False) 
+        
+         
+        
 
     def setMaxLines(self, max_lines) -> None:
         self.max_lines = max_lines

@@ -150,6 +150,10 @@ class MpTerm(enum.Enum):
     Cr = 1
     NlCr = 2
 
+    NoSync = "NoSync"
+    SyncStart = "SyncStart"
+    SyncEnd = "SyncEnd"
+
 
 about_html = f"""
 <center><img src={App.ICON} width="54" height="54"></center>
@@ -546,6 +550,12 @@ class MainForm(QMainWindow):
         self.ed_line_length = QNumberEdit()
         self.ed_line_length.set_value(self.prof.columns)
         self.button_layout.addWidget(self.ed_line_length)
+
+        # self.cb_sync_mode = QComboBox(self.central_widget)
+        # self.cb_sync_mode.addItem("No sync", MpTerm.NoSync)
+        # self.cb_sync_mode.addItem("Sync at start", MpTerm.SyncStart)
+        # self.cb_sync_mode.addItem("Sync at end", MpTerm.SyncEnd)
+        # self.button_layout.addWidget(self.cb_sync_mode)
 
         self.ed_synch_string = QHexEdit(self.central_widget)
         self.ed_synch_string.setText(self.prof.sync_string)
