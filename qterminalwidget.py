@@ -141,13 +141,10 @@ class QTerminalWidget(QPlainTextEdit):
 
         self.max_lines = 100
         self.last_id = 0
-        
+
         # Performance tuning
-        self.setMaximumBlockCount(5000) # limit number of blocks
-        self.setUndoRedoEnabled(False) 
-        
-         
-        
+        self.setMaximumBlockCount(1000) # limit number of blocks
+        self.setUndoRedoEnabled(False)
 
     def setMaxLines(self, max_lines) -> None:
         self.max_lines = max_lines
@@ -203,6 +200,8 @@ class QTerminalWidget(QPlainTextEdit):
             lines = self.terminal_state.update(data)
             self.data_list.extend(lines)
 
+        self.setUpdatesEnabled(False)
+        
         for i in range(len(self.data_list)):
             obj = self.data_list.pop(0)
             if type(obj) is TerminalLine:
@@ -227,9 +226,11 @@ class QTerminalWidget(QPlainTextEdit):
                 # print(f"HTML id={obj.id}")
 
             if type(obj) is EscapeObj:
+                self.setUpdatesEnabled(True)
                 return obj
 
         self.limit_lines()
+        self.setUpdatesEnabled(True)
         return None
 
     def scroll_down(self) -> None:
